@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2 } from "lucide-react";
 
 import { navGroups } from "@/lib/nav";
 import {
@@ -34,13 +33,18 @@ export function AppSidebar({ alertCount = 0 }: { alertCount?: number }) {
               tooltip="Proges"
               render={<Link href="/" />}
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Building2 className="size-4" />
+              {/* Símbolo Proges: una propiedad (el cuadrado) y alguien que la cuida (el punto arena). */}
+              <div className="flex size-8 shrink-0 items-center justify-center">
+                <div className="relative size-5 rounded-[5px] bg-primary">
+                  <div className="absolute -right-1 -bottom-1 size-2 rounded-full bg-arena" />
+                </div>
               </div>
               <div className="flex flex-col gap-0.5 leading-none">
-                <span className="font-semibold">Proges</span>
+                <span className="text-base font-bold tracking-[-0.035em]">
+                  Proges
+                </span>
                 <span className="text-xs text-muted-foreground">
-                  Patrimonio
+                  Propiedades y gestión
                 </span>
               </div>
             </SidebarMenuButton>

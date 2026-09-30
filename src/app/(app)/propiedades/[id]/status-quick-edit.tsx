@@ -12,11 +12,12 @@ import { PropertyStatus } from "@/generated/prisma/enums";
 import { propertyStatusLabels, propertyStatusVariant } from "@/lib/domain";
 import { updatePropertyStatus } from "../actions";
 
+// Mismos colores que las variantes del Badge, para que el selector se vea como la etiqueta.
 const triggerClass: Record<ReturnType<typeof propertyStatusVariant>, string> = {
-  default:
-    "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
-  secondary:
-    "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+  success:
+    "border-transparent bg-success-soft text-success-soft-foreground hover:bg-success-soft/80",
+  arena:
+    "border-transparent bg-arena-soft text-arena-soft-foreground hover:bg-arena-soft/80",
   outline: "text-foreground hover:bg-accent",
 };
 
@@ -41,7 +42,7 @@ export function StatusQuickEdit({
   return (
     <Select value={current} onValueChange={handleChange} disabled={isPending}>
       <SelectTrigger
-        className={`h-6 w-auto gap-1 rounded-full border px-2.5 py-0 text-xs font-semibold shadow-none focus:ring-0 ${triggerClass[variant]} ${isPending ? "opacity-60" : ""}`}
+        className={`h-6 w-auto gap-1 rounded-[6px] border px-2.5 py-0 text-xs font-semibold shadow-none focus:ring-0 ${triggerClass[variant]} ${isPending ? "opacity-60" : ""}`}
       >
         <SelectValue />
       </SelectTrigger>

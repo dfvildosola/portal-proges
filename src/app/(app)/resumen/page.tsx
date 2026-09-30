@@ -31,16 +31,17 @@ import { OwnerFilter } from "./owner-filter";
 import { RentabilidadTable } from "./rentabilidad-table";
 import type { RentabilidadRow } from "./rentabilidad-table";
 
-// Paleta para el gráfico de sociedades (legible en claro y oscuro).
+// Paleta para el gráfico de sociedades: variables del tema (globals.css), que
+// cambian solas entre claro y oscuro.
 const DONUT_COLORS = [
-  "#3b82f6",
-  "#10b981",
-  "#f59e0b",
-  "#a855f7",
-  "#ef4444",
-  "#14b8a6",
-  "#eab308",
-  "#ec4899",
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--chart-6)",
+  "var(--chart-7)",
+  "var(--chart-8)",
 ];
 
 // Arma los datos de la dona: ordena de mayor a menor, asigna colores y agrupa la
@@ -59,7 +60,7 @@ function toDonutItems(
     top.push({
       label: "Otros",
       value: rest.reduce((s, r) => s + r.value, 0),
-      color: "#9ca3af",
+      color: "var(--chart-other)",
     });
   }
   return top;
@@ -629,7 +630,7 @@ function Metric({
             emphasis === "negative"
               ? "text-destructive"
               : emphasis === "positive"
-                ? "text-emerald-600 dark:text-emerald-500"
+                ? "text-success"
                 : ""
           }`}
         >
@@ -743,7 +744,7 @@ function Donut({
                 key={s.label}
                 r={r}
                 fill="none"
-                stroke={s.color}
+                style={{ stroke: s.color }}
                 strokeWidth={stroke}
                 strokeDasharray={`${s.len} ${C - s.len}`}
                 strokeDashoffset={-s.offset}

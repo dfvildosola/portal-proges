@@ -360,7 +360,7 @@ export default async function PropiedadDetallePage({
                             <span
                               className={`ml-2 text-xs tabular-nums ${
                                 pct >= 0
-                                  ? "text-emerald-600"
+                                  ? "text-success"
                                   : "text-destructive"
                               }`}
                             >

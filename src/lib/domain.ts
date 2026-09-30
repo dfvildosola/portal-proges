@@ -100,27 +100,27 @@ export const taxStatusLabels: Record<TaxStatus, string> = {
 
 export function chargeStatusVariant(
   estado: ChargeStatus,
-): "default" | "secondary" | "destructive" {
+): "success" | "warning" | "destructive" {
   switch (estado) {
     case "PAGADO":
-      return "default";
+      return "success";
     case "ATRASADO":
       return "destructive";
     default:
-      return "secondary";
+      return "warning";
   }
 }
 
 export function taxStatusVariant(
   estado: TaxStatus,
-): "default" | "secondary" {
-  return estado === "PAGADA" ? "default" : "secondary";
+): "success" | "warning" {
+  return estado === "PAGADA" ? "success" : "warning";
 }
 
 export function movementTypeVariant(
   tipo: MovementType,
-): "default" | "secondary" {
-  return tipo === "INGRESO" ? "default" : "secondary";
+): "success" | "secondary" {
+  return tipo === "INGRESO" ? "success" : "secondary";
 }
 
 export const alertTypeLabels: Record<AlertType, string> = {
@@ -157,14 +157,14 @@ export const alertSeverityLabels: Record<AlertSeverity, string> = {
 
 export function alertSeverityVariant(
   severidad: AlertSeverity,
-): "default" | "secondary" | "destructive" {
+): "info" | "warning" | "destructive" {
   switch (severidad) {
     case "ALTA":
       return "destructive";
     case "MEDIA":
-      return "secondary";
+      return "warning";
     default:
-      return "default";
+      return "info";
   }
 }
 
@@ -190,12 +190,12 @@ export function enumOptions<T extends Record<string, string>>(
 // Variante de color del badge según el estado de la propiedad.
 export function propertyStatusVariant(
   estado: PropertyStatus,
-): "default" | "secondary" | "outline" {
+): "success" | "arena" | "outline" {
   switch (estado) {
     case "ARRENDADA":
-      return "default";
+      return "success";
     case "EN_VENTA":
-      return "secondary";
+      return "arena";
     default:
       return "outline";
   }
@@ -204,12 +204,12 @@ export function propertyStatusVariant(
 // Variante de color del badge según el estado del contrato.
 export function contractStatusVariant(
   estado: ContractStatus,
-): "default" | "secondary" | "outline" | "destructive" {
+): "success" | "warning" | "outline" | "destructive" {
   switch (estado) {
     case "VIGENTE":
-      return "default";
+      return "success";
     case "POR_VENCER":
-      return "secondary";
+      return "warning";
     case "VENCIDO":
       return "destructive";
     default:

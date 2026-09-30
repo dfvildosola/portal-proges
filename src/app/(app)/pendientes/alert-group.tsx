@@ -17,9 +17,9 @@ import { formatDate } from "@/lib/format";
 import { resolveAlert, resolvePropertyAlerts } from "./actions";
 
 const categoryIcon: Record<AlertCategory, React.ReactNode> = {
-  cobranza: <Wallet className="size-4 shrink-0 text-blue-500" />,
-  contribuciones: <Landmark className="size-4 shrink-0 text-amber-500" />,
-  propiedad: <Building className="size-4 shrink-0 text-slate-400" />,
+  cobranza: <Wallet className="size-4 shrink-0 text-info" />,
+  contribuciones: <Landmark className="size-4 shrink-0 text-warning" />,
+  propiedad: <Building className="size-4 shrink-0 text-muted-foreground" />,
 };
 
 type Alert = {
