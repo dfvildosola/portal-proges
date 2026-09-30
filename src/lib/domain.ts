@@ -15,6 +15,7 @@ import {
   TaxStatus,
   AlertType,
   AlertSeverity,
+  DocumentType,
 } from "@/generated/prisma/enums";
 
 export const propertyTypeLabels: Record<PropertyType, string> = {
@@ -166,6 +167,18 @@ export function alertSeverityVariant(
       return "default";
   }
 }
+
+export const documentTypeLabels: Record<DocumentType, string> = {
+  ESCRITURA_TITULO: "Escrituras y títulos",
+  CONTRATO: "Contratos",
+  AVALUO_TASACION: "Avalúos y tasaciones",
+  LEGAL_JUDICIAL: "Legales y judiciales",
+  MUNICIPAL: "Municipalidad",
+  SEGURO: "Seguros",
+  MANTENCION: "Mantención",
+  CONTRIBUCION: "Contribuciones",
+  OTRO: "Otros",
+};
 
 // Convierte un mapa de etiquetas en opciones { value, label } para un <Select>.
 export function enumOptions<T extends Record<string, string>>(

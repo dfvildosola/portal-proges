@@ -38,6 +38,7 @@ export function DataTable<TData, TValue>({
   initialVisibility,
   initialSorting,
   pageSize = 10,
+  pageSizeOptions,
 }: {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
@@ -46,6 +47,7 @@ export function DataTable<TData, TValue>({
   initialVisibility?: VisibilityState;
   initialSorting?: SortingState;
   pageSize?: number;
+  pageSizeOptions?: number[];
 }) {
   const [sorting, setSorting] = React.useState<SortingState>(
     initialSorting ?? [],
@@ -161,7 +163,7 @@ export function DataTable<TData, TValue>({
         </Table>
       </Card>
 
-      <DataTablePagination table={table} />
+      <DataTablePagination table={table} pageSizeOptions={pageSizeOptions} />
     </div>
   );
 }

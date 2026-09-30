@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Pencil, X, Plus } from "lucide-react";
+import { Pencil, X, Plus, Download, FileText } from "lucide-react";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import { BackLink } from "@/components/back-link";
@@ -33,12 +33,15 @@ import {
   alertTypeLabels,
   alertSeverityLabels,
   alertSeverityVariant,
+  documentTypeLabels,
 } from "@/lib/domain";
 import { resolveAlert } from "../../pendientes/actions";
 import { formatMoney, formatDate, formatM2 } from "@/lib/format";
 import { DeletePropertyButton } from "./delete-button";
 import { AddOwnerForm, AddTagForm, AddUnitForm, AddAssessmentForm } from "./owners-tags-forms";
 import { AddMovementForm, AddTaxForm, GenerateYearTaxesForm, UpdateTaxMontoForm } from "./economic-forms";
+import { UploadDocumentDialog } from "./documents-forms";
+import { StatusQuickEdit } from "./status-quick-edit";
 import {
   removeOwner,
   removeTag,
@@ -47,6 +50,7 @@ import {
   removeMovement,
   markTaxPaid,
   removeTax,
+  deleteDocument,
 } from "../actions";
 
 // Par etiqueta/valor dentro de una grilla de definición.
@@ -96,6 +100,7 @@ export default async function PropiedadDetallePage({
         include: { tenant: { select: { nombre: true, rut: true } } },
         orderBy: { fechaInicio: "desc" },
       },
+      documents: { orderBy: { createdAt: "desc" } },
       movements: { orderBy: { fecha: "desc" } },
       taxes: { orderBy: [{ anio: "desc" }, { cuota: "asc" }] },
       alerts: {
@@ -105,6 +110,26 @@ export default async function PropiedadDetallePage({
     },
   });
   if (!p) notFound();
+
+  // Agrupa documentos por categoría (tipo) para mostrarlos en secciones.
+  const docsByType = p.documents.reduce<Record<string, typeof p.documents>>(
+    (acc, doc) => {
+      (acc[doc.tipo] ??= []).push(doc);
+      return acc;
+    },
+    {},
+  );
+
+  const today = new Date();
+  const in30Days = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+  function expiryBadge(fechaVencimiento: Date | null) {
+    if (!fechaVencimiento) return null;
+    if (fechaVencimiento < today)
+      return <Badge variant="destructive">Vencido</Badge>;
+    if (fechaVencimiento < in30Days)
+      return <Badge variant="secondary">Por vencer</Badge>;
+    return null;
+  }
 
   // Entidades existentes (para reutilizar en vez de duplicar), excluyendo las
   // que ya figuran como dueñas de esta propiedad.
@@ -132,9 +157,7 @@ export default async function PropiedadDetallePage({
             <h1 className="text-2xl font-semibold tracking-tight">
               {p.rolSII}
             </h1>
-            <Badge variant={propertyStatusVariant(p.estado)}>
-              {propertyStatusLabels[p.estado]}
-            </Badge>
+            <StatusQuickEdit propertyId={p.id} current={p.estado} />
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {p.direccion}, {p.comuna}
@@ -425,13 +448,87 @@ export default async function PropiedadDetallePage({
           </Card>
         </TabsContent>
 
-        <TabsContent value="documentos" className="mt-6">
-          <div className="rounded-xl border border-dashed bg-muted/30 p-6 text-center">
-            <p className="text-sm font-medium">Sin documentos cargados</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              La carga de documentos (escritura, dominio vigente, inscripción CBR, seguros) estará disponible próximamente.
+        <TabsContent value="documentos" className="mt-6 max-w-3xl space-y-6">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              {p.documents.length === 0
+                ? "Sin documentos cargados"
+                : `${p.documents.length} ${p.documents.length === 1 ? "documento" : "documentos"}`}
             </p>
+            <UploadDocumentDialog propertyId={p.id} />
           </div>
+
+          {p.documents.length === 0 ? (
+            <div className="rounded-xl border border-dashed bg-muted/30 p-8 text-center">
+              <p className="text-sm font-medium">Sin documentos</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Sube escrituras, contratos, avalúos, seguros y más.
+              </p>
+            </div>
+          ) : (
+            Object.entries(docsByType).map(([tipo, docs]) => (
+              <div key={tipo}>
+                <h3 className="mb-2 text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  {documentTypeLabels[tipo as keyof typeof documentTypeLabels]}
+                </h3>
+                <div className="divide-y rounded-lg border">
+                  {docs.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="flex items-start justify-between px-3 py-2.5 gap-3"
+                    >
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <p className="truncate text-sm font-medium">
+                              {doc.nombre}
+                            </p>
+                            <Badge variant="secondary" className="text-xs font-normal">
+                              {documentTypeLabels[doc.tipo]}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {doc.fechaEmision
+                              ? `Emisión: ${formatDate(doc.fechaEmision)} · `
+                              : ""}
+                            Subido: {formatDate(doc.createdAt)}
+                            {doc.fechaVencimiento
+                              ? ` · Vence: ${formatDate(doc.fechaVencimiento)}`
+                              : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {expiryBadge(doc.fechaVencimiento)}
+                        <a
+                          href={doc.blobKey}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download={doc.nombre}
+                          className="inline-flex h-7 items-center gap-1 rounded-lg border border-border bg-background px-2 text-xs font-medium transition-colors hover:bg-muted"
+                        >
+                          <Download className="size-3.5" />
+                          Descargar
+                        </a>
+                        <form action={deleteDocument}>
+                          <input type="hidden" name="documentId" value={doc.id} />
+                          <input type="hidden" name="propertyId" value={p.id} />
+                          <button
+                            type="submit"
+                            aria-label="Eliminar documento"
+                            className="text-muted-foreground transition-colors hover:text-destructive"
+                          >
+                            <X className="size-4" />
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
         </TabsContent>
 
         <TabsContent value="contrato" className="mt-6 max-w-3xl">

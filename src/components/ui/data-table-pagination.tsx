@@ -19,8 +19,10 @@ import {
 
 export function DataTablePagination<TData>({
   table,
+  pageSizeOptions = [10, 20, 30, 50],
 }: {
   table: Table<TData>;
+  pageSizeOptions?: number[];
 }) {
   const { pageIndex, pageSize } = table.getState().pagination;
   const total = table.getFilteredRowModel().rows.length;
@@ -41,7 +43,7 @@ export function DataTablePagination<TData>({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {[10, 20, 30, 50].map((size) => (
+              {pageSizeOptions.map((size) => (
                 <SelectItem key={size} value={String(size)}>
                   {size}
                 </SelectItem>

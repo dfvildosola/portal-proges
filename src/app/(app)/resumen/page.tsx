@@ -9,12 +9,12 @@ import {
   AlertTriangle,
   Receipt,
   Home as HomeIcon,
+  Tag,
 } from "lucide-react";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import { getLatestUf, toCLP } from "@/lib/currency";
 import { PageHeader } from "@/components/page-header";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -22,22 +22,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { formatMoney } from "@/lib/format";
 import {
   propertyTypeLabels,
-  propertyGoalLabels,
-  propertyStatusLabels,
   movementCategoryLabels,
 } from "@/lib/domain";
 import { OwnerFilter } from "./owner-filter";
+import { RentabilidadTable } from "./rentabilidad-table";
+import type { RentabilidadRow } from "./rentabilidad-table";
 
 // Paleta para el gráfico de sociedades (legible en claro y oscuro).
 const DONUT_COLORS = [
@@ -208,6 +200,8 @@ export default async function ResumenPage({
   let arrendadaSinContrato = 0;
   let taxPendienteMonto = 0;
   let taxPendienteCount = 0;
+  let enVentaCount = 0;
+  let enVentaValorCLP = 0;
 
   const esCartera = !selGrupoId && !selOwnerId;
   const grupoNombre = new Map(grupos.map((g) => [g.id, g.nombre]));
@@ -221,17 +215,7 @@ export default async function ResumenPage({
   // dueño independiente → gráfico. Clave: "grupo:<id>" | "owner:<id>".
   const porTitular = new Map<string, number>();
   const fracById = new Map<string, number>();
-  const rentaRows: {
-    id: string;
-    rol: string;
-    direccion: string;
-    tipo: string;
-    objetivo: string;
-    estado: string;
-    valorCLP: number;
-    annualCLP: number;
-    capRate: number | null;
-  }[] = [];
+  const rentaRows: RentabilidadRow[] = [];
 
   for (const p of properties) {
     const frac = shareOf(p);
@@ -292,9 +276,9 @@ export default async function ResumenPage({
         id: p.id,
         rol: p.rolSII,
         direccion: p.direccion,
-        tipo: propertyTypeLabels[p.tipo],
-        objetivo: propertyGoalLabels[p.objetivo],
-        estado: propertyStatusLabels[p.estado],
+        tipo: p.tipo,
+        objetivo: p.objetivo,
+        estado: p.estado,
         valorCLP: comercial * frac,
         annualCLP: annual * frac,
         capRate: comercial > 0 && hasContract ? (annual / comercial) * 100 : null,
@@ -303,6 +287,10 @@ export default async function ResumenPage({
 
     if (p.estado === "DESOCUPADA") desocupadas++;
     if (p.estado === "ARRENDADA" && !hasContract) arrendadaSinContrato++;
+    if (p.estado === "EN_VENTA") {
+      enVentaCount++;
+      if (comercial !== null) enVentaValorCLP += comercial * frac;
+    }
 
     for (const t of p.taxes) {
       taxPendienteCount++;
@@ -362,7 +350,6 @@ export default async function ResumenPage({
   const yieldBruto =
     patrimonioCLP > 0 ? (annualRentTotal / patrimonioCLP) * 100 : null;
 
-  rentaRows.sort((a, b) => (b.capRate ?? -1) - (a.capRate ?? -1));
 
   const tiposOrdenados = [...porTipo.entries()].sort((a, b) => b[1] - a[1]);
   const comunasOrdenadas = [...porComuna.entries()].sort((a, b) => b[1] - a[1]);
@@ -418,7 +405,7 @@ export default async function ResumenPage({
           {/* ---------------- Patrimonio ---------------- */}
           <section>
             <SectionTitle>Patrimonio</SectionTitle>
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
               <Metric
                 label="Valor comercial"
                 value={formatMoney(patrimonioCLP, "CLP")}
@@ -450,6 +437,17 @@ export default async function ResumenPage({
                 value={String(propsCount)}
                 sub={selNombre ? "con participación" : "en cartera"}
                 icon={HomeIcon}
+              />
+              <Metric
+                label="En venta"
+                value={String(enVentaCount)}
+                sub={
+                  enVentaCount > 0
+                    ? formatMoney(enVentaValorCLP, "CLP")
+                    : "ninguna"
+                }
+                icon={Tag}
+                href={enVentaCount > 0 ? "/propiedades" : undefined}
               />
             </div>
 
@@ -538,63 +536,9 @@ export default async function ResumenPage({
               )}
             </div>
             <p className="mb-3 text-sm text-muted-foreground">
-              Cap rate = arriendo anual ÷ valor comercial. Ordenado de mayor a
-              menor: lo de abajo rinde poco para lo que vale.
+              Cap rate = arriendo anual ÷ valor comercial.
             </p>
-            <div className="overflow-hidden rounded-xl border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Propiedad</TableHead>
-                    <TableHead>Objetivo</TableHead>
-                    <TableHead className="text-right">Valor comercial</TableHead>
-                    <TableHead className="text-right">Arriendo anual</TableHead>
-                    <TableHead className="text-right">Cap rate</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rentaRows.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell>
-                        <Link
-                          href={`/propiedades/${r.id}`}
-                          className="font-medium underline-offset-2 hover:underline"
-                        >
-                          {r.rol}
-                        </Link>
-                        <div className="text-xs text-muted-foreground">
-                          {r.tipo} · {r.direccion}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {r.objetivo}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatMoney(r.valorCLP, "CLP")}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {r.annualCLP > 0 ? (
-                          formatMoney(r.annualCLP, "CLP")
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {r.capRate !== null ? (
-                          <span className="font-medium">
-                            {formatPct(r.capRate)}
-                          </span>
-                        ) : (
-                          <Badge variant="secondary">Sin contrato</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <RentabilidadTable data={rentaRows} />
           </section>
 
           {/* ---------------- Salud / cobranza ---------------- */}
