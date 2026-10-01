@@ -15,9 +15,12 @@ import {
   movementTypeLabels,
   movementCategoryLabels,
   currencyLabels,
+  billTypeLabels,
   enumOptions,
 } from "@/lib/domain";
 import { addMovement, addTax, generateYearTaxes, updateTaxMonto } from "../actions";
+import { addBill } from "../../cuentas/actions";
+import type { BillFormState } from "../../cuentas/actions";
 import type { MovementFormState, TaxFormState } from "../actions";
 
 function Field({
@@ -224,6 +227,74 @@ export function AddTaxForm({ propertyId }: { propertyId: string }) {
       </div>
       {state?.error && (
         <p className="mt-2 text-sm text-destructive">{state.error}</p>
+      )}
+    </form>
+  );
+}
+
+export function AddBillForm({ propertyId }: { propertyId: string }) {
+  const [state, formAction, pending] = useActionState(addBill, {} as BillFormState);
+  const err = (f: string) => state?.fieldErrors?.[f];
+
+  return (
+    <form action={formAction} className="w-full space-y-3">
+      <input type="hidden" name="propertyId" value={propertyId} />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Field label="Tipo" error={err("tipo")}>
+          <Select name="tipo" defaultValue="GASTO_COMUN">
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {enumOptions(billTypeLabels).map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Período (AAAA-MM)" htmlFor="bill-periodo" error={err("periodo")}>
+          <Input id="bill-periodo" name="periodo" placeholder="2026-10" maxLength={7} />
+        </Field>
+        <Field label="Vence" htmlFor="bill-vence" error={err("fechaVencimiento")}>
+          <Input id="bill-vence" name="fechaVencimiento" type="date" />
+        </Field>
+      </div>
+      <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[1fr_auto_1fr_auto]">
+        <Field label="Monto (opcional)" htmlFor="bill-monto" error={err("monto")}>
+          <Input
+            id="bill-monto"
+            name="monto"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="Sin monto"
+          />
+        </Field>
+        <Field label="Moneda" error={err("moneda")}>
+          <Select name="moneda" defaultValue="CLP">
+            <SelectTrigger className="w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {enumOptions(currencyLabels).map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Notas (opcional)" htmlFor="bill-notas" error={err("notas")}>
+          <Input id="bill-notas" name="notas" placeholder="Observaciones" />
+        </Field>
+        <Button type="submit" variant="outline" disabled={pending}>
+          Agregar
+        </Button>
+      </div>
+      {state?.error && (
+        <p className="text-sm text-destructive">{state.error}</p>
       )}
     </form>
   );

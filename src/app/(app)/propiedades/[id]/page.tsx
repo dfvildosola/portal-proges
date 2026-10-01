@@ -5,7 +5,6 @@ import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -17,19 +16,15 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   propertyTypeLabels,
-  propertyStatusLabels,
   propertyGoalLabels,
   currencyLabels,
   ownerTypeLabels,
-  propertyStatusVariant,
   propertyUnitTypeLabels,
   contractStatusLabels,
   contractStatusVariant,
   movementTypeLabels,
   movementCategoryLabels,
-  taxStatusLabels,
   movementTypeVariant,
-  taxStatusVariant,
   alertTypeLabels,
   alertSeverityLabels,
   alertSeverityVariant,
@@ -39,7 +34,9 @@ import { resolveAlert } from "../../pendientes/actions";
 import { formatMoney, formatDate, formatM2 } from "@/lib/format";
 import { DeletePropertyButton } from "./delete-button";
 import { AddOwnerForm, AddTagForm, AddUnitForm, AddAssessmentForm } from "./owners-tags-forms";
-import { AddMovementForm, AddTaxForm, GenerateYearTaxesForm, UpdateTaxMontoForm } from "./economic-forms";
+import { AddMovementForm } from "./economic-forms";
+import { TaxesTab } from "./taxes-tab";
+import { BillsTab } from "./bills-tab";
 import { UploadDocumentDialog } from "./documents-forms";
 import { StatusQuickEdit } from "./status-quick-edit";
 import {
@@ -48,8 +45,6 @@ import {
   removeUnit,
   removeAssessment,
   removeMovement,
-  markTaxPaid,
-  removeTax,
   deleteDocument,
 } from "../actions";
 
@@ -65,22 +60,13 @@ function DataItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-// Placeholder con estilo para las pestañas que se construyen en fases siguientes.
-function ComingSoon({ fase, children }: { fase: string; children: string }) {
-  return (
-    <div className="flex flex-col items-start gap-2 rounded-xl border border-dashed bg-muted/30 p-6">
-      <Badge variant="secondary">{fase}</Badge>
-      <p className="text-sm text-muted-foreground">{children}</p>
-    </div>
-  );
-}
-
 const TABS = [
   { value: "resumen", label: "Resumen" },
   { value: "documentos", label: "Documentos" },
   { value: "contrato", label: "Contrato" },
   { value: "economico", label: "Económico" },
   { value: "contribuciones", label: "Contribuciones" },
+  { value: "cuentas", label: "Cuentas" },
   { value: "alertas", label: "Alertas" },
 ];
 
@@ -103,6 +89,7 @@ export default async function PropiedadDetallePage({
       documents: { orderBy: { createdAt: "desc" } },
       movements: { orderBy: { fecha: "desc" } },
       taxes: { orderBy: [{ anio: "desc" }, { cuota: "asc" }] },
+      bills: { orderBy: { fechaVencimiento: "asc" } },
       alerts: {
         where: { estado: "ACTIVA" },
         orderBy: { createdAt: "desc" },
@@ -654,96 +641,11 @@ export default async function PropiedadDetallePage({
         </TabsContent>
 
         <TabsContent value="contribuciones" className="mt-6 max-w-3xl">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Contribuciones</CardTitle>
-              <GenerateYearTaxesForm propertyId={p.id} />
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {p.taxes.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Sin contribuciones registradas.
-                </p>
-              ) : (
-                <div className="divide-y rounded-lg border">
-                  {p.taxes.map((t) => (
-                    <div
-                      key={t.id}
-                      className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <div>
-                        <span className="text-sm font-medium">
-                          Cuota {t.cuota} · {t.anio}
-                        </span>
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          {t.monto !== null ? `${formatMoney(t.monto)} · ` : ""}vence{" "}
-                          {formatDate(t.fechaVencimiento)}
-                        </span>
-                        {t.estado === "PAGADA" && t.fechaPago && (
-                          <span className="block text-xs text-muted-foreground">
-                            Pagada el {formatDate(t.fechaPago)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant={taxStatusVariant(t.estado)}>
-                          {taxStatusLabels[t.estado]}
-                        </Badge>
-                        {t.estado === "PENDIENTE" && t.monto === null && (
-                          <UpdateTaxMontoForm taxId={t.id} propertyId={p.id} />
-                        )}
-                        {t.estado === "PENDIENTE" && t.monto !== null && (
-                          <form
-                            action={markTaxPaid}
-                            className="flex items-center gap-1"
-                          >
-                            <input type="hidden" name="taxId" value={t.id} />
-                            <input
-                              type="hidden"
-                              name="propertyId"
-                              value={p.id}
-                            />
-                            <Input
-                              name="fechaPago"
-                              type="date"
-                              required
-                              className="h-7 w-36 text-xs"
-                            />
-                            <Button
-                              type="submit"
-                              size="sm"
-                              variant="outline"
-                              className="h-7 px-2 text-xs"
-                            >
-                              Marcar pagada
-                            </Button>
-                          </form>
-                        )}
-                        <form action={removeTax}>
-                          <input type="hidden" name="taxId" value={t.id} />
-                          <input
-                            type="hidden"
-                            name="propertyId"
-                            value={p.id}
-                          />
-                          <button
-                            type="submit"
-                            aria-label="Quitar contribución"
-                            className="text-muted-foreground transition-colors hover:text-destructive"
-                          >
-                            <X className="size-4" />
-                          </button>
-                        </form>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="border-t">
-              <AddTaxForm propertyId={p.id} />
-            </CardFooter>
-          </Card>
+          <TaxesTab propertyId={p.id} taxes={p.taxes} />
+        </TabsContent>
+
+        <TabsContent value="cuentas" className="mt-6 max-w-3xl">
+          <BillsTab propertyId={p.id} bills={p.bills} />
         </TabsContent>
 
         <TabsContent value="alertas" className="mt-6 max-w-3xl">

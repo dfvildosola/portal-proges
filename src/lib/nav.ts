@@ -10,6 +10,7 @@ import {
   Users,
   Network,
   PieChart,
+  Receipt,
   type LucideIcon,
 } from "lucide-react";
 
@@ -32,6 +33,7 @@ export const navGroups: NavGroup[] = [
       { href: "/", label: "Inicio", icon: Home },
       { href: "/pendientes", label: "Pendientes", icon: Bell, badge: true },
       { href: "/cobranza", label: "Cobranza", icon: Wallet },
+      { href: "/cuentas", label: "Cuentas", icon: Receipt },
     ],
   },
   {

@@ -22,8 +22,8 @@ Plan aprobado: `~/.claude/plans/adaptive-stirring-koala.md` (copiado abajo en lo
 ## Etapas
 
 - ✅ **Etapa 1 — Base de datos y acciones.** `prisma/schema.prisma` (enums `BillType`, `BillStatus`, modelo `PropertyBill`, relación en `Property`) + migración; `src/app/(app)/cuentas/actions.ts` (`addBill`, `markBillPaid`, `removeBill`); etiquetas en `src/lib/domain.ts`; ADR en `docs/decisiones/`.
-- ⏳ **Etapa 2 — Pantallas.** Primero extraer la pestaña contribuciones de `propiedades/[id]/page.tsx` (804 líneas, sobre el tope; solo mover código). Después pestaña «Cuentas» en la ficha, y página `/cuentas` con filtros + entrada en `src/lib/nav.ts` (grupo «Trabajo diario»).
-- ◻️ **Etapa 3 — Alertas.** Dos valores nuevos en `AlertType` (migración), reglas en `syncAlerts`, datos de ejemplo en `prisma/seed.ts`.
+- ✅ **Etapa 2 — Pantallas.** Primero extraer la pestaña contribuciones de `propiedades/[id]/page.tsx` (804 líneas, sobre el tope; solo mover código). Después pestaña «Cuentas» en la ficha, y página `/cuentas` con filtros + entrada en `src/lib/nav.ts` (grupo «Trabajo diario»).
+- ⏳ **Etapa 3 — Alertas.** Dos valores nuevos en `AlertType` (migración), reglas en `syncAlerts`, datos de ejemplo en `prisma/seed.ts`.
 
 ## Hallazgos útiles del código
 
@@ -41,10 +41,14 @@ Plan aprobado: `~/.claude/plans/adaptive-stirring-koala.md` (copiado abajo en lo
 Hecha y verificada (lint 0 errores, build ok). Migración `20261001232456_cuentas_por_pagar` aplicada en `proges_dev`. Acciones en `src/app/(app)/cuentas/actions.ts` (`addBill(prev, formData)`, `markBillPaid(formData)`, `removeBill(formData)`; campos `billId`, `propertyId`, `fechaPago`; formulario de alta: `tipo`, `periodo` AAAA-MM, `monto`, `moneda`, `fechaVencimiento`, `notas`). Etiquetas en `src/lib/domain.ts`: `billTypeLabels`, `billStatusLabels`, `billStatusVariant`. ADR en `docs/decisiones/0001-cuentas-por-pagar.md`.
 Desvío: los helpers (`toFieldErrors`, `assertProperty`, `dateField`) se copiaron en `cuentas/actions.ts` porque un archivo `"use server"` no puede exportar funciones no async. Anotado en `PENDIENTES.md`.
 
+## Etapa 2: cómo quedó
+
+Hecha; lint 0 errores, build ok. Pestaña contribuciones extraída a `propiedades/[id]/taxes-tab.tsx`; pestaña «Cuentas» en `bills-tab.tsx` + `AddBillForm` en `economic-forms.tsx`; página `/cuentas` (filtros por tipo/estado con searchParams, vencidas destacadas) y entrada en `nav.ts`. `page.tsx` quedó en 706 líneas.
+- «Vencida» = pendiente con vencimiento pasado, calculada en `cuentas/page.tsx`, no es estado en la base. La Etapa 3 debe usar la misma regla.
+- No verificado en navegador: la ficha con la pestaña, alta, marcar pagada, y /cuentas con filas (la base local no tiene propiedades). Conviene correr el seed en la etapa 3 y probar todo.
+- La pestaña no se abre por URL (no existe `?tab=` en la ficha).
+- Si un `next dev` viejo da 500 «db.propertyBill undefined»: es un cliente Prisma viejo; reiniciarlo.
+
 ## Paso siguiente exacto
 
-Etapa 2. Subagente Sonnet, piezas en serie (todas tocan `propiedades/[id]/`):
-1. Extraer la pestaña contribuciones de `src/app/(app)/propiedades/[id]/page.tsx` (804 líneas, l.657-745) a un componente aparte. Solo mover código; el resultado debe verse igual.
-2. Pestaña «Cuentas» en esa ficha (lista de `p.bills`, «Marcar pagada», borrar, `AddBillForm` en `economic-forms.tsx`), copiando la de contribuciones. Hay que cargar `bills` en la consulta de la propiedad.
-3. Página `/cuentas` (`src/app/(app)/cuentas/page.tsx`) con cuentas de todas las propiedades, filtros por tipo y estado, vencidas destacadas; entrada en `src/lib/nav.ts` (grupo «Trabajo diario»). Leer `node_modules/next/dist/docs/` antes.
-Verifica: lint, build y probar en el navegador (`npm run dev`).
+Etapa 3. Subagente Sonnet: dos valores nuevos en `AlertType` (migración), reglas en `syncAlerts` (`src/lib/alerts.ts`: «cuenta vencida» ALTA, «por vencer ≤7 días» MEDIA, molde: reglas de contribuciones), etiquetas en `domain.ts`, cuentas de ejemplo en `prisma/seed.ts`. Después probar todo en el navegador con datos del seed (ficha, alta, pagar, /cuentas, alertas). Cierre: `/code-review`, borrar TAREA.md, actualizar PENDIENTES.md.
