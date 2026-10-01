@@ -53,7 +53,7 @@ const billSchema = z.object({
     .trim()
     .optional()
     .transform((v) => (v === undefined || v === "" ? null : v))
-    .refine((v) => v === null || (!Number.isNaN(Number(v)) && Number(v) >= 0), {
+    .refine((v) => v === null || (!Number.isNaN(Number(v)) && Number(v) >= 0 && Number(v) < 1e12), {
       message: "Debe ser un número válido",
     }),
   moneda: z
@@ -127,7 +127,7 @@ export async function markBillPaid(formData: FormData): Promise<void> {
 
   const orgId = await getOrgId();
   await db.propertyBill.updateMany({
-    where: { id: billId, organizationId: orgId },
+    where: { id: billId, organizationId: orgId, estado: BillStatus.PENDIENTE },
     data: { estado: BillStatus.PAGADA, fechaPago },
   });
   revalidatePath(`/propiedades/${propertyId}`);
