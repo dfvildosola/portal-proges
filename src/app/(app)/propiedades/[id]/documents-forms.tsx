@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,17 +27,18 @@ import type { DocumentFormState } from "../actions";
 export function UploadDocumentDialog({ propertyId }: { propertyId: string }) {
   const [open, setOpen] = useState(false);
   const [tipo, setTipo] = useState<DocumentType>("ESCRITURA_TITULO");
+  // Close and reset right when the upload succeeds, inside the action itself.
   const [state, formAction, pending] = useActionState(
-    uploadDocument,
+    async (prev: DocumentFormState, formData: FormData) => {
+      const result = await uploadDocument(prev, formData);
+      if (result.success) {
+        setOpen(false);
+        setTipo("ESCRITURA_TITULO");
+      }
+      return result;
+    },
     {} as DocumentFormState,
   );
-
-  useEffect(() => {
-    if (state?.success) {
-      setOpen(false);
-      setTipo("ESCRITURA_TITULO");
-    }
-  }, [state?.success]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
