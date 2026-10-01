@@ -100,6 +100,19 @@ enum TaxStatus {
   PAGADA
 }
 
+enum BillType {
+  GASTO_COMUN
+  LUZ
+  AGUA
+  GAS
+  OTRO
+}
+
+enum BillStatus {
+  PENDIENTE
+  PAGADA
+}
+
 enum DocumentType {
   ESCRITURA_TITULO
   CONTRATO
@@ -168,6 +181,7 @@ model Property {
   contracts LeaseContract[]
   movements Movement[]
   taxes     PropertyTax[]
+  bills     PropertyBill[]
   alerts    Alert[]
 
   @@index([organizationId])
@@ -370,6 +384,28 @@ model PropertyTax {
 
   @@unique([propertyId, anio, cuota])
   @@index([organizationId])
+}
+
+// Cuenta que el dueño debe pagar por una propiedad (gasto común, luz, agua,
+// gas, otro). Las contribuciones siguen aparte en PropertyTax.
+model PropertyBill {
+  id               String     @id @default(cuid())
+  organizationId   String
+  propertyId       String
+  tipo             BillType
+  periodo          String // "YYYY-MM"
+  monto            Decimal?   @db.Decimal(14, 2)
+  moneda           Currency   @default(CLP)
+  fechaVencimiento DateTime
+  estado           BillStatus @default(PENDIENTE)
+  fechaPago        DateTime?
+  notas            String?
+  createdAt        DateTime   @default(now())
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([propertyId])
 }
 
 // ----------------------------------------------------------------------------

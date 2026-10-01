@@ -21,8 +21,8 @@ Plan aprobado: `~/.claude/plans/adaptive-stirring-koala.md` (copiado abajo en lo
 
 ## Etapas
 
-- ⏳ **Etapa 1 — Base de datos y acciones.** `prisma/schema.prisma` (enums `BillType`, `BillStatus`, modelo `PropertyBill`, relación en `Property`) + migración; `src/app/(app)/cuentas/actions.ts` (`addBill`, `markBillPaid`, `removeBill`); etiquetas en `src/lib/domain.ts`; ADR en `docs/decisiones/`.
-- ◻️ **Etapa 2 — Pantallas.** Primero extraer la pestaña contribuciones de `propiedades/[id]/page.tsx` (804 líneas, sobre el tope; solo mover código). Después pestaña «Cuentas» en la ficha, y página `/cuentas` con filtros + entrada en `src/lib/nav.ts` (grupo «Trabajo diario»).
+- ✅ **Etapa 1 — Base de datos y acciones.** `prisma/schema.prisma` (enums `BillType`, `BillStatus`, modelo `PropertyBill`, relación en `Property`) + migración; `src/app/(app)/cuentas/actions.ts` (`addBill`, `markBillPaid`, `removeBill`); etiquetas en `src/lib/domain.ts`; ADR en `docs/decisiones/`.
+- ⏳ **Etapa 2 — Pantallas.** Primero extraer la pestaña contribuciones de `propiedades/[id]/page.tsx` (804 líneas, sobre el tope; solo mover código). Después pestaña «Cuentas» en la ficha, y página `/cuentas` con filtros + entrada en `src/lib/nav.ts` (grupo «Trabajo diario»).
 - ◻️ **Etapa 3 — Alertas.** Dos valores nuevos en `AlertType` (migración), reglas en `syncAlerts`, datos de ejemplo en `prisma/seed.ts`.
 
 ## Hallazgos útiles del código
@@ -36,6 +36,15 @@ Plan aprobado: `~/.claude/plans/adaptive-stirring-koala.md` (copiado abajo en lo
 
 - El espacio `mejoras` fue cerrado en medio de la sesión; no se perdió nada (`main` estaba igual). Se decidió trabajar en el original.
 
+## Etapa 1: cómo quedó
+
+Hecha y verificada (lint 0 errores, build ok). Migración `20261001232456_cuentas_por_pagar` aplicada en `proges_dev`. Acciones en `src/app/(app)/cuentas/actions.ts` (`addBill(prev, formData)`, `markBillPaid(formData)`, `removeBill(formData)`; campos `billId`, `propertyId`, `fechaPago`; formulario de alta: `tipo`, `periodo` AAAA-MM, `monto`, `moneda`, `fechaVencimiento`, `notas`). Etiquetas en `src/lib/domain.ts`: `billTypeLabels`, `billStatusLabels`, `billStatusVariant`. ADR en `docs/decisiones/0001-cuentas-por-pagar.md`.
+Desvío: los helpers (`toFieldErrors`, `assertProperty`, `dateField`) se copiaron en `cuentas/actions.ts` porque un archivo `"use server"` no puede exportar funciones no async. Anotado en `PENDIENTES.md`.
+
 ## Paso siguiente exacto
 
-Lanzar un subagente Sonnet para la Etapa 1 (las tres piezas en serie: schema+migración → acciones+domain → ADR). Después revisar `git diff --stat`, correr `npm run lint` y `npm run build`, commit, actualizar este archivo y pedirle a Diego `/clear` + `sigue`.
+Etapa 2. Subagente Sonnet, piezas en serie (todas tocan `propiedades/[id]/`):
+1. Extraer la pestaña contribuciones de `src/app/(app)/propiedades/[id]/page.tsx` (804 líneas, l.657-745) a un componente aparte. Solo mover código; el resultado debe verse igual.
+2. Pestaña «Cuentas» en esa ficha (lista de `p.bills`, «Marcar pagada», borrar, `AddBillForm` en `economic-forms.tsx`), copiando la de contribuciones. Hay que cargar `bills` en la consulta de la propiedad.
+3. Página `/cuentas` (`src/app/(app)/cuentas/page.tsx`) con cuentas de todas las propiedades, filtros por tipo y estado, vencidas destacadas; entrada en `src/lib/nav.ts` (grupo «Trabajo diario»). Leer `node_modules/next/dist/docs/` antes.
+Verifica: lint, build y probar en el navegador (`npm run dev`).

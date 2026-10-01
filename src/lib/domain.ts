@@ -13,6 +13,8 @@ import {
   MovementType,
   MovementCategory,
   TaxStatus,
+  BillType,
+  BillStatus,
   AlertType,
   AlertSeverity,
   DocumentType,
@@ -98,6 +100,19 @@ export const taxStatusLabels: Record<TaxStatus, string> = {
   PAGADA: "Pagada",
 };
 
+export const billTypeLabels: Record<BillType, string> = {
+  GASTO_COMUN: "Gasto común",
+  LUZ: "Luz",
+  AGUA: "Agua",
+  GAS: "Gas",
+  OTRO: "Otro",
+};
+
+export const billStatusLabels: Record<BillStatus, string> = {
+  PENDIENTE: "Pendiente",
+  PAGADA: "Pagada",
+};
+
 export function chargeStatusVariant(
   estado: ChargeStatus,
 ): "success" | "warning" | "destructive" {
@@ -113,6 +128,12 @@ export function chargeStatusVariant(
 
 export function taxStatusVariant(
   estado: TaxStatus,
+): "success" | "warning" {
+  return estado === "PAGADA" ? "success" : "warning";
+}
+
+export function billStatusVariant(
+  estado: BillStatus,
 ): "success" | "warning" {
   return estado === "PAGADA" ? "success" : "warning";
 }
