@@ -150,6 +150,49 @@ export async function syncAlerts(
     });
   }
 
+  // Regla 6: Cuentas por pagar vencidas sin pagar (un alert por propiedad)
+  const cuentasVencidas = await db.propertyBill.findMany({
+    where: {
+      organizationId: orgId,
+      estado: "PENDIENTE",
+      fechaVencimiento: { lt: now },
+    },
+  });
+  const vencidasPorPropiedad = new Map<string, number>();
+  for (const b of cuentasVencidas) {
+    vencidasPorPropiedad.set(b.propertyId, (vencidasPorPropiedad.get(b.propertyId) ?? 0) + 1);
+  }
+  for (const [propertyId, count] of vencidasPorPropiedad) {
+    specs.push({
+      tipo: AlertType.CUENTA_VENCIDA,
+      severidad: AlertSeverity.ALTA,
+      mensaje: `${count} cuenta${count === 1 ? "" : "s"} vencida${count === 1 ? "" : "s"} sin pagar.`,
+      propertyId,
+    });
+  }
+
+  // Regla 6b: Cuentas por pagar que vencen en los próximos 7 días (un alert por propiedad)
+  const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const cuentasPorVencer = await db.propertyBill.findMany({
+    where: {
+      organizationId: orgId,
+      estado: "PENDIENTE",
+      fechaVencimiento: { gte: now, lte: in7Days },
+    },
+  });
+  const porVencerPorPropiedad = new Map<string, number>();
+  for (const b of cuentasPorVencer) {
+    porVencerPorPropiedad.set(b.propertyId, (porVencerPorPropiedad.get(b.propertyId) ?? 0) + 1);
+  }
+  for (const [propertyId, count] of porVencerPorPropiedad) {
+    specs.push({
+      tipo: AlertType.CUENTA_POR_VENCER,
+      severidad: AlertSeverity.MEDIA,
+      mensaje: `${count} cuenta${count === 1 ? "" : "s"} por vencer en los próximos 7 días.`,
+      propertyId,
+    });
+  }
+
   // Regla 5: Propiedad DESOCUPADA hace >3 meses
   const desocupadas = await db.property.findMany({
     where: {

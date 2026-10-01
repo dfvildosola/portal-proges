@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Building, Wallet, Landmark, ChevronDown } from "lucide-react";
+import { Building, Wallet, Landmark, Receipt, ChevronDown } from "lucide-react";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ const categoryIcon: Record<AlertCategory, React.ReactNode> = {
   cobranza: <Wallet className="size-4 shrink-0 text-info" />,
   contribuciones: <Landmark className="size-4 shrink-0 text-warning" />,
   propiedad: <Building className="size-4 shrink-0 text-muted-foreground" />,
+  cuentas: <Receipt className="size-4 shrink-0 text-warning" />,
 };
 
 type Alert = {

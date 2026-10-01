@@ -151,9 +151,11 @@ export const alertTypeLabels: Record<AlertType, string> = {
   CONTRIBUCION_IMPAGA: "Contribución impaga",
   CONTRIBUCION_POR_VENCER: "Contribución por vencer",
   DESOCUPADA_PROLONGADA: "Desocupada prolongada",
+  CUENTA_VENCIDA: "Cuenta vencida",
+  CUENTA_POR_VENCER: "Cuenta por vencer",
 };
 
-export type AlertCategory = "cobranza" | "contribuciones" | "propiedad";
+export type AlertCategory = "cobranza" | "contribuciones" | "propiedad" | "cuentas";
 
 export const alertTypeCategory: Record<AlertType, AlertCategory> = {
   ARRENDADA_SIN_CONTRATO: "cobranza",
@@ -162,12 +164,15 @@ export const alertTypeCategory: Record<AlertType, AlertCategory> = {
   CONTRIBUCION_IMPAGA: "contribuciones",
   CONTRIBUCION_POR_VENCER: "contribuciones",
   DESOCUPADA_PROLONGADA: "propiedad",
+  CUENTA_VENCIDA: "cuentas",
+  CUENTA_POR_VENCER: "cuentas",
 };
 
 export const alertCategoryLabels: Record<AlertCategory, string> = {
   cobranza: "Cobranza",
   contribuciones: "Contribuciones",
   propiedad: "Propiedad",
+  cuentas: "Cuentas",
 };
 
 export const alertSeverityLabels: Record<AlertSeverity, string> = {

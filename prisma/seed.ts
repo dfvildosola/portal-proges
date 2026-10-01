@@ -26,11 +26,6 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function pickN<T>(arr: T[], n: number): T[] {
-  const copy = [...arr].sort(() => Math.random() - 0.5);
-  return copy.slice(0, n);
-}
-
 function rut(base: number): string {
   const digits = String(base);
   const reversed = digits.split("").reverse().map(Number);
@@ -161,6 +156,7 @@ async function main() {
   console.log("🌱  Limpiando datos previos...");
   await db.alert.deleteMany({ where: { organizationId: ORG } });
   await db.propertyTax.deleteMany({ where: { organizationId: ORG } });
+  await db.propertyBill.deleteMany({ where: { organizationId: ORG } });
   await db.movement.deleteMany({ where: { organizationId: ORG } });
   await db.rentCharge.deleteMany({ where: { organizationId: ORG } });
   await db.leaseContract.deleteMany({ where: { organizationId: ORG } });
@@ -525,6 +521,33 @@ async function main() {
         },
       });
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Cuentas por pagar de ejemplo (vencida, por vencer, pagada, lejana)
+  // -------------------------------------------------------------------------
+  console.log("💡  Creando cuentas por pagar...");
+  const DIA = 86400000;
+  const cuentasEjemplo = [
+    { i: 0, tipo: "GASTO_COMUN", monto: 95000, venc: -10, estado: "PENDIENTE" },
+    { i: 1, tipo: "LUZ", monto: 42000, venc: 3, estado: "PENDIENTE" },
+    { i: 2, tipo: "AGUA", monto: 18500, venc: -20, estado: "PAGADA" },
+    { i: 3, tipo: "GAS", monto: 27000, venc: 25, estado: "PENDIENTE" },
+  ] as const;
+  for (const c of cuentasEjemplo) {
+    const vencimiento = new Date(Date.now() + c.venc * DIA);
+    await db.propertyBill.create({
+      data: {
+        organizationId: ORG,
+        propertyId: properties[c.i].prop.id,
+        tipo: c.tipo,
+        periodo: vencimiento.toISOString().slice(0, 7),
+        monto: c.monto,
+        fechaVencimiento: vencimiento,
+        estado: c.estado,
+        fechaPago: c.estado === "PAGADA" ? new Date(vencimiento.getTime() - 2 * DIA) : null,
+      },
+    });
   }
 
   // -------------------------------------------------------------------------
