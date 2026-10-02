@@ -21,8 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { documentTypeLabels, enumOptions } from "@/lib/domain";
 import type { DocumentType } from "@/generated/prisma/enums";
-import { uploadDocument } from "../actions";
-import type { DocumentFormState } from "../actions";
+import { uploadDocument } from "../documents-actions";
+import type { DocumentFormState } from "../documents-actions";
 
 export function UploadDocumentDialog({ propertyId }: { propertyId: string }) {
   const [open, setOpen] = useState(false);

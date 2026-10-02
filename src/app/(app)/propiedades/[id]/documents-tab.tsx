@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { documentTypeLabels } from "@/lib/domain";
 import { formatDate } from "@/lib/format";
 import { UploadDocumentDialog } from "./documents-forms";
-import { deleteDocument } from "../actions";
+import { deleteDocument } from "../documents-actions";
 
 // Contenido de la pestaña «Documentos» de la ficha: los documentos agrupados por tipo.
 export function DocumentsTab({

@@ -13,7 +13,7 @@ import {
 import { taxStatusLabels, taxStatusVariant } from "@/lib/domain";
 import { formatMoney, formatDate } from "@/lib/format";
 import { AddTaxForm, GenerateYearTaxesForm, UpdateTaxMontoForm } from "./economic-forms";
-import { markTaxPaid, removeTax } from "../actions";
+import { markTaxPaid, removeTax } from "../finance-actions";
 
 // Contenido de la pestaña «Contribuciones» de la ficha de propiedad.
 export function TaxesTab({

@@ -4,41 +4,13 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
+import { assertProperty, dateField, toFieldErrors } from "@/lib/form-helpers";
 import { BillStatus, BillType, Currency } from "@/generated/prisma/enums";
 
 export type BillFormState = {
   error?: string;
   fieldErrors?: Record<string, string>;
 };
-
-// Copias mínimas de helpers de propiedades/actions.ts: un archivo "use server"
-// solo puede exportar funciones async, así que no se pueden importar de ahí.
-function toFieldErrors(error: z.ZodError): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? "");
-    if (key && !out[key]) out[key] = issue.message;
-  }
-  return out;
-}
-
-// Confirma que la propiedad pertenece a la organización activa. Devuelve null si no.
-async function assertProperty(propertyId: string, orgId: string) {
-  return db.property.findFirst({
-    where: { id: propertyId, organizationId: orgId },
-    select: { id: true },
-  });
-}
-
-const dateField = (obligatorio: string) =>
-  z
-    .string()
-    .trim()
-    .min(1, obligatorio)
-    .refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)), {
-      message: "Fecha inválida",
-    })
-    .transform((v) => new Date(`${v}T00:00:00Z`));
 
 const billSchema = z.object({
   tipo: z.enum(Object.values(BillType) as [BillType, ...BillType[]], {

@@ -21,7 +21,7 @@ import { formatMoney, formatDate } from "@/lib/format";
 import { AddMovementForm } from "./economic-forms";
 import { TaxesTab } from "./taxes-tab";
 import { BillsTab } from "./bills-tab";
-import { removeMovement } from "../actions";
+import { removeMovement } from "../finance-actions";
 
 // Contenido de la pestaña «Finanzas» de la ficha: movimientos, contribuciones
 // y cuentas, cada uno en su tarjeta con título.

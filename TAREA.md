@@ -69,15 +69,19 @@ Las decisiones 3 y 6 se documentan en el ADR `docs/decisiones/0002-ficha-cifras-
     - `PENDIENTES.md` al día;
     - probado en el navegador;
     - revisión del `revisor` hecha, con sus hallazgos arreglados o anotados.
-- ⏳ **Etapa 2: valores con fecha y fuente, compra y deuda** (con migración).
-  - Primero partir `propiedades/actions.ts` (765 líneas).
-  - Campos nuevos en `Property`:
-    - fecha y fuente del valor comercial;
-    - fecha y precio de compra, con su moneda;
-    - saldo de la deuda, con su moneda y fecha.
-  - En la ficha: valor neto, plusvalía y «valor comercial hace N meses» (desactualizado pasados los 12).
-  - Patrimonio neto en `/resumen`. Primero partir `resumen/page.tsx` (773 líneas).
-  - ADR 0003. El detalle se confirma con Diego al empezar.
+- ⏳ **Etapa 2: valores con fecha y fuente, compra y deuda** (con migración). Plan de piezas aprobado el 2026-10-01: `~/.claude/plans/glowing-mixing-biscuit.md`. Decisiones (van al ADR 0003):
+  1. Fuente del valor comercial: tasación, corredor o estimación propia (enum `ValorFuente`). «Estimación automática» cuando exista el piloto.
+  2. Compra: fecha, precio y moneda, sin gastos de compra.
+  3. Deuda: saldo, moneda (por defecto UF) y fecha del saldo, más banco, dividendo mensual (en la moneda del saldo) y fecha del último dividendo.
+  4. `exentaContribuciones` (sí/no).
+  5. Todo como campos de `Property`, sin tabla de créditos (un crédito por propiedad).
+  6. Fechas opcionales; ninguna futura salvo la del último dividendo.
+  7. Plusvalía = valor − precio de compra, comparados en la moneda de la compra. Si la compra fue en CLP, aviso «en pesos de la fecha de compra: incluye la inflación».
+  8. Valor neto = valor − saldo, en la moneda del valor (con `toCLP` si no coinciden).
+  9. El dividendo se muestra, pero no entra al costo anual (mezcla capital e intereses).
+  10. Valor comercial desactualizado pasados 12 meses.
+  11. Sin saldo = sin deuda («Sin deuda registrada»).
+  - Piezas en serie: ✅ (a) partir `propiedades/actions.ts` · ◻️ (b) migración, formulario y seed · ◻️ (c) ficha · ◻️ (d) partir `/resumen` y patrimonio neto · ◻️ coordinador (ADR 0003, pendientes, memoria, navegador, revisor, commit).
 - ◻️ **Etapa 3: papeles en regla.**
   - Tipos de documento nuevos (migración): dominio vigente, hipotecas y gravámenes, certificado de avalúo, recepción final, reglamento de copropiedad, permiso de edificación, plano, derechos de agua y subdivisión SAG.
   - Lista por defecto según tipo de propiedad, escrita en `src/lib/papeles.ts`, y una tarjeta «Papeles» con ✓/✗ y fecha de emisión.
@@ -195,26 +199,7 @@ Decisiones tomadas en el camino:
 
 ## Paso siguiente exacto
 
-**Etapa 2.** Antes de planear las piezas, confirmar con Diego el detalle (el plan dice «el detalle se confirma con Diego al empezar»). Explicarle cada concepto con una analogía antes de preguntar:
-
-1. **Valor comercial:** fecha y fuente. ¿Qué fuentes ofrecer? El plan propone tasación, corredor, estimación propia y estimación automática.
-2. **Compra:** fecha, precio y moneda. ¿Hace falta registrar también gastos de compra (notaría, CBR, comisión) para la plusvalía, o basta con el precio?
-3. **Deuda:** ¿solo el saldo, con su moneda y su fecha, o también banco, dividendo y plazo? La regla 1 de código pide partir por lo mínimo.
-4. **Exenta de contribuciones:** ¿se agrega ahora el campo? Sale de `PENDIENTES.md`.
-
-Después, el plan de piezas en serie, cada una con un subagente Sonnet:
-
-- **(a) Partir `propiedades/actions.ts` (765 líneas) por tema.** Solo mover código. De paso:
-  - arreglar el error de porcentaje de `addOwner`;
-  - sacar a `src/lib/` los helpers copiados, si se llega a la tercera copia.
-- **(b) Migración** con los campos nuevos, y los formularios de propiedad para editarlos.
-- **(c) Ficha:**
-  - valor neto;
-  - plusvalía;
-  - «valor comercial hace N meses», desactualizado pasados los 12;
-  - «Datos al día» deja de decir «sin fecha».
-- **(d) Partir `resumen/page.tsx` (773 líneas)** y mostrar el patrimonio neto.
-- **Coordinador:** ADR 0003, `PENDIENTES.md`, navegador, `revisor`, commit y pausa.
+**Etapa 2, pieza (b)**: migración, formulario y seed, con un subagente Sonnet. La pieza (a) está hecha: las acciones viven en `propiedades/{actions,facts-actions,finance-actions,documents-actions}.ts` y los helpers en `src/lib/form-helpers.ts`. El encargo de cada pieza está en el plan `~/.claude/plans/glowing-mixing-biscuit.md`. Las piezas van en serie y el coordinador corre `npm run lint && npm run build` después de cada una. Si la conversación se alarga, pausar después de (b).
 
 Al cerrar la etapa 3, y antes de mezclar: `/code-review` sobre la branch, borrar `TAREA.md` y el contrato de prueba (ver abajo).
 

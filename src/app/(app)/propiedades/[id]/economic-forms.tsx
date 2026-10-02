@@ -18,10 +18,10 @@ import {
   billTypeLabels,
   enumOptions,
 } from "@/lib/domain";
-import { addMovement, addTax, generateYearTaxes, updateTaxMonto } from "../actions";
+import { addMovement, addTax, generateYearTaxes, updateTaxMonto } from "../finance-actions";
 import { addBill } from "../../cuentas/actions";
 import type { BillFormState } from "../../cuentas/actions";
-import type { MovementFormState, TaxFormState } from "../actions";
+import type { MovementFormState, TaxFormState } from "../finance-actions";
 
 function Field({
   label,

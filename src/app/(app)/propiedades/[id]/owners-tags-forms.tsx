@@ -26,7 +26,7 @@ import {
   propertyUnitTypeLabels,
   enumOptions,
 } from "@/lib/domain";
-import { addOwner, addTag, addUnit, addAssessment } from "../actions";
+import { addOwner, addTag, addUnit, addAssessment } from "../facts-actions";
 import type { PropertyFormState } from "../actions";
 
 const NUEVA = "__nueva__";

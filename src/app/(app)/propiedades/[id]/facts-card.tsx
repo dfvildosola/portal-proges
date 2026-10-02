@@ -29,7 +29,7 @@ import {
   AddAssessmentDialog,
 } from "./owners-tags-forms";
 import { Lista, Quitar, Seccion, sub } from "./facts-parts";
-import { removeOwner, removeTag, removeUnit, removeAssessment } from "../actions";
+import { removeOwner, removeTag, removeUnit, removeAssessment } from "../facts-actions";
 
 type PropiedadFicha = Pick<
   Property,
