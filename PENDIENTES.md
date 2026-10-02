@@ -6,6 +6,7 @@
   - un almacén de Vercel Blob aparte para desarrollo, para que ni `npm run dev` ni los espacios (que copian el `.env` del original) escriban en el de producción;
   - si los documentos pasan a almacenamiento **privado**: hoy se suben con `access: "public"`, así que una escritura o un certificado quedan en una URL pública, difícil de adivinar pero sin protección. Vercel Blob ya ofrece almacenamiento privado.
   2026-10-01.
+- **Migraciones de producción a mano.** Subir a `main` publica en Vercel, pero las migraciones se aplican aparte (`AGENTS.md`, ADR 0005). Si alguien sube sin migrar, producción falla hasta que se migre. Decidir si el build de Vercel corre `prisma migrate deploy` solo, para lo que necesita la dirección directa de Neon como variable aparte. 2026-10-02.
 - **Borrar el contenedor viejo de Docker** (`proges-db-prueba` y su volumen `proges_proges-pgdata`) y el respaldo `.env.respaldo-docker` cuando la base `proges_dev` del Mac lleve un tiempo funcionando bien. Hoy el contenedor está apagado, no borrado. 2026-10-01.
 - **Cuentas pagadas no llegan a la rentabilidad.** Marcar pagada una `PropertyBill` no crea un `Movement` (gasto), así que ese gasto no aparece en la rentabilidad de la propiedad. Resolver cuando el flujo lleve un tiempo en uso real. 2026-10-01.
 - **`Field` copiado 6 veces.** El envoltorio etiqueta + campo + error está repetido en `property-form.tsx`, `property-form-economic.tsx`, `[id]/economic-forms.tsx`, `pay-form`, `tenant-form` y `contract-form`. Sacarlo a `src/components/` y que todos lo importen (regla de tres). 2026-10-01.
