@@ -58,7 +58,7 @@ Sale de la investigación de la etapa 1 (ver `TAREA.md` de la ficha, en la histo
 
 ## Consecuencias
 
-- Los documentos subidos antes de este cambio no tienen papel. Siguen en su cajón, pero no cuentan para la lista hasta que se vuelvan a subir eligiendo el papel. Hoy no hay ninguno cargado.
+- Los documentos subidos antes de este cambio no tienen papel. Siguen en su cajón, pero no cuentan para la lista hasta que se vuelvan a subir eligiendo el papel. Hoy no hay ninguno cargado. Para cambiar el papel de un documento sin volver a subirlo falta un cuadro «Editar» (`PENDIENTES.md`).
 - Un papel que se subió con «Otro documento» tampoco cuenta, aunque sea el que falta. La lista no adivina.
 - La lista de papeles depende del tipo y del estado de la propiedad. Si una propiedad pasa a «Arrendada», empieza a pedir el contrato de arriendo.
 - Entre varios documentos vigentes de un mismo papel, la lista muestra el de fecha de emisión más reciente; si alguno no tiene fecha de emisión, cuenta su fecha de subida. Por eso la fecha de emisión no puede ser futura: un año mal tipeado (2062) dejaría ese documento como el más reciente para siempre.
