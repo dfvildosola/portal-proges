@@ -42,3 +42,6 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# Datos reales para el guion de ejemplo (direcciones y ROL): nunca a GitHub, el repo es público
+/prisma/datos-reales.json
