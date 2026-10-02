@@ -109,7 +109,7 @@ Las decisiones 3 y 6 se documentan en el ADR `docs/decisiones/0002-ficha-cifras-
   4. Fecha de emisión = `Document.fechaEmision` (ya existía); vacía → «subido el …» en gris.
   5. Lista en el código (`src/lib/papeles.ts`), igual para todos los clientes.
   6. Diego corrigió la tabla: **plano y certificado de informaciones previas van en todas** las propiedades.
-  - Piezas en serie: ✅ (a) base y reglas (migración `20261002021225_papeles`, `src/lib/papeles.ts`, `papelLabels`) · ✅ (b) subir con papel (`papel` vacío → error; «Otro» pide el cajón; props `papelInicial` y `compacto` en `UploadDocumentDialog`) · ✅ (c) lista en la ficha (`papeles-list.tsx` arriba en Documentos; línea «Papeles» en «Datos al día», acortada) · ⏳ cierre (ADR 0004, navegador, revisor, `/code-review` de la branch, limpieza).
+  - Piezas en serie: ✅ (a) base y reglas (migración `20261002021225_papeles`, `src/lib/papeles.ts`, `papelLabels`) · ✅ (b) subir con papel (`papel` vacío → error; «Otro» pide el cajón; props `papelInicial` y `compacto` en `UploadDocumentDialog`) · ✅ (c) lista en la ficha (`papeles-list.tsx` arriba en Documentos; línea «Papeles» en «Datos al día», acortada) · ⏳ cierre: ✅ ADR 0004 · ✅ navegador · ✅ revisor · ◻️ `/code-review` de la branch · ◻️ limpieza.
 
 ### Para `PENDIENTES.md` (✅ ya agregados en la etapa 1)
 
@@ -223,7 +223,7 @@ Decisiones tomadas en el camino:
 
 ## Paso siguiente exacto
 
-**Etapa 3, cierre del coordinador**: navegador, revisor, `/code-review` de la branch y limpieza (plan `~/.claude/plans/peppy-kindling-horizon.md`). Datos de prueba: documentos `prueba-papel-1` a `-6` en la casa arrendada «Av. Kennedy 3254» (`cmuqaemqn005cvkuve0cc9if2`), con `blobKey` falso; se borran con `delete from "Document" where id like 'prueba-papel-%';`. El ADR 0004 ya está escrito (`docs/decisiones/0004-papeles.md`). Para (c): `chequeoPapeles` lista todos los nombres que faltan; con 0 documentos serían 11 nombres en una línea, así que (c) lo acorta (ninguno cargado → «Papeles: ninguno cargado (faltan los N)»; más de 3 faltantes → los 3 primeros «y N más»).
+**Etapa 3, cierre del coordinador.** Hecho: navegador (casa arrendada con 7 documentos de prueba, bodega con 0 de 9, cuadro con papel preelegido, «Otro» con cajón, botón desactivado sin papel); revisor (2 medios y 3 bajos, todos arreglados en `dfece27`; decisión 7 nueva en el ADR 0004: un papel está al día si alguno de sus documentos sigue vigente, y la copia vieja no cuenta como vencida). **No se pudo probar la subida completa:** `BLOB_READ_WRITE_TOKEN` está vacío en `.env` (anotado en `PENDIENTES.md`). Falta: `/code-review` sobre toda la branch (`main...feat/ficha-propiedad`), arreglar o anotar hallazgos, y la limpieza: `delete from "Document" where id like 'prueba-papel-%';` (7 filas, `blobKey` falso), `delete from "LeaseContract" where id='prueba-ficha-terminado';`, borrar `TAREA.md`, último commit. Mezclar solo cuando Diego lo pida.
 
 **Al terminar la etapa 3 (última de la tarea):** `/code-review` sobre la branch, borrar el contrato de prueba (abajo) y `TAREA.md`, y después mezclar cuando Diego lo pida.
 
