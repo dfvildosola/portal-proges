@@ -102,10 +102,14 @@ Las decisiones 3 y 6 se documentan en el ADR `docs/decisiones/0002-ficha-cifras-
     - Tarjeta nueva `patrimonio-card.tsx` arriba de la columna derecha del Resumen. Si falta la UF para convertir, el neto o la plusvalía muestran «—» con un aviso.
     - Exenta: en Finanzas, el botón «Generar cuotas del año» se cambia por la etiqueta «Exenta de contribuciones».
     - Todavía **no** se probó en el navegador: va en el cierre de la etapa.
-- ⏳ **Etapa 3: papeles en regla.**
-  - Tipos de documento nuevos (migración): dominio vigente, hipotecas y gravámenes, certificado de avalúo, recepción final, reglamento de copropiedad, permiso de edificación, plano, derechos de agua y subdivisión SAG.
-  - Lista por defecto según tipo de propiedad, escrita en `src/lib/papeles.ts`, y una tarjeta «Papeles» con ✓/✗ y fecha de emisión.
-  - ADR 0004: se parte con la lista en el código y se personaliza por empresa cuando un cliente lo pida.
+- ⏳ **Etapa 3: papeles en regla.** Plan de piezas aprobado el 2026-10-01: `~/.claude/plans/peppy-kindling-horizon.md` (ahí está la tabla de papeles por tipo de propiedad). Decisiones (van al ADR 0004):
+  1. Campo nuevo `Document.papel` (enum `Papel`, 14 valores), aparte del cajón (`tipo`, que no cambia). Al elegir papel, el cajón lo pone `PAPEL_CATEGORIA`; con «Otro», se elige el cajón como hoy.
+  2. Dominio vigente e hipotecas **no** se marcan viejos: fecha + antigüedad. Rojo solo con `fechaVencimiento` pasada.
+  3. Una línea «Papeles» en «Datos al día» (cuenta solo los que faltan) y la lista completa arriba en la pestaña Documentos, con «Subir» en cada papel que falta.
+  4. Fecha de emisión = `Document.fechaEmision` (ya existía); vacía → «subido el …» en gris.
+  5. Lista en el código (`src/lib/papeles.ts`), igual para todos los clientes.
+  6. Diego corrigió la tabla: **plano y certificado de informaciones previas van en todas** las propiedades.
+  - Piezas en serie: ⏳ (a) base y reglas · ◻️ (b) subir con papel · ◻️ (c) lista en la ficha · ◻️ cierre (ADR 0004, navegador, revisor, `/code-review` de la branch, limpieza).
 
 ### Para `PENDIENTES.md` (✅ ya agregados en la etapa 1)
 
@@ -219,19 +223,7 @@ Decisiones tomadas en el camino:
 
 ## Paso siguiente exacto
 
-**Etapa 3: papeles en regla. Primero el plan de piezas, en plan mode y aprobado por Diego, igual que en la etapa 2.** El alcance general ya está aprobado (ver arriba y el plan `~/.claude/plans/parallel-juggling-lagoon.md`). Falta cortarlo en piezas en serie, por ejemplo:
-
-- (a) migración con los tipos de documento nuevos;
-- (b) `src/lib/papeles.ts`, con la lista por defecto según el tipo de propiedad y una función pura que diga qué papel está, cuál falta y cuál está viejo;
-- (c) la tarjeta «Papeles» en la ficha;
-- después, el cierre del coordinador con el ADR 0004.
-
-Antes de la etapa 3, el plan tiene que traer 3 decisiones, explicadas para Diego:
-1. ¿Se marca «viejo» el dominio vigente o el certificado de hipotecas y gravámenes con más de 30 días? En la práctica se piden con menos de 30 días.
-2. ¿La fecha de emisión es un campo nuevo del documento o se usa la fecha de subida?
-3. ¿«Papeles» va en el Resumen o en la pestaña Documentos?
-
-Revisar primero qué tiene hoy `Documento` en `prisma/schema.prisma` (tipos, fechas).
+**Etapa 3, pieza (a): base y reglas**, con un subagente Sonnet según el plan `~/.claude/plans/peppy-kindling-horizon.md`. Después (b) y (c), en serie, y el cierre.
 
 **Al terminar la etapa 3 (última de la tarea):** `/code-review` sobre la branch, borrar el contrato de prueba (abajo) y `TAREA.md`, y después mezclar cuando Diego lo pida.
 
