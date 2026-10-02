@@ -235,7 +235,9 @@ Revisar primero qué tiene hoy `Documento` en `prisma/schema.prisma` (tipos, fec
 
 **Al terminar la etapa 3 (última de la tarea):** `/code-review` sobre la branch, borrar el contrato de prueba (abajo) y `TAREA.md`, y después mezclar cuando Diego lo pida.
 
-El servidor `next dev` de `:3000` se reinició el 2026-10-01 y ya tiene el cliente de Prisma nuevo. Si la etapa 3 trae migración, hay que reiniciarlo otra vez.
+El servidor `next dev` de `:3000` se reinició el 2026-10-01 y ya tiene el cliente de Prisma nuevo. Lo encendió la sesión anterior, así que puede haberse apagado con el `/clear`: si `localhost:3000` no responde, `npm run dev` desde esta carpeta. Si la etapa 3 trae migración, hay que reiniciarlo.
+
+**Navegador:** los clics de la extensión en los botones de envío a veces no envían el formulario. Usar `form.requestSubmit()` desde `javascript_tool` (ver «Cierre de la etapa 2»).
 
 **Qué dejaron (a) y (b)**, para los encargos:
 - **Acciones:** viven en `src/app/(app)/propiedades/{actions,facts-actions,finance-actions,documents-actions}.ts`. Los helpers de validación están en `src/lib/form-helpers.ts`, incluido `optionalDateField({ noFutura })`.
