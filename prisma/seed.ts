@@ -6,13 +6,19 @@
 //   DATABASE_URL="postgresql://..." npm run db:seed   ← Neon u otra DB
 
 import "dotenv/config";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaClient, type Prisma, type Property } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const db = new PrismaClient({ adapter });
 
 const ORG = "org_proges";
+
+// "Hoy" de los datos de la ficha (valor, compra, deuda): 2026-10-01.
+const HOY_FICHA = new Date(Date.UTC(2026, 9, 1));
+
+const BANCOS = ["Banco de Chile", "BancoEstado", "Santander", "BCI", "Scotiabank"];
+const FUENTES = ["TASACION", "CORREDOR", "ESTIMACION_PROPIA"] as const;
 
 // UF de referencia para generar avalúos fiscales en CLP a partir de valores
 // comerciales en UF (los valores UF reales se cargan más abajo en CurrencyValue).
@@ -55,6 +61,19 @@ function addMonths(dt: Date, n: number): Date {
 
 function periodoStr(dt: Date): string {
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+// Elige `n` índices del `pool` para repartir un dato entre las 50 propiedades:
+// primero los obligatorios y después los demás en un orden repartido (`paso`
+// es coprimo con 50). Así los conteos son fijos aunque tipo y estado sean al azar.
+function elegir(pool: number[], n: number, paso: number, obligatorios: number[] = []): number[] {
+  const orden = [...pool].sort((a, b) => ((a * paso) % 50) - ((b * paso) % 50));
+  const out = [...obligatorios];
+  for (const i of orden) {
+    if (out.length >= n) break;
+    if (!out.includes(i)) out.push(i);
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -249,7 +268,7 @@ async function main() {
   // -------------------------------------------------------------------------
   console.log("🏢  Creando 50 propiedades...");
   const estados = [...ESTADOS_DIST].sort(() => Math.random() - 0.5);
-  const properties = [];
+  const properties: { prop: Property; tpl: PropTemplate; estado: string }[] = [];
 
   for (let i = 0; i < 50; i++) {
     const tpl = pick(TEMPLATES);
@@ -324,6 +343,76 @@ async function main() {
     }
 
     properties.push({ prop, tpl, estado });
+  }
+
+  // -------------------------------------------------------------------------
+  // Ficha económica: fecha y fuente del valor, compra, deuda y exenta de
+  // contribuciones. Se reparte por índice para que los conteos sean fijos.
+  // -------------------------------------------------------------------------
+  console.log("📊  Cargando valor, compra y deuda...");
+  const todos = properties.map((_, i) => i);
+  const enEstado = (e: string) => todos.filter((i) => properties[i].estado === e);
+  const iUso = enEstado("USO_PROPIO")[0];
+  const iVenta = enEstado("EN_VENTA")[0];
+  // Arrendadas que no son bodega: una con deuda y compra en UF, otra con compra en CLP.
+  const arrendadasNoBodega = enEstado("ARRENDADA").filter((i) => properties[i].prop.tipo !== "BODEGA");
+  const iArrDeuda = arrendadasNoBodega[2];
+  const iArrClp = arrendadasNoBodega[5];
+  const forzadas = [iUso, iVenta, iArrDeuda, iArrClp];
+
+  const conFecha = elegir(todos, 35, 7, forzadas);
+  const viejas = conFecha.filter((i) => !forzadas.includes(i)).slice(0, 8); // valor de hace más de 12 meses
+  const conCompra = elegir(todos, 25, 11, forzadas);
+  const compraEnUF = new Set(conCompra.filter((_, k) => k % 2 === 0));
+  compraEnUF.add(iArrDeuda);
+  compraEnUF.delete(iArrClp);
+  const compraCara = conCompra.filter((i) => !forzadas.includes(i)).slice(2, 5); // plusvalía negativa
+  const conDeuda = elegir(
+    conCompra.filter((i) => properties[i].prop.tipo !== "BODEGA"),
+    15,
+    13,
+    [iArrDeuda],
+  );
+
+  for (let i = 0; i < properties.length; i++) {
+    const { prop } = properties[i];
+    const valor = Number(prop.valorComercial);
+    const valorUF = prop.valorComercialMoneda === "UF" ? valor : valor / UF_REF;
+    const data: Prisma.PropertyUpdateInput = { exentaContribuciones: prop.tipo === "BODEGA" };
+
+    if (conFecha.includes(i)) {
+      // Reciente: entre 1 y 11 meses atrás. Vieja: entre 14 y 30 meses atrás.
+      const mesesAtras = viejas.includes(i) ? 14 + Math.floor(Math.random() * 17) : 1 + Math.floor(Math.random() * 11);
+      const base = addMonths(HOY_FICHA, -mesesAtras);
+      data.valorComercialFecha = new Date(base.getTime() + Math.floor(Math.random() * 28) * 86400000);
+      data.valorComercialFuente = FUENTES[conFecha.indexOf(i) % FUENTES.length];
+    }
+
+    if (conCompra.includes(i)) {
+      const ratio = compraCara.includes(i) ? 1.05 + Math.random() * 0.2 : 0.45 + Math.random() * 0.4;
+      const enUF = compraEnUF.has(i);
+      data.compraFecha = date(2008 + Math.floor(Math.random() * 16), 1 + Math.floor(Math.random() * 12), 1 + Math.floor(Math.random() * 28));
+      data.compraMoneda = enUF ? "UF" : "CLP";
+      data.compraPrecio = enUF ? +(valorUF * ratio).toFixed(2) : Math.round(valorUF * UF_REF * ratio);
+    }
+
+    if (conDeuda.includes(i)) {
+      const saldo = +(valorUF * (0.2 + Math.random() * 0.4)).toFixed(2); // siempre bajo el valor
+      const dividendo = +(12 + Math.random() * 33).toFixed(2);
+      const deudaFecha = date(2026, 1 + Math.floor(Math.random() * 9), 5);
+      // El último dividendo sale de cuántos dividendos faltan, dentro de 2030-2045.
+      const termino = addMonths(deudaFecha, Math.round((saldo / dividendo) * 1.25));
+      data.deudaSaldo = saldo;
+      data.deudaMoneda = "UF";
+      data.deudaFecha = deudaFecha;
+      data.deudaBanco = BANCOS[conDeuda.indexOf(i) % BANCOS.length];
+      data.deudaDividendo = dividendo;
+      data.deudaTermino = new Date(
+        Math.min(Math.max(termino.getTime(), date(2030, 1, 5).getTime()), date(2045, 12, 5).getTime()),
+      );
+    }
+
+    await db.property.update({ where: { id: prop.id }, data });
   }
 
   // -------------------------------------------------------------------------
@@ -492,7 +581,7 @@ async function main() {
   }
 
   // -------------------------------------------------------------------------
-  // Contribuciones 2026 (todas las propiedades)
+  // Contribuciones 2026 (todas las propiedades, salvo las exentas: bodegas)
   // -------------------------------------------------------------------------
   console.log("🧾  Creando contribuciones 2026...");
   const CUOTAS = [
@@ -503,6 +592,7 @@ async function main() {
   ];
 
   for (const { prop } of properties) {
+    if (prop.tipo === "BODEGA") continue; // las bodegas están exentas de contribuciones
     const montoBase = 80000 + Math.floor(Math.random() * 320000);
     for (const { cuota, mes, dia } of CUOTAS) {
       const vencimiento = date(2026, mes, dia);

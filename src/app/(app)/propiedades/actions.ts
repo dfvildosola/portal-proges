@@ -8,6 +8,8 @@ import { getOrgId } from "@/lib/org";
 import {
   enumField,
   moneyField,
+  optionalDateField,
+  optionalText,
   optionalYearField,
   toFieldErrors,
 } from "@/lib/form-helpers";
@@ -16,6 +18,7 @@ import {
   PropertyStatus,
   PropertyGoal,
   Currency,
+  ValorFuente,
 } from "@/generated/prisma/enums";
 
 export type PropertyFormState = {
@@ -37,6 +40,18 @@ const propertySchema = z.object({
   anoConstruccion: optionalYearField,
   valorComercial: moneyField,
   valorComercialMoneda: enumField(Currency),
+  valorComercialFecha: optionalDateField({ noFutura: true }),
+  valorComercialFuente: enumField(ValorFuente).nullable(),
+  compraFecha: optionalDateField({ noFutura: true }),
+  compraPrecio: moneyField,
+  compraMoneda: enumField(Currency),
+  deudaSaldo: moneyField,
+  deudaMoneda: enumField(Currency),
+  deudaFecha: optionalDateField({ noFutura: true }),
+  deudaBanco: optionalText,
+  deudaDividendo: moneyField,
+  deudaTermino: optionalDateField(),
+  exentaContribuciones: z.boolean(),
 });
 
 function parse(formData: FormData) {
@@ -54,6 +69,20 @@ function parse(formData: FormData) {
     anoConstruccion: formData.get("anoConstruccion") ?? "",
     valorComercial: formData.get("valorComercial") ?? "",
     valorComercialMoneda: formData.get("valorComercialMoneda") ?? "CLP",
+    valorComercialFecha: formData.get("valorComercialFecha") ?? "",
+    // Sin fuente ("") queda como null.
+    valorComercialFuente: formData.get("valorComercialFuente") || null,
+    compraFecha: formData.get("compraFecha") ?? "",
+    compraPrecio: formData.get("compraPrecio") ?? "",
+    compraMoneda: formData.get("compraMoneda") ?? "CLP",
+    deudaSaldo: formData.get("deudaSaldo") ?? "",
+    deudaMoneda: formData.get("deudaMoneda") ?? "UF",
+    deudaFecha: formData.get("deudaFecha") ?? "",
+    deudaBanco: formData.get("deudaBanco") ?? "",
+    deudaDividendo: formData.get("deudaDividendo") ?? "",
+    deudaTermino: formData.get("deudaTermino") ?? "",
+    // El checkbox manda "true" si está marcado y "false" si no (ver property-form).
+    exentaContribuciones: formData.get("exentaContribuciones") === "true",
   });
 }
 

@@ -18,6 +18,7 @@ import {
   AlertType,
   AlertSeverity,
   DocumentType,
+  ValorFuente,
 } from "@/generated/prisma/enums";
 
 export const propertyTypeLabels: Record<PropertyType, string> = {
@@ -49,6 +50,12 @@ export const propertyGoalLabels: Record<PropertyGoal, string> = {
 export const currencyLabels: Record<Currency, string> = {
   CLP: "Pesos (CLP)",
   UF: "UF",
+};
+
+export const valorFuenteLabels: Record<ValorFuente, string> = {
+  TASACION: "Tasación",
+  CORREDOR: "Corredor",
+  ESTIMACION_PROPIA: "Estimación propia",
 };
 
 export const ownerTypeLabels: Record<OwnerType, string> = {

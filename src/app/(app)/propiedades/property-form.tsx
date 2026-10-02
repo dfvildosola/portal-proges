@@ -5,10 +5,10 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -27,6 +27,7 @@ import {
   enumOptions,
 } from "@/lib/domain";
 import type { PropertyFormState } from "./actions";
+import { PropertyFormEconomic } from "./property-form-economic";
 
 export type PropertyValues = {
   id?: string;
@@ -43,6 +44,18 @@ export type PropertyValues = {
   anoConstruccion?: string;
   valorComercial?: string;
   valorComercialMoneda?: string;
+  valorComercialFecha?: string;
+  valorComercialFuente?: string;
+  compraFecha?: string;
+  compraPrecio?: string;
+  compraMoneda?: string;
+  deudaSaldo?: string;
+  deudaMoneda?: string;
+  deudaFecha?: string;
+  deudaBanco?: string;
+  deudaDividendo?: string;
+  deudaTermino?: string;
+  exentaContribuciones?: boolean;
 };
 
 function Field({
@@ -81,7 +94,7 @@ export function PropertyForm({
   const err = (f: string) => state?.fieldErrors?.[f];
 
   return (
-    <form action={formAction} className="max-w-2xl">
+    <form action={formAction} className="flex max-w-2xl flex-col gap-4">
       {initial?.id && <input type="hidden" name="id" value={initial.id} />}
 
       <Card>
@@ -100,7 +113,11 @@ export function PropertyForm({
         </Field>
 
         <Field label="Tipo" error={err("tipo")}>
-          <Select name="tipo" defaultValue={initial?.tipo ?? "DEPARTAMENTO"}>
+          <Select
+            name="tipo"
+            items={propertyTypeLabels}
+            defaultValue={initial?.tipo ?? "DEPARTAMENTO"}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Tipo de propiedad" />
             </SelectTrigger>
@@ -142,7 +159,11 @@ export function PropertyForm({
         </Field>
 
         <Field label="Objetivo" error={err("objetivo")}>
-          <Select name="objetivo" defaultValue={initial?.objetivo ?? "INVERSION"}>
+          <Select
+            name="objetivo"
+            items={propertyGoalLabels}
+            defaultValue={initial?.objetivo ?? "INVERSION"}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Objetivo" />
             </SelectTrigger>
@@ -157,7 +178,11 @@ export function PropertyForm({
         </Field>
 
         <Field label="Estado" error={err("estado")}>
-          <Select name="estado" defaultValue={initial?.estado ?? "DISPONIBLE"}>
+          <Select
+            name="estado"
+            items={propertyStatusLabels}
+            defaultValue={initial?.estado ?? "DISPONIBLE"}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
@@ -174,6 +199,7 @@ export function PropertyForm({
         <Field label="Moneda principal" error={err("monedaPrincipal")}>
           <Select
             name="monedaPrincipal"
+            items={currencyLabels}
             defaultValue={initial?.monedaPrincipal ?? "CLP"}
           >
             <SelectTrigger>
@@ -238,55 +264,38 @@ export function PropertyForm({
           />
         </Field>
 
-        <div className="sm:col-span-2">
-          <Field
-            label="Valor comercial (opcional)"
-            htmlFor="valorComercial"
-            error={err("valorComercial") ?? err("valorComercialMoneda")}
-          >
-            <div className="flex gap-2">
-              <Input
-                id="valorComercial"
-                name="valorComercial"
-                type="number"
-                step="0.01"
-                min="0"
-                className="flex-1"
-                defaultValue={initial?.valorComercial}
-              />
-              <Select
-                name="valorComercialMoneda"
-                defaultValue={initial?.valorComercialMoneda ?? "CLP"}
-              >
-                <SelectTrigger className="w-28">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {enumOptions(currencyLabels).map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </Field>
+        <div className="flex items-start gap-2 sm:col-span-2">
+          <Checkbox
+            id="exentaContribuciones"
+            name="exentaContribuciones"
+            value="true"
+            uncheckedValue="false"
+            defaultChecked={initial?.exentaContribuciones ?? false}
+            className="mt-0.5"
+          />
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="exentaContribuciones">Exenta de contribuciones</Label>
+            <p className="text-xs text-muted-foreground">
+              No paga contribuciones: la ficha no pedirá las 4 cuotas.
+            </p>
+          </div>
         </div>
           </div>
-
-          {state?.error && (
-            <p className="mt-4 text-sm text-destructive">{state.error}</p>
-          )}
         </CardContent>
-        <CardFooter className="gap-3 border-t">
-          <Button type="submit" disabled={pending}>
-            {pending ? "Guardando…" : submitLabel}
-          </Button>
-          <Button variant="outline" nativeButton={false} render={<Link href="/propiedades" />}>
-            Cancelar
-          </Button>
-        </CardFooter>
       </Card>
+
+      <PropertyFormEconomic initial={initial} err={err} />
+
+      {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
+
+      <div className="flex gap-3">
+        <Button type="submit" disabled={pending}>
+          {pending ? "Guardando…" : submitLabel}
+        </Button>
+        <Button variant="outline" nativeButton={false} render={<Link href="/propiedades" />}>
+          Cancelar
+        </Button>
+      </div>
     </form>
   );
 }

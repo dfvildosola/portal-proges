@@ -6,6 +6,9 @@ import { PageHeader } from "@/components/page-header";
 import { PropertyForm } from "../../property-form";
 import { updateProperty } from "../../actions";
 
+// Las fechas se guardan a medianoche UTC: se leen en UTC como "AAAA-MM-DD".
+const dia = (d: Date | null) => d?.toISOString().slice(0, 10);
+
 export default async function EditarPropiedadPage({
   params,
 }: PageProps<"/propiedades/[id]/editar">) {
@@ -38,6 +41,18 @@ export default async function EditarPropiedadPage({
           anoConstruccion: p.anoConstruccion?.toString(),
           valorComercial: p.valorComercial?.toString(),
           valorComercialMoneda: p.valorComercialMoneda,
+          valorComercialFecha: dia(p.valorComercialFecha),
+          valorComercialFuente: p.valorComercialFuente ?? undefined,
+          compraFecha: dia(p.compraFecha),
+          compraPrecio: p.compraPrecio?.toString(),
+          compraMoneda: p.compraMoneda,
+          deudaSaldo: p.deudaSaldo?.toString(),
+          deudaMoneda: p.deudaMoneda,
+          deudaFecha: dia(p.deudaFecha),
+          deudaBanco: p.deudaBanco ?? undefined,
+          deudaDividendo: p.deudaDividendo?.toString(),
+          deudaTermino: dia(p.deudaTermino),
+          exentaContribuciones: p.exentaContribuciones,
         }}
       />
     </>

@@ -74,3 +74,29 @@ export const dateField = (obligatorio = "La fecha es obligatoria") =>
       message: "Fecha inválida",
     })
     .transform((v) => new Date(`${v}T00:00:00Z`));
+
+// Fecha opcional "AAAA-MM-DD": "" queda como null. Con `noFutura`, rechaza
+// fechas posteriores a hoy (se compara por día, en UTC).
+export const optionalDateField = ({ noFutura = false } = {}) =>
+  z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v === undefined || v === "" ? null : v))
+    .refine((v) => v === null || !Number.isNaN(Date.parse(`${v}T00:00:00Z`)), {
+      message: "Fecha inválida",
+    })
+    .transform((v) => (v === null ? null : new Date(`${v}T00:00:00Z`)))
+    .refine(
+      (d) => {
+        if (!noFutura || d === null) return true;
+        const ahora = new Date();
+        const hoyUTC = Date.UTC(
+          ahora.getUTCFullYear(),
+          ahora.getUTCMonth(),
+          ahora.getUTCDate(),
+        );
+        return d.getTime() <= hoyUTC;
+      },
+      { message: "La fecha no puede ser futura" },
+    );

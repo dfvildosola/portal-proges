@@ -152,6 +152,14 @@ enum RateType {
   IPC
 }
 
+// Fuente del valor comercial de una propiedad. «Estimación automática» se
+// agrega cuando exista.
+enum ValorFuente {
+  TASACION
+  CORREDOR
+  ESTIMACION_PROPIA
+}
+
 // ----------------------------------------------------------------------------
 // Propiedades
 // ----------------------------------------------------------------------------
@@ -172,6 +180,23 @@ model Property {
   anoConstruccion Int?
   valorComercial       Decimal?  @db.Decimal(14, 2)
   valorComercialMoneda Currency  @default(CLP)
+  // Fecha y fuente del valor comercial (para saber qué tan al día está).
+  valorComercialFecha  DateTime?
+  valorComercialFuente ValorFuente?
+  // Compra: cuándo y por cuánto se compró.
+  compraFecha          DateTime?
+  compraPrecio         Decimal?  @db.Decimal(14, 2)
+  compraMoneda         Currency  @default(CLP)
+  // Deuda hipotecaria vigente (todo vacío si no hay deuda). El dividendo va en
+  // la misma moneda que el saldo.
+  deudaSaldo           Decimal?  @db.Decimal(14, 2)
+  deudaMoneda          Currency  @default(UF)
+  deudaFecha           DateTime? // fecha a la que corresponde el saldo
+  deudaBanco           String?
+  deudaDividendo       Decimal?  @db.Decimal(14, 2)
+  deudaTermino         DateTime? // fecha del último dividendo
+  // Exenta de contribuciones: no paga cuotas (p. ej. bodegas de avalúo bajo).
+  exentaContribuciones Boolean   @default(false)
   createdAt            DateTime  @default(now())
   updatedAt      DateTime       @updatedAt
 

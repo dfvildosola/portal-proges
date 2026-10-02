@@ -81,7 +81,7 @@ Las decisiones 3 y 6 se documentan en el ADR `docs/decisiones/0002-ficha-cifras-
   9. El dividendo se muestra, pero no entra al costo anual (mezcla capital e intereses).
   10. Valor comercial desactualizado pasados 12 meses.
   11. Sin saldo = sin deuda («Sin deuda registrada»).
-  - Piezas en serie: ✅ (a) partir `propiedades/actions.ts` · ◻️ (b) migración, formulario y seed · ◻️ (c) ficha · ◻️ (d) partir `/resumen` y patrimonio neto · ◻️ coordinador (ADR 0003, pendientes, memoria, navegador, revisor, commit).
+  - Piezas en serie: ✅ (a) partir `propiedades/actions.ts` · ✅ (b) migración, formulario y seed · ◻️ (c) ficha · ◻️ (d) partir `/resumen` y patrimonio neto · ◻️ coordinador (ADR 0003, pendientes, memoria, navegador, revisor, commit).
 - ◻️ **Etapa 3: papeles en regla.**
   - Tipos de documento nuevos (migración): dominio vigente, hipotecas y gravámenes, certificado de avalúo, recepción final, reglamento de copropiedad, permiso de edificación, plano, derechos de agua y subdivisión SAG.
   - Lista por defecto según tipo de propiedad, escrita en `src/lib/papeles.ts`, y una tarjeta «Papeles» con ✓/✗ y fecha de emisión.
@@ -199,11 +199,30 @@ Decisiones tomadas en el camino:
 
 ## Paso siguiente exacto
 
-**Etapa 2, pieza (b)**: migración, formulario y seed, con un subagente Sonnet. La pieza (a) está hecha: las acciones viven en `propiedades/{actions,facts-actions,finance-actions,documents-actions}.ts` y los helpers en `src/lib/form-helpers.ts`. El encargo de cada pieza está en el plan `~/.claude/plans/glowing-mixing-biscuit.md`. Las piezas van en serie y el coordinador corre `npm run lint && npm run build` después de cada una. Si la conversación se alarga, pausar después de (b).
+**Etapa 2, pieza (c): la ficha**, con un subagente Sonnet. El encargo está en el plan `~/.claude/plans/glowing-mixing-biscuit.md`, sección «(c) La ficha». Después viene (d) y luego el cierre del coordinador. Las piezas van en serie, y después de cada una el coordinador corre `npm run lint && npm run build` y revisa el diff.
+
+**Qué dejaron (a) y (b)**, para los encargos:
+- **Acciones:** viven en `src/app/(app)/propiedades/{actions,facts-actions,finance-actions,documents-actions}.ts`. Los helpers de validación están en `src/lib/form-helpers.ts`, incluido `optionalDateField({ noFutura })`.
+- **Campos nuevos de `Property`** (migración `20261002012815_ficha_valor_compra_deuda`):
+  - `valorComercialFecha`, `valorComercialFuente` (enum `ValorFuente`; etiquetas en `valorFuenteLabels` de `src/lib/domain.ts`);
+  - `compraFecha`, `compraPrecio`, `compraMoneda`;
+  - `deudaSaldo`, `deudaMoneda`, `deudaFecha`, `deudaBanco`, `deudaDividendo`, `deudaTermino`;
+  - `exentaContribuciones`.
+- **Formulario:** `property-form.tsx` (301 líneas), más los grupos nuevos en `property-form-economic.tsx` (259). El checkbox manda "true"/"false" (`value`/`uncheckedValue`). Todos los `<Select>` del formulario muestran la etiqueta, así que en `PENDIENTES.md` se saca `property-form.tsx` de la línea de selectores.
+- **Probado solo con curl** (crear, editar, vaciar, fechas futuras e inválidas). Falta probar el formulario con clics en el navegador al cerrar la etapa.
+- **Ojo:** el `next dev` que estaba corriendo en `:3000` tiene el cliente de Prisma viejo en memoria. Hay que reiniciarlo antes de probar en el navegador.
+- **Datos de ejemplo:** el seed sigue usando `Math.random` para tipos y montos; volver a sembrar cambia todos los ids.
 
 Al cerrar la etapa 3, y antes de mezclar: `/code-review` sobre la branch, borrar `TAREA.md` y el contrato de prueba (ver abajo).
 
-**Datos de prueba para el navegador:**
-- **Contrato terminado (ya creado en `proges_dev`):** `LeaseContract` con id `prueba-ficha-terminado`, TERMINADO, del 2025-03-01 al 2026-07-31, en la propiedad DISPONIBLE «Av. Tobalaba 635, Depto 2A» (`cmuq647zs0029nsuvdaojsbgw`). Se borra al cerrar la tarea con `delete from "LeaseContract" where id='prueba-ficha-terminado';`.
-- **Uso propio:** `cmuq6481i005cnsuv7desng6n`.
-- **En venta:** `cmuq64805002unsuvwipb4wgf`.
+**Datos de prueba para el navegador** (seed del 2026-10-01, etapa 2):
+- **Contrato terminado:** `LeaseContract` con id `prueba-ficha-terminado`, TERMINADO, del 2025-03-01 al 2026-07-31, en la propiedad DISPONIBLE «Av. Marathon 556» (`cmuqaempw0046vkuvg3oind4k`, una casa con valor, compra y deuda). Se borra al cerrar la tarea con `delete from "LeaseContract" where id='prueba-ficha-terminado';`. Para `psql`, quítale a `DATABASE_URL` el `?schema=…`.
+- **Arrendada con deuda y compra en UF**, con valor de hace más de 12 meses (local): `cmuqaemnx001hvkuvwcu7qhh2`. Otra, una oficina con valor reciente: `cmuqaemoi0023vkuvq5mowqav`.
+- **Arrendada con compra en CLP**, sin deuda: `cmuqaemp0002rvkuvur31yu4o`.
+- **Uso propio:** `cmuqaemq2004fvkuvdhkpftuu`.
+- **En venta:** `cmuqaemqi0053vkuvyou4rr0k`.
+- **Disponible sin datos nuevos:** `cmuqaempk003ovkuvg65dofnq`.
+- **Bodega exenta:** `cmuqaemoa001rvkuvk2dshnr4`.
+- **Valor de hace más de 12 meses** (corredor): `cmuqaemo5001lvkuvjeats2of`.
+- **Conteos:** 35 con fecha de valor (8 de más de 12 meses), 25 con compra (13 en UF y 12 en CLP, 3 con plusvalía negativa), 15 con deuda en UF y 14 bodegas exentas, sin cuotas.
+- La arrendada con atraso para probar se elige en `/cobranza`.
