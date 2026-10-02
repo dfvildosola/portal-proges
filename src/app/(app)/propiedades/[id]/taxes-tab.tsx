@@ -15,19 +15,27 @@ import { formatMoney, formatDate } from "@/lib/format";
 import { AddTaxForm, GenerateYearTaxesForm, UpdateTaxMontoForm } from "./economic-forms";
 import { markTaxPaid, removeTax } from "../finance-actions";
 
-// Contenido de la pestaña «Contribuciones» de la ficha de propiedad.
+// Contenido de la pestaña «Contribuciones» de la ficha de propiedad. Si la
+// propiedad es exenta no se ofrece generar las cuotas del año; las que ya
+// existan se siguen mostrando.
 export function TaxesTab({
   propertyId,
   taxes,
+  exenta,
 }: {
   propertyId: string;
   taxes: PropertyTax[];
+  exenta: boolean;
 }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">Contribuciones</CardTitle>
-        <GenerateYearTaxesForm propertyId={propertyId} />
+        {exenta ? (
+          <Badge variant="success">Exenta de contribuciones</Badge>
+        ) : (
+          <GenerateYearTaxesForm propertyId={propertyId} />
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
         {taxes.length === 0 ? (

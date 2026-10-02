@@ -20,6 +20,7 @@ import { AttentionStrip } from "./attention-strip";
 import { KeyFigures } from "./key-figures";
 import { SituationCard } from "./situation-card";
 import { DataFreshness } from "./data-freshness";
+import { PatrimonioCard } from "./patrimonio-card";
 import { PropertyMap } from "./property-map";
 import { FactsCard } from "./facts-card";
 import { LeaseTab } from "./lease-tab";
@@ -142,9 +143,12 @@ export default async function PropiedadDetallePage({
         <TabsContent value="resumen" className="mt-6 space-y-6">
           <KeyFigures
             valorComercial={valorComercial}
+            valorFecha={p.valorComercialFecha}
+            valorFuente={p.valorComercialFuente}
             renta={rentaMensual(p.contracts)}
             rentabilidad={rentab}
             costo={costo}
+            now={now}
           />
           <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
             <div className="space-y-6">
@@ -171,11 +175,21 @@ export default async function PropiedadDetallePage({
               />
             </div>
             <div className="space-y-6">
+              <PatrimonioCard
+                property={p}
+                valorComercial={valorComercial}
+                uf={uf}
+                now={now}
+              />
               <DataFreshness
                 chequeos={datosAlDia({
                   assessments: p.assessments,
                   taxes: p.taxes,
                   documents: p.documents,
+                  hayValorComercial:
+                    valorComercial !== null && valorComercial.monto > 0,
+                  valorComercialFecha: p.valorComercialFecha,
+                  exentaContribuciones: p.exentaContribuciones,
                   now,
                 })}
               />
@@ -194,6 +208,7 @@ export default async function PropiedadDetallePage({
             movements={p.movements}
             taxes={p.taxes}
             bills={p.bills}
+            exentaContribuciones={p.exentaContribuciones}
           />
         </TabsContent>
 

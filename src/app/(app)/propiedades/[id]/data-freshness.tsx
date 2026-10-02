@@ -1,4 +1,4 @@
-import { CircleAlert, CircleCheck, CircleDashed, CircleX } from "lucide-react";
+import { CircleAlert, CircleCheck, CircleX } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -13,8 +13,7 @@ const ICONO = {
   vencido: { Icon: CircleX, color: "text-destructive", sr: "Vencido" },
 } as const;
 
-// Bloque «Datos al día»: los 3 chequeos de la ficha y una línea fija sobre la
-// fecha del valor comercial, que todavía no se guarda.
+// Bloque «Datos al día»: los chequeos de la ficha (vienen de datosAlDia).
 export function DataFreshness({ chequeos }: { chequeos: Chequeo[] }) {
   return (
     <Card>
@@ -33,10 +32,6 @@ export function DataFreshness({ chequeos }: { chequeos: Chequeo[] }) {
               </li>
             );
           })}
-          <li className="flex items-start gap-2 text-sm text-muted-foreground">
-            <CircleDashed className="mt-0.5 size-4 shrink-0" />
-            <span>Valor comercial: sin fecha</span>
-          </li>
         </ul>
       </CardContent>
     </Card>

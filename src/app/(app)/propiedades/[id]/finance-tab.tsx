@@ -30,11 +30,13 @@ export function FinanceTab({
   movements,
   taxes,
   bills,
+  exentaContribuciones,
 }: {
   propertyId: string;
   movements: Movement[];
   taxes: PropertyTax[];
   bills: PropertyBill[];
+  exentaContribuciones: boolean;
 }) {
   return (
     <div className="space-y-6">
@@ -96,7 +98,11 @@ export function FinanceTab({
         </CardFooter>
       </Card>
 
-      <TaxesTab propertyId={propertyId} taxes={taxes} />
+      <TaxesTab
+        propertyId={propertyId}
+        taxes={taxes}
+        exenta={exentaContribuciones}
+      />
 
       <BillsTab propertyId={propertyId} bills={bills} />
     </div>

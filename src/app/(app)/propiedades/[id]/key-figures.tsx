@@ -1,12 +1,18 @@
 import { Landmark, Wallet, TrendingUp, Receipt } from "lucide-react";
-import type { Currency } from "@/generated/prisma/enums";
+import type { Currency, ValorFuente } from "@/generated/prisma/enums";
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { valorFuenteLabels } from "@/lib/domain";
 import { formatMoney } from "@/lib/format";
+import {
+  antiguedad,
+  mesesDesde,
+  valorDesactualizado,
+} from "@/lib/property-metrics";
 import type {
   Costo,
   RentaMensual,
@@ -21,19 +27,21 @@ function formatPct(n: number): string {
 }
 
 // Una cifra: etiqueta con ícono, valor grande y una línea chica debajo. Si no hay
-// valor va «—» y la línea explica por qué.
+// valor va «—» y la línea explica por qué. `warning` pinta esa línea de aviso.
 function Cifra({
   label,
   icon: Icon,
   value,
   sub,
   negative,
+  warning,
 }: {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   value: string | null;
   sub: string;
   negative?: boolean;
+  warning?: boolean;
 }) {
   return (
     <Card>
@@ -53,24 +61,49 @@ function Cifra({
         >
           {value ?? "—"}
         </CardTitle>
-        <p className="text-xs text-muted-foreground">{sub}</p>
+        <p
+          className={`text-xs ${warning ? "text-warning" : "text-muted-foreground"}`}
+        >
+          {sub}
+        </p>
       </CardHeader>
     </Card>
   );
 }
 
-// Las 4 cifras de la ficha: valor comercial, renta mensual, rentabilidad neta
-// (con la bruta en chico) y costo anual.
+// Línea bajo el valor comercial: «Tasación · hace 3 meses». Muestra la fuente y la
+// antigüedad que haya; sin fecha dice «sin fecha». Pasados 12 meses suma
+// «desactualizado».
+function lineaDelValor(
+  fuente: ValorFuente | null,
+  fecha: Date | null,
+  now: Date,
+): string {
+  const partes: string[] = [];
+  if (fuente) partes.push(valorFuenteLabels[fuente]);
+  partes.push(fecha ? antiguedad(mesesDesde(fecha, now)) : "sin fecha");
+  if (valorDesactualizado(fecha, now)) partes.push("desactualizado");
+  return partes.join(" · ");
+}
+
+// Las 4 cifras de la ficha: valor comercial (con su fuente y antigüedad), renta
+// mensual, rentabilidad neta (con la bruta en chico) y costo anual.
 export function KeyFigures({
   valorComercial,
+  valorFecha,
+  valorFuente,
   renta,
   rentabilidad,
   costo,
+  now,
 }: {
   valorComercial: { monto: number; moneda: Currency } | null;
+  valorFecha: Date | null;
+  valorFuente: ValorFuente | null;
   renta: RentaMensual | null;
   rentabilidad: Rentabilidad | null;
   costo: Costo;
+  now: Date;
 }) {
   const hayValor = valorComercial !== null && valorComercial.monto > 0;
 
@@ -92,7 +125,12 @@ export function KeyFigures({
               ? formatMoney(valorComercial.monto, valorComercial.moneda)
               : null
           }
-          sub={hayValor ? "sin fecha" : "falta valor comercial"}
+          sub={
+            hayValor
+              ? lineaDelValor(valorFuente, valorFecha, now)
+              : "falta valor comercial"
+          }
+          warning={hayValor && valorDesactualizado(valorFecha, now)}
         />
         <Cifra
           label="Renta mensual"

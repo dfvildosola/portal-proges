@@ -242,27 +242,150 @@ export function tiraDePagos(
 }
 
 // ---------------------------------------------------------------------------
+// Antigüedad del valor comercial
+// ---------------------------------------------------------------------------
+
+// Meses completos entre `fecha` y `now`, en UTC. 0 si la fecha es futura o aún
+// no pasa un mes entero.
+export function mesesDesde(fecha: Date, now: Date): number {
+  let meses =
+    (now.getUTCFullYear() - fecha.getUTCFullYear()) * 12 +
+    (now.getUTCMonth() - fecha.getUTCMonth());
+  if (now.getUTCDate() < fecha.getUTCDate()) meses--;
+  return Math.max(0, meses);
+}
+
+// Antigüedad en palabras: «hace menos de 1 mes», «hace 3 meses», «hace 2 años».
+export function antiguedad(meses: number): string {
+  if (meses < 1) return "hace menos de 1 mes";
+  if (meses === 1) return "hace 1 mes";
+  if (meses < 24) return `hace ${meses} meses`;
+  return `hace ${Math.floor(meses / 12)} años`;
+}
+
+// El valor comercial se considera desactualizado una vez cumplidos 12 meses
+// completos. Sin fecha no se puede saber: devuelve false (el chequeo «falta» lo
+// cubre aparte).
+export function valorDesactualizado(fecha: Date | null, now: Date): boolean {
+  return fecha !== null && mesesDesde(fecha, now) >= 12;
+}
+
+// ---------------------------------------------------------------------------
+// Patrimonio: valor neto y plusvalía
+// ---------------------------------------------------------------------------
+
+type Monto = { monto: number; moneda: Currency };
+
+// Pasa un monto de una moneda a otra con la UF dada (CLP por 1 UF). null si hace
+// falta la UF y no hay.
+function convertir(
+  monto: number,
+  desde: Currency,
+  hacia: Currency,
+  uf: number | null,
+): number | null {
+  if (desde === hacia) return monto;
+  const clp = toCLP(monto, desde, uf);
+  if (hacia === "CLP") return clp;
+  if (clp === null || uf === null || uf <= 0) return null;
+  return clp / uf;
+}
+
+// Valor neto = valor comercial − saldo de la deuda, en la moneda del valor
+// comercial. null si no hay valor comercial (o es 0), o si hace falta la UF para
+// pasar la deuda a la moneda del valor y no hay. Sin deuda (null) el neto es el
+// valor completo. Puede salir negativo si se debe más de lo que vale.
+export function valorNeto({
+  valor,
+  deuda,
+  uf,
+}: {
+  valor: Monto | null;
+  deuda: Monto | null;
+  uf: number | null;
+}): Monto | null {
+  if (valor === null || valor.monto <= 0) return null;
+  if (deuda === null) return { monto: valor.monto, moneda: valor.moneda };
+  const deudaEnMonedaDelValor = convertir(
+    deuda.monto,
+    deuda.moneda,
+    valor.moneda,
+    uf,
+  );
+  if (deudaEnMonedaDelValor === null) return null;
+  return { monto: valor.monto - deudaEnMonedaDelValor, moneda: valor.moneda };
+}
+
+export type Plusvalia = {
+  monto: number;
+  moneda: Currency;
+  // Ganancia ÷ precio de compra × 100.
+  pct: number;
+  // true si se compró en CLP: la ganancia está en pesos de la fecha de compra e
+  // incluye la inflación.
+  nominal: boolean;
+};
+
+// Plusvalía = valor comercial − precio de compra, comparados en la moneda en que
+// se compró (si se compró en UF, el valor de hoy se pasa a UF). null si falta el
+// valor comercial (o es 0) o el precio de compra (o es 0), o si hace falta la UF
+// y no hay.
+export function plusvalia({
+  valor,
+  compra,
+  uf,
+}: {
+  valor: Monto | null;
+  compra: Monto | null;
+  uf: number | null;
+}): Plusvalia | null {
+  if (valor === null || valor.monto <= 0) return null;
+  if (compra === null || compra.monto <= 0) return null;
+  const valorEnMonedaDeCompra = convertir(
+    valor.monto,
+    valor.moneda,
+    compra.moneda,
+    uf,
+  );
+  if (valorEnMonedaDeCompra === null) return null;
+  const monto = valorEnMonedaDeCompra - compra.monto;
+  return {
+    monto,
+    moneda: compra.moneda,
+    pct: (monto / compra.monto) * 100,
+    nominal: compra.moneda === "CLP",
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Datos al día
 // ---------------------------------------------------------------------------
 
 export type Chequeo = {
-  clave: "avaluo" | "contribuciones" | "documentos";
+  clave: "avaluo" | "valorComercial" | "contribuciones" | "documentos";
   texto: string;
   estado: "ok" | "falta" | "vencido";
 };
 
-// Tres chequeos de la ficha: avalúo del año en curso, las 4 cuotas de
-// contribuciones del año (todas con monto) y documentos vencidos (los que tienen
-// fechaVencimiento anterior a now; sin fecha no se consideran).
+// Cuatro chequeos de la ficha: avalúo del año en curso, valor comercial con
+// fecha de menos de 12 meses, las 4 cuotas de contribuciones del año (todas con
+// monto; si la propiedad es exenta, siempre «ok») y documentos vencidos (los que
+// tienen fechaVencimiento anterior a now; sin fecha no se consideran).
 export function datosAlDia({
   assessments,
   taxes,
   documents,
+  hayValorComercial,
+  valorComercialFecha,
+  exentaContribuciones,
   now,
 }: {
   assessments: Pick<PropertyAssessment, "anio">[];
   taxes: Pick<PropertyTax, "anio" | "cuota" | "monto">[];
   documents: Pick<DocumentoDB, "nombre" | "fechaVencimiento">[];
+  hayValorComercial: boolean;
+  valorComercialFecha: Date | null;
+  exentaContribuciones: boolean;
   now: Date;
 }): Chequeo[] {
   const anio = now.getUTCFullYear();
@@ -275,6 +398,33 @@ export function datosAlDia({
         texto: `Falta el avalúo fiscal ${anio}`,
         estado: "falta",
       };
+
+  let valorComercial: Chequeo;
+  if (!hayValorComercial) {
+    valorComercial = {
+      clave: "valorComercial",
+      texto: "Falta el valor comercial",
+      estado: "falta",
+    };
+  } else if (valorComercialFecha === null) {
+    valorComercial = {
+      clave: "valorComercial",
+      texto: "Valor comercial sin fecha",
+      estado: "falta",
+    };
+  } else if (valorDesactualizado(valorComercialFecha, now)) {
+    valorComercial = {
+      clave: "valorComercial",
+      texto: `Valor comercial desactualizado (${antiguedad(mesesDesde(valorComercialFecha, now))})`,
+      estado: "vencido",
+    };
+  } else {
+    valorComercial = {
+      clave: "valorComercial",
+      texto: `Valor comercial al día (${antiguedad(mesesDesde(valorComercialFecha, now))})`,
+      estado: "ok",
+    };
+  }
 
   const cuotasDelAnio = taxes.filter((t) => t.anio === anio);
   const faltantes = [1, 2, 3, 4].filter(
@@ -293,8 +443,13 @@ export function datosAlDia({
   if (sinMonto > 0) {
     problemas.push(`${sinMonto} sin monto`);
   }
-  const contribuciones: Chequeo =
-    problemas.length === 0
+  const contribuciones: Chequeo = exentaContribuciones
+    ? {
+        clave: "contribuciones",
+        texto: "Exenta de contribuciones",
+        estado: "ok",
+      }
+    : problemas.length === 0
       ? {
           clave: "contribuciones",
           texto: `Contribuciones ${anio}: las 4 cuotas, con monto`,
@@ -318,5 +473,5 @@ export function datosAlDia({
           estado: "vencido",
         };
 
-  return [avaluo, contribuciones, documentos];
+  return [avaluo, valorComercial, contribuciones, documentos];
 }

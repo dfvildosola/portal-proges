@@ -81,7 +81,14 @@ Las decisiones 3 y 6 se documentan en el ADR `docs/decisiones/0002-ficha-cifras-
   9. El dividendo se muestra, pero no entra al costo anual (mezcla capital e intereses).
   10. Valor comercial desactualizado pasados 12 meses.
   11. Sin saldo = sin deuda («Sin deuda registrada»).
-  - Piezas en serie: ✅ (a) partir `propiedades/actions.ts` · ✅ (b) migración, formulario y seed · ◻️ (c) ficha · ◻️ (d) partir `/resumen` y patrimonio neto · ◻️ coordinador (ADR 0003, pendientes, memoria, navegador, revisor, commit).
+  - Piezas en serie: ✅ (a) partir `propiedades/actions.ts` · ✅ (b) migración, formulario y seed · ✅ (c) ficha · ⏳ (d) partir `/resumen` y patrimonio neto · ◻️ coordinador (ADR 0003, pendientes, memoria, navegador, revisor, commit).
+  - **Qué dejó (c)**, decisiones tomadas en el camino:
+    - `property-metrics.ts` (477 líneas) suma `mesesDesde`, `antiguedad`, `valorDesactualizado`, `valorNeto` y `plusvalia`. `datosAlDia` ahora da 4 chequeos y recibe además `hayValorComercial`, para distinguir «Falta el valor comercial» de «Valor comercial sin fecha».
+    - **Desactualizado = 12 meses completos o más** (`>= 12`). El subagente lo había dejado en `> 12`, y lo corrigió el coordinador.
+    - **Deuda con saldo 0 = «Sin deuda registrada»**: se cuenta como deuda solo un saldo mayor que 0.
+    - Tarjeta nueva `patrimonio-card.tsx` arriba de la columna derecha del Resumen. Si falta la UF para convertir, el neto o la plusvalía muestran «—» con un aviso.
+    - Exenta: en Finanzas, el botón «Generar cuotas del año» se cambia por la etiqueta «Exenta de contribuciones».
+    - Todavía **no** se probó en el navegador: va en el cierre de la etapa.
 - ◻️ **Etapa 3: papeles en regla.**
   - Tipos de documento nuevos (migración): dominio vigente, hipotecas y gravámenes, certificado de avalúo, recepción final, reglamento de copropiedad, permiso de edificación, plano, derechos de agua y subdivisión SAG.
   - Lista por defecto según tipo de propiedad, escrita en `src/lib/papeles.ts`, y una tarjeta «Papeles» con ✓/✗ y fecha de emisión.
@@ -199,7 +206,7 @@ Decisiones tomadas en el camino:
 
 ## Paso siguiente exacto
 
-**Etapa 2, pieza (c): la ficha**, con un subagente Sonnet. El encargo está en el plan `~/.claude/plans/glowing-mixing-biscuit.md`, sección «(c) La ficha». Después viene (d) y luego el cierre del coordinador. Las piezas van en serie, y después de cada una el coordinador corre `npm run lint && npm run build` y revisa el diff.
+**Etapa 2, pieza (d): `/resumen`**, con un subagente Sonnet. Primero se parte `resumen/page.tsx` (solo mover código) y después se agrega el patrimonio neto. El encargo está en el plan `~/.claude/plans/glowing-mixing-biscuit.md`, sección «(d)». Después viene el cierre del coordinador, que incluye probar en el navegador lo de (c) y (d). Después de cada pieza, el coordinador corre `npm run lint && npm run build` y revisa el diff.
 
 **Qué dejaron (a) y (b)**, para los encargos:
 - **Acciones:** viven en `src/app/(app)/propiedades/{actions,facts-actions,finance-actions,documents-actions}.ts`. Los helpers de validación están en `src/lib/form-helpers.ts`, incluido `optionalDateField({ noFutura })`.
