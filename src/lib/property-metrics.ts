@@ -362,7 +362,12 @@ export function plusvalia({
 // ---------------------------------------------------------------------------
 
 export type Chequeo = {
-  clave: "avaluo" | "valorComercial" | "contribuciones" | "documentos";
+  clave:
+    | "avaluo"
+    | "valorComercial"
+    | "contribuciones"
+    | "documentos"
+    | "papeles";
   texto: string;
   estado: "ok" | "falta" | "vencido";
 };

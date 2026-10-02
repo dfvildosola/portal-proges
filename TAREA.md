@@ -109,7 +109,7 @@ Las decisiones 3 y 6 se documentan en el ADR `docs/decisiones/0002-ficha-cifras-
   4. Fecha de emisión = `Document.fechaEmision` (ya existía); vacía → «subido el …» en gris.
   5. Lista en el código (`src/lib/papeles.ts`), igual para todos los clientes.
   6. Diego corrigió la tabla: **plano y certificado de informaciones previas van en todas** las propiedades.
-  - Piezas en serie: ⏳ (a) base y reglas · ◻️ (b) subir con papel · ◻️ (c) lista en la ficha · ◻️ cierre (ADR 0004, navegador, revisor, `/code-review` de la branch, limpieza).
+  - Piezas en serie: ✅ (a) base y reglas (migración `20261002021225_papeles`, `src/lib/papeles.ts`, `papelLabels`) · ⏳ (b) subir con papel · ◻️ (c) lista en la ficha · ◻️ cierre (ADR 0004, navegador, revisor, `/code-review` de la branch, limpieza).
 
 ### Para `PENDIENTES.md` (✅ ya agregados en la etapa 1)
 
@@ -223,7 +223,7 @@ Decisiones tomadas en el camino:
 
 ## Paso siguiente exacto
 
-**Etapa 3, pieza (a): base y reglas**, con un subagente Sonnet según el plan `~/.claude/plans/peppy-kindling-horizon.md`. Después (b) y (c), en serie, y el cierre.
+**Etapa 3, pieza (b): subir con papel**, con un subagente Sonnet según el plan `~/.claude/plans/peppy-kindling-horizon.md`. Después (c) y el cierre. El ADR 0004 ya está escrito (`docs/decisiones/0004-papeles.md`). Para (c): `chequeoPapeles` lista todos los nombres que faltan; con 0 documentos serían 11 nombres en una línea, así que (c) lo acorta (ninguno cargado → «Papeles: ninguno cargado (faltan los N)»; más de 3 faltantes → los 3 primeros «y N más»).
 
 **Al terminar la etapa 3 (última de la tarea):** `/code-review` sobre la branch, borrar el contrato de prueba (abajo) y `TAREA.md`, y después mezclar cuando Diego lo pida.
 

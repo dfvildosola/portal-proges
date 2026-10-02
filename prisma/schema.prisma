@@ -125,6 +125,25 @@ enum DocumentType {
   OTRO
 }
 
+// El papel concreto que es un documento (dominio vigente, recepción final…).
+// El cajón donde se archiva sigue en Document.tipo.
+enum Papel {
+  ESCRITURA
+  DOMINIO_VIGENTE
+  HIPOTECAS_GRAVAMENES
+  CERTIFICADO_AVALUO
+  PLANO
+  CIP
+  RECEPCION_FINAL
+  POLIZA_SEGURO
+  PERMISO_EDIFICACION
+  CERTIFICADO_NUMERO
+  REGLAMENTO_COPROPIEDAD
+  SUBDIVISION_SAG
+  DERECHOS_AGUA
+  CONTRATO_ARRIENDO
+}
+
 enum AlertType {
   ARRENDADA_SIN_CONTRATO
   CONTRATO_POR_VENCER
@@ -446,6 +465,7 @@ model Document {
   organizationId String
   propertyId     String
   tipo           DocumentType
+  papel          Papel? // qué papel es (null = documento suelto, sin papel asignado)
   nombre         String
   blobKey        String // puntero al objeto en Vercel Blob
   fechaEmision   DateTime?

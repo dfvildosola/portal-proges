@@ -18,6 +18,7 @@ import {
   AlertType,
   AlertSeverity,
   DocumentType,
+  Papel,
   ValorFuente,
 } from "@/generated/prisma/enums";
 
@@ -211,6 +212,24 @@ export const documentTypeLabels: Record<DocumentType, string> = {
   MANTENCION: "Mantención",
   CONTRIBUCION: "Contribuciones",
   OTRO: "Otros",
+};
+
+// El papel concreto que es un documento (el cajón donde se archiva es documentTypeLabels).
+export const papelLabels: Record<Papel, string> = {
+  ESCRITURA: "Escritura",
+  DOMINIO_VIGENTE: "Dominio vigente (CBR)",
+  HIPOTECAS_GRAVAMENES: "Hipotecas y gravámenes (CBR)",
+  CERTIFICADO_AVALUO: "Certificado de avalúo (SII)",
+  PLANO: "Plano",
+  CIP: "Certificado de informaciones previas (DOM)",
+  RECEPCION_FINAL: "Recepción final (DOM)",
+  POLIZA_SEGURO: "Póliza de incendio y sismo",
+  PERMISO_EDIFICACION: "Permiso de edificación (DOM)",
+  CERTIFICADO_NUMERO: "Certificado de número (DOM)",
+  REGLAMENTO_COPROPIEDAD: "Reglamento de copropiedad",
+  SUBDIVISION_SAG: "Subdivisión SAG",
+  DERECHOS_AGUA: "Derechos de agua (CBR/DGA)",
+  CONTRATO_ARRIENDO: "Contrato de arriendo",
 };
 
 // Convierte un mapa de etiquetas en opciones { value, label } para un <Select>.
