@@ -10,6 +10,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import {
   Dialog,
@@ -19,13 +20,38 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { documentTypeLabels, enumOptions } from "@/lib/domain";
-import type { DocumentType } from "@/generated/prisma/enums";
+import { documentTypeLabels, enumOptions, papelLabels } from "@/lib/domain";
+import type { DocumentType, Papel } from "@/generated/prisma/enums";
 import { uploadDocument } from "../documents-actions";
 import type { DocumentFormState } from "../documents-actions";
 
-export function UploadDocumentDialog({ propertyId }: { propertyId: string }) {
+// Opciones del selector «¿Qué papel es?»: los 14 papeles en el orden del enum y,
+// al final, «Otro documento» (el papel no está en la lista y se pide el cajón).
+const OTRO = "OTRO";
+const papelItems: Record<string, string> = {
+  ...papelLabels,
+  [OTRO]: "Otro documento",
+};
+type PapelElegido = Papel | typeof OTRO;
+
+// Cuadro para subir un documento. El usuario elige qué papel es y el cajón (tipo)
+// se llena solo en el servidor; con «Otro documento» se pide el cajón a mano.
+// - papelInicial: abre el cuadro con ese papel ya elegido (botón de cada fila de
+//   la lista de papeles).
+// - compacto: el disparador es un botón chico «Subir» en vez de «Subir documento».
+export function UploadDocumentDialog({
+  propertyId,
+  papelInicial,
+  compacto = false,
+}: {
+  propertyId: string;
+  papelInicial?: Papel;
+  compacto?: boolean;
+}) {
   const [open, setOpen] = useState(false);
+  // null = nada elegido: el selector muestra «Elige el papel» y el servidor
+  // rechaza el envío, así nadie sube algo mal etiquetado por no mirar.
+  const [papel, setPapel] = useState<PapelElegido | null>(papelInicial ?? null);
   const [tipo, setTipo] = useState<DocumentType>("ESCRITURA_TITULO");
   // Close and reset right when the upload succeeds, inside the action itself.
   const [state, formAction, pending] = useActionState(
@@ -33,6 +59,7 @@ export function UploadDocumentDialog({ propertyId }: { propertyId: string }) {
       const result = await uploadDocument(prev, formData);
       if (result.success) {
         setOpen(false);
+        setPapel(papelInicial ?? null);
         setTipo("ESCRITURA_TITULO");
       }
       return result;
@@ -42,31 +69,49 @@ export function UploadDocumentDialog({ propertyId }: { propertyId: string }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" />}>
-        <Upload className="size-3.5" />
-        Subir documento
+      <DialogTrigger
+        render={
+          compacto ? (
+            <Button size="xs" variant="outline" />
+          ) : (
+            <Button size="sm" />
+          )
+        }
+      >
+        {compacto ? (
+          "Subir"
+        ) : (
+          <>
+            <Upload className="size-3.5" />
+            Subir documento
+          </>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <form action={formAction} encType="multipart/form-data">
           <input type="hidden" name="propertyId" value={propertyId} />
+          <input type="hidden" name="papel" value={papel ?? ""} />
           <input type="hidden" name="tipo" value={tipo} />
           <DialogHeader>
-            <DialogTitle>Subir documento</DialogTitle>
+            <DialogTitle>
+              {papelInicial
+                ? `Subir: ${papelLabels[papelInicial]}`
+                : "Subir documento"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex flex-col gap-1.5">
-              <Label>Categoría</Label>
+              <Label>¿Qué papel es?</Label>
               <Select
-                value={tipo}
-                onValueChange={(v) => setTipo(v as DocumentType)}
+                items={papelItems}
+                value={papel}
+                onValueChange={(v) => setPapel(v as PapelElegido | null)}
               >
                 <SelectTrigger className="w-full">
-                  <span className="flex-1 text-left text-sm">
-                    {documentTypeLabels[tipo]}
-                  </span>
+                  <SelectValue placeholder="Elige el papel" />
                 </SelectTrigger>
                 <SelectContent>
-                  {enumOptions(documentTypeLabels).map((o) => (
+                  {enumOptions(papelItems).map((o) => (
                     <SelectItem key={o.value} value={o.value}>
                       {o.label}
                     </SelectItem>
@@ -74,6 +119,28 @@ export function UploadDocumentDialog({ propertyId }: { propertyId: string }) {
                 </SelectContent>
               </Select>
             </div>
+            {papel === OTRO && (
+              <div className="flex flex-col gap-1.5">
+                <Label>Categoría</Label>
+                <Select
+                  value={tipo}
+                  onValueChange={(v) => setTipo(v as DocumentType)}
+                >
+                  <SelectTrigger className="w-full">
+                    <span className="flex-1 text-left text-sm">
+                      {documentTypeLabels[tipo]}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {enumOptions(documentTypeLabels).map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="doc-file">Archivo</Label>
               <Input
@@ -111,7 +178,8 @@ export function UploadDocumentDialog({ propertyId }: { propertyId: string }) {
             )}
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={pending}>
+            {/* Without a papel the server rejects it, and React would clear the chosen file. */}
+            <Button type="submit" disabled={pending || papel === null}>
               {pending ? "Subiendo…" : "Subir"}
             </Button>
           </DialogFooter>

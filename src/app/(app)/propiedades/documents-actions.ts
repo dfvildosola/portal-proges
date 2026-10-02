@@ -5,7 +5,8 @@ import { put, del } from "@vercel/blob";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import { assertProperty } from "@/lib/form-helpers";
-import { DocumentType } from "@/generated/prisma/enums";
+import { DocumentType, Papel } from "@/generated/prisma/enums";
+import { PAPEL_CATEGORIA } from "@/lib/papeles";
 
 // ---------------------------------------------------------------------------
 // Documentos (Vercel Blob + metadatos en DB)
@@ -26,11 +27,26 @@ export async function uploadDocument(
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return { error: "Selecciona un archivo." };
 
-  const tipoRaw = String(formData.get("tipo") ?? "");
-  if (!Object.values(DocumentType).includes(tipoRaw as DocumentType)) {
-    return { error: "Tipo de documento inválido." };
+  // Qué papel es el documento. Un papel de la lista fija el cajón (tipo) solo;
+  // "OTRO" lo deja sin papel y ahí sí se usa el cajón que mandó el formulario.
+  const papelRaw = String(formData.get("papel") ?? "").trim();
+  if (papelRaw === "") return { error: "Elige qué papel es." };
+
+  let papel: Papel | null;
+  let tipo: DocumentType;
+  if (papelRaw === "OTRO") {
+    const tipoRaw = String(formData.get("tipo") ?? "");
+    if (!Object.values(DocumentType).includes(tipoRaw as DocumentType)) {
+      return { error: "Tipo de documento inválido." };
+    }
+    papel = null;
+    tipo = tipoRaw as DocumentType;
+  } else if (Object.values(Papel).includes(papelRaw as Papel)) {
+    papel = papelRaw as Papel;
+    tipo = PAPEL_CATEGORIA[papel];
+  } else {
+    return { error: "Papel inválido." };
   }
-  const tipo = tipoRaw as DocumentType;
 
   const nombreRaw = String(formData.get("nombre") ?? "").trim();
   const nombre = nombreRaw || file.name;
@@ -59,7 +75,7 @@ export async function uploadDocument(
   }
 
   await db.document.create({
-    data: { organizationId: orgId, propertyId, tipo, nombre, blobKey: blobUrl, fechaEmision, fechaVencimiento },
+    data: { organizationId: orgId, propertyId, tipo, papel, nombre, blobKey: blobUrl, fechaEmision, fechaVencimiento },
   });
 
   revalidatePath(`/propiedades/${propertyId}`);

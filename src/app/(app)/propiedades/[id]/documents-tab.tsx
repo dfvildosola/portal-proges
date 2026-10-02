@@ -1,7 +1,7 @@
 import { Download, FileText, X } from "lucide-react";
 import type { Document as PropertyDocument } from "@/generated/prisma/client";
 import { Badge } from "@/components/ui/badge";
-import { documentTypeLabels } from "@/lib/domain";
+import { documentTypeLabels, papelLabels } from "@/lib/domain";
 import { formatDate } from "@/lib/format";
 import { UploadDocumentDialog } from "./documents-forms";
 import { deleteDocument } from "../documents-actions";
@@ -72,7 +72,9 @@ export function DocumentsTab({
                           {doc.nombre}
                         </p>
                         <Badge variant="secondary" className="text-xs font-normal">
-                          {documentTypeLabels[doc.tipo]}
+                          {doc.papel
+                            ? papelLabels[doc.papel]
+                            : documentTypeLabels[doc.tipo]}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
