@@ -13,7 +13,11 @@ import {
   rentabilidad,
   tiraDePagos,
 } from "@/lib/property-metrics";
-import { chequeoPapeles, estadoPapeles } from "@/lib/papeles";
+import {
+  chequeoPapeles,
+  estadoPapeles,
+  sacarReemplazados,
+} from "@/lib/papeles";
 import { BackLink } from "@/components/back-link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PropertyHeader } from "./property-header";
@@ -195,7 +199,7 @@ export default async function PropiedadDetallePage({
                   ...datosAlDia({
                     assessments: p.assessments,
                     taxes: p.taxes,
-                    documents: p.documents,
+                    documents: sacarReemplazados(p.documents, now),
                     hayValorComercial:
                       valorComercial !== null && valorComercial.monto > 0,
                     valorComercialFecha: p.valorComercialFecha,

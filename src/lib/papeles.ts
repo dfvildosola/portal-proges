@@ -102,7 +102,8 @@ export function papelesRequeridos(
 export type EstadoPapel = {
   papel: Papel;
   estado: "ok" | "falta" | "vencido";
-  // El documento vigente de ese papel (el más reciente); null si falta.
+  // El documento que representa a ese papel: el más reciente entre los vigentes
+  // o, si todos vencieron, el más reciente de todos; null si falta.
   documento: {
     id: string;
     nombre: string;
@@ -115,10 +116,38 @@ export type EstadoPapel = {
   antiguedad: string | null;
 };
 
-// Un EstadoPapel por cada papel requerido, en el mismo orden. De los documentos
-// de un papel manda el más reciente (fechaEmision, o createdAt si no la tiene).
-// El papel está «vencido» si ese documento tiene fechaVencimiento anterior a now
-// (misma regla que datosAlDia); sin documento, «falta».
+// Un documento está vigente si no tiene fechaVencimiento o si esta no es anterior
+// a now (es la inversa de la regla de «documentos vencidos» de datosAlDia).
+function estaVigente(
+  d: Pick<DocumentoDB, "fechaVencimiento">,
+  now: Date,
+): boolean {
+  return d.fechaVencimiento === null || d.fechaVencimiento >= now;
+}
+
+// El más reciente de una lista: por fechaEmision, o por createdAt si no la tiene.
+// null si la lista está vacía.
+function masReciente<T extends Pick<DocumentoDB, "fechaEmision" | "createdAt">>(
+  docs: T[],
+): T | null {
+  let reciente: T | null = null;
+  for (const d of docs) {
+    if (
+      reciente === null ||
+      (d.fechaEmision ?? d.createdAt) >
+        (reciente.fechaEmision ?? reciente.createdAt)
+    ) {
+      reciente = d;
+    }
+  }
+  return reciente;
+}
+
+// Un EstadoPapel por cada papel requerido, en el mismo orden. Los usuarios guardan
+// el historial (una póliza vieja vencida convive con la nueva), así que basta un
+// documento vigente para que el papel esté «ok», y se muestra el más reciente entre
+// los vigentes. Si todos sus documentos vencieron, el papel está «vencido» y se
+// muestra el más reciente de todos. Sin documentos, «falta».
 export function estadoPapeles({
   tipo,
   estado,
@@ -134,24 +163,14 @@ export function estadoPapeles({
   now: Date;
 }): EstadoPapel[] {
   return papelesRequeridos(tipo, estado).map((papel) => {
-    let reciente: (typeof documents)[number] | null = null;
-    for (const d of documents) {
-      if (d.papel !== papel) continue;
-      if (
-        reciente === null ||
-        (d.fechaEmision ?? d.createdAt) >
-          (reciente.fechaEmision ?? reciente.createdAt)
-      ) {
-        reciente = d;
-      }
-    }
-
+    const delPapel = documents.filter((d) => d.papel === papel);
+    const vigentes = delPapel.filter((d) => estaVigente(d, now));
+    const vencido = vigentes.length === 0;
+    const reciente = masReciente(vencido ? delPapel : vigentes);
     if (reciente === null) {
       return { papel, estado: "falta", documento: null, antiguedad: null };
     }
 
-    const vencido =
-      reciente.fechaVencimiento !== null && reciente.fechaVencimiento < now;
     return {
       papel,
       estado: vencido ? "vencido" : "ok",
@@ -168,6 +187,23 @@ export function estadoPapeles({
           : antiguedad(mesesDesde(reciente.fechaEmision, now)),
     };
   });
+}
+
+// Los mismos documentos, menos los vencidos de un papel que ya tiene otro documento
+// vigente: una póliza renovada deja de contar como vencida y la vieja queda solo
+// como historial. Los documentos sin papel no se tocan.
+export function sacarReemplazados<
+  T extends Pick<DocumentoDB, "id" | "papel" | "fechaVencimiento">,
+>(documents: T[], now: Date): T[] {
+  const papelesVigentes = new Set(
+    documents
+      .filter((d) => d.papel !== null && estaVigente(d, now))
+      .map((d) => d.papel),
+  );
+  return documents.filter(
+    (d) =>
+      d.papel === null || estaVigente(d, now) || !papelesVigentes.has(d.papel),
+  );
 }
 
 // Chequeo «papeles» de la ficha: cuántos de los requeridos están cargados. Un

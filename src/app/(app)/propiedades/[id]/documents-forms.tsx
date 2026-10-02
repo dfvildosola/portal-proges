@@ -52,7 +52,7 @@ export function UploadDocumentDialog({
   // null = nada elegido: el selector muestra «Elige el papel» y el servidor
   // rechaza el envío, así nadie sube algo mal etiquetado por no mirar.
   const [papel, setPapel] = useState<PapelElegido | null>(papelInicial ?? null);
-  const [tipo, setTipo] = useState<DocumentType>("ESCRITURA_TITULO");
+  const [tipo, setTipo] = useState<DocumentType>("OTRO");
   // Close and reset right when the upload succeeds, inside the action itself.
   const [state, formAction, pending] = useActionState(
     async (prev: DocumentFormState, formData: FormData) => {
@@ -60,7 +60,7 @@ export function UploadDocumentDialog({
       if (result.success) {
         setOpen(false);
         setPapel(papelInicial ?? null);
-        setTipo("ESCRITURA_TITULO");
+        setTipo("OTRO");
       }
       return result;
     },
@@ -88,14 +88,14 @@ export function UploadDocumentDialog({
         )}
       </DialogTrigger>
       <DialogContent className="max-w-md">
-        <form action={formAction} encType="multipart/form-data">
+        <form action={formAction}>
           <input type="hidden" name="propertyId" value={propertyId} />
           <input type="hidden" name="papel" value={papel ?? ""} />
           <input type="hidden" name="tipo" value={tipo} />
           <DialogHeader>
             <DialogTitle>
-              {papelInicial
-                ? `Subir: ${papelLabels[papelInicial]}`
+              {papel !== null && papel !== OTRO
+                ? `Subir: ${papelLabels[papel]}`
                 : "Subir documento"}
             </DialogTitle>
           </DialogHeader>

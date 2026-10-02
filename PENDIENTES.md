@@ -2,7 +2,10 @@
 
 - **Pendientes: botón dentro de otro botón.** En `pendientes/alert-group.tsx`, el botón «Resolver propiedad» está dentro del encabezado que abre y cierra el grupo, que también es un botón. El navegador reclama y React rehace la página al cargar (error de hidratación).
 - **Tema:** decidir si montos, ROL y fechas pasan a JetBrains Mono, como pide el sistema de diseño. Quedó fuera del cambio de tema.
-- **Espacios y Vercel Blob.** Cada espacio copia el `.env` del original, con el mismo `BLOB_READ_WRITE_TOKEN`: subir o borrar un documento desde un espacio escribe en el almacén real de Vercel Blob, igual que hoy desde `npm run dev`. Con varios espacios el riesgo se multiplica. Opciones: un almacén aparte para desarrollo, o que los espacios no traigan el token. 2026-10-01.
+- **Subir documentos no funciona en local: `BLOB_READ_WRITE_TOKEN` está vacío en `.env`.** Toda subida responde «Error al subir el archivo…» antes de llegar a Vercel; en la etapa 3 de la ficha (papeles) el flujo se probó hasta ese paso, pero no la escritura del documento. Decidir antes de cargar el token:
+  - un almacén de Vercel Blob aparte para desarrollo, para que ni `npm run dev` ni los espacios (que copian el `.env` del original) escriban en el de producción;
+  - si los documentos pasan a almacenamiento **privado**: hoy se suben con `access: "public"`, así que una escritura o un certificado quedan en una URL pública, difícil de adivinar pero sin protección. Vercel Blob ya ofrece almacenamiento privado.
+  2026-10-01.
 - **Borrar el contenedor viejo de Docker** (`proges-db-prueba` y su volumen `proges_proges-pgdata`) y el respaldo `.env.respaldo-docker` cuando la base `proges_dev` del Mac lleve un tiempo funcionando bien. Hoy el contenedor está apagado, no borrado. 2026-10-01.
 - **Cuentas pagadas no llegan a la rentabilidad.** Marcar pagada una `PropertyBill` no crea un `Movement` (gasto), así que ese gasto no aparece en la rentabilidad de la propiedad. Resolver cuando el flujo lleve un tiempo en uso real. 2026-10-01.
 - **`Field` copiado 6 veces.** El envoltorio etiqueta + campo + error está repetido en `property-form.tsx`, `property-form-economic.tsx`, `[id]/economic-forms.tsx`, `pay-form`, `tenant-form` y `contract-form`. Sacarlo a `src/components/` y que todos lo importen (regla de tres). 2026-10-01.
@@ -38,7 +41,7 @@ Ideas que salieron al rediseñar la ficha y que no entran en esta tarea. 2026-10
 - Bitácora de notas por propiedad.
 - Flujo de venta: primero preguntar cómo se vende hoy (regla 8).
 - Mapa de toda la cartera: requiere guardar coordenadas de cada propiedad.
-- Papeles personalizables por empresa (la etapa 3 parte con una lista fija en el código).
+- Papeles personalizables por empresa, cuando un cliente lo pida. Hoy la lista es fija, en `src/lib/papeles.ts` (ADR 0004, decisión 5).
 - `rolSII` único por comuna y organización (hoy la base no lo impide).
 - Foto de fachada.
 - **Separar los intereses del dividendo** para la rentabilidad neta. Hoy el dividendo solo se muestra y no entra al costo, porque mezcla abono a capital (ahorro) con intereses (gasto). Ver ADR 0003, decisión 9.

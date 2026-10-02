@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { put, del } from "@vercel/blob";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
-import { assertProperty } from "@/lib/form-helpers";
+import { assertProperty, optionalDateField } from "@/lib/form-helpers";
 import { DocumentType, Papel } from "@/generated/prisma/enums";
 import { PAPEL_CATEGORIA } from "@/lib/papeles";
 
@@ -51,10 +51,21 @@ export async function uploadDocument(
   const nombreRaw = String(formData.get("nombre") ?? "").trim();
   const nombre = nombreRaw || file.name;
 
-  const fechaEmisionRaw = String(formData.get("fechaEmision") ?? "").trim();
-  const fechaVencimientoRaw = String(formData.get("fechaVencimiento") ?? "").trim();
-  const fechaEmision = fechaEmisionRaw ? new Date(`${fechaEmisionRaw}T00:00:00Z`) : null;
-  const fechaVencimiento = fechaVencimientoRaw ? new Date(`${fechaVencimientoRaw}T00:00:00Z`) : null;
+  // Fechas: la de emisión no puede ser futura; la de vencimiento sí.
+  const emisionParsed = optionalDateField({ noFutura: true }).safeParse(
+    String(formData.get("fechaEmision") ?? ""),
+  );
+  if (!emisionParsed.success) {
+    return { error: `Fecha de emisión: ${emisionParsed.error.issues[0].message}` };
+  }
+  const vencimientoParsed = optionalDateField().safeParse(
+    String(formData.get("fechaVencimiento") ?? ""),
+  );
+  if (!vencimientoParsed.success) {
+    return { error: `Fecha de vencimiento: ${vencimientoParsed.error.issues[0].message}` };
+  }
+  const fechaEmision = emisionParsed.data;
+  const fechaVencimiento = vencimientoParsed.data;
 
   const orgId = await getOrgId();
   if (!(await assertProperty(propertyId, orgId))) return { error: "Propiedad no encontrada." };
