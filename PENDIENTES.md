@@ -1,5 +1,6 @@
 # Pendientes — Proges
 
+- **Producción es pública: falta el login.** Desde el 2026-10-02, `proges.vercel.app` funciona con su base (ADR 0005), pero no hay login: no hay middleware ni Clerk en el código, y `getOrgId()` (`src/lib/org.ts`) devuelve siempre `org_proges`. Cualquiera con la dirección puede ver, crear y borrar datos. **No cargar datos reales en producción hasta tener login.** Las llaves de Clerk ya están en Vercel. Mientras tanto, una opción rápida es activar la protección de Vercel (Deployment Protection) también para producción. 2026-10-02.
 - **Pendientes: botón dentro de otro botón.** En `pendientes/alert-group.tsx`, el botón «Resolver propiedad» está dentro del encabezado que abre y cierra el grupo, que también es un botón. El navegador reclama y React rehace la página al cargar (error de hidratación).
 - **Tema:** decidir si montos, ROL y fechas pasan a JetBrains Mono, como pide el sistema de diseño. Quedó fuera del cambio de tema.
 - **Subir documentos no funciona en local: `BLOB_READ_WRITE_TOKEN` está vacío en `.env`.** Toda subida responde «Error al subir el archivo…» antes de llegar a Vercel; en la etapa 3 de la ficha (papeles) el flujo se probó hasta ese paso, pero no la escritura del documento. Decidir antes de cargar el token:
