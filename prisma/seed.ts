@@ -1,682 +1,381 @@
-// Seed de datos de prueba para Proges.
-// Genera ~50 propiedades con arrendatarios, contratos, cobros y contribuciones.
+// Guion de datos de ejemplo para Proges: una cartera de 80 propiedades de
+// gestión de patrimonio, enfocada en arriendo y compraventa, con dueños, grupos,
+// arrendatarios, contratos, cobros, gastos, contribuciones, cuentas y valores UF.
+// «Hoy» es 2026-10-01 (HOY_FICHA en `seed-datos.ts`).
+//
+// Cada vez que corre, BORRA todo lo de la organización y lo vuelve a crear.
+// Los datos de cada propiedad se arman en `seed-propiedades.ts` (45 reales desde
+// `prisma/datos-reales.json`, que no va a GitHub, y 35 inventadas); las listas de
+// nombres y comunas están en `seed-datos.ts`.
 //
 // Uso:
-//   npm run db:seed                          ← DB local
-//   DATABASE_URL="postgresql://..." npm run db:seed   ← Neon u otra DB
+//   npm run db:seed          ← base local (la de DATABASE_URL en .env)
+//
+// Freno de seguridad: si DATABASE_URL apunta a una base que no es local
+// (localhost, 127.0.0.1 o ::1), el guion se niega a correr, porque borraría toda
+// esa base. Para hacerlo a propósito hay que confirmarlo:
+//   SEED_CONFIRMAR=borrar-produccion DATABASE_URL="postgresql://..." npm run db:seed
+//
+// Qué pasa si algo falla: los datos se arman y se revisan en memoria antes de
+// tocar la base (un `datos-reales.json` mal formado se detiene ahí, sin borrar
+// nada). Después, el borrado y todas las creaciones van en UNA transacción: si un
+// paso falla, la base vuelve a como estaba (como un «deshacer» de todo el guion).
 
 import "dotenv/config";
-import { PrismaClient, type Prisma, type Property } from "../src/generated/prisma/client";
+import { randomUUID } from "node:crypto";
+import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { GRUPOS, OWNERS, TENANTS, ETIQUETAS, ORG, UF_HOY, date } from "./seed-datos";
+import { armarPropiedades } from "./seed-propiedades";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const db = new PrismaClient({ adapter });
 
-const ORG = "org_proges";
-
-// "Hoy" de los datos de la ficha (valor, compra, deuda): 2026-10-01.
-const HOY_FICHA = new Date(Date.UTC(2026, 9, 1));
-
-const BANCOS = ["Banco de Chile", "BancoEstado", "Santander", "BCI", "Scotiabank"];
-const FUENTES = ["TASACION", "CORREDOR", "ESTIMACION_PROPIA"] as const;
-
-// UF de referencia para generar avalúos fiscales en CLP a partir de valores
-// comerciales en UF (los valores UF reales se cargan más abajo en CurrencyValue).
-const UF_REF = 38100;
-
 // ---------------------------------------------------------------------------
-// Helpers
+// Freno de seguridad
 // ---------------------------------------------------------------------------
 
-function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
+const HOSTS_LOCALES = ["localhost", "127.0.0.1", "::1"];
 
-function rut(base: number): string {
-  const digits = String(base);
-  const reversed = digits.split("").reverse().map(Number);
-  const series = [2, 3, 4, 5, 6, 7, 2, 3, 4, 5, 6, 7];
-  const sum = reversed.reduce((acc, d, i) => acc + d * series[i], 0);
-  const remainder = 11 - (sum % 11);
-  const dv = remainder === 11 ? "0" : remainder === 10 ? "K" : String(remainder);
-  const fmt = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `${fmt}-${dv}`;
-}
-
-function rolSII(num: number): string {
-  const block = String(Math.floor(num / 100)).padStart(4, "0");
-  const unit = String(num % 100).padStart(3, "0");
-  return `${block}-${unit}`;
-}
-
-function date(y: number, m: number, d: number): Date {
-  return new Date(Date.UTC(y, m - 1, d));
-}
-
-function addMonths(dt: Date, n: number): Date {
-  const d = new Date(dt);
-  d.setUTCMonth(d.getUTCMonth() + n);
-  return d;
-}
-
-function periodoStr(dt: Date): string {
-  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-// Elige `n` índices del `pool` para repartir un dato entre las 50 propiedades:
-// primero los obligatorios y después los demás en un orden repartido (`paso`
-// es coprimo con 50). Así los conteos son fijos aunque tipo y estado sean al azar.
-function elegir(pool: number[], n: number, paso: number, obligatorios: number[] = []): number[] {
-  const orden = [...pool].sort((a, b) => ((a * paso) % 50) - ((b * paso) % 50));
-  const out = [...obligatorios];
-  for (const i of orden) {
-    if (out.length >= n) break;
-    if (!out.includes(i)) out.push(i);
+// Host de la base a la que apunta DATABASE_URL (sin usuario ni clave), o null si
+// la dirección no se puede leer.
+function hostDeLaBase(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^\[|\]$/g, ""); // ::1 viene entre corchetes
+  } catch {
+    return null;
   }
-  return out;
 }
 
-// ---------------------------------------------------------------------------
-// Datos base
-// ---------------------------------------------------------------------------
+// true si se puede seguir. Si la base no es local y no se confirmó, avisa y
+// devuelve false sin tocar nada.
+function puedeBorrar(): boolean {
+  const host = hostDeLaBase(process.env.DATABASE_URL);
+  if (host !== null && HOSTS_LOCALES.includes(host)) return true;
+  if (process.env.SEED_CONFIRMAR === "borrar-produccion") return true;
 
-const COMUNAS: [string, string][] = [
-  ["Las Condes", "Región Metropolitana"],
-  ["Providencia", "Región Metropolitana"],
-  ["Vitacura", "Región Metropolitana"],
-  ["Ñuñoa", "Región Metropolitana"],
-  ["La Reina", "Región Metropolitana"],
-  ["San Miguel", "Región Metropolitana"],
-  ["Macul", "Región Metropolitana"],
-  ["La Florida", "Región Metropolitana"],
-  ["Maipú", "Región Metropolitana"],
-  ["Peñalolén", "Región Metropolitana"],
-  ["Santiago", "Región Metropolitana"],
-  ["Estación Central", "Región Metropolitana"],
-];
-
-const CALLES = [
-  "Av. Apoquindo", "Av. Providencia", "Av. Las Condes", "Av. Vitacura",
-  "Av. Irarrázaval", "Av. Tobalaba", "Av. Kennedy", "Av. Cristóbal Colón",
-  "Av. Bilbao", "Av. Francisco Bilbao", "Calle Los Militares", "Calle Baquedano",
-  "Av. Grecia", "Av. Vicuña Mackenna", "Av. Marathon", "Calle San Pascual",
-  "Av. Departamental", "Pasaje Los Aromos", "Calle Lota", "Av. Príncipe de Gales",
-];
-
-const NOMBRES_PERSONA = [
-  "Carlos Andrés Vidal Soto", "María Elena Fuentes Rojas", "Jorge Luis Pereira Núñez",
-  "Patricia Alejandra Morales Lagos", "Roberto Antonio Herrera Cáceres",
-  "Ana Cecilia Muñoz Bravo", "Francisco Javier Ortiz Pérez", "Claudia Andrea Ramos Torres",
-  "Rodrigo Sebastián Espinoza Vera", "Daniela Paz Castro Montoya",
-  "Andrés Felipe Gutiérrez Silva", "Marcela Soledad Vargas Díaz",
-];
-
-const NOMBRES_TENANT = [
-  "Sofía Isabel Araya Ponce", "Ignacio Hernán Rojas Saavedra", "Valentina Nicole Flores Contreras",
-  "Matías Esteban Soto Guerrero", "Camila Javiera Mendez Alcaíno", "Felipe Andrés Torres Leiva",
-  "Natalia Cristina Vega Villalobos", "Sebastián Alberto Mora Poblete", "Catalina Andrea Ríos Acevedo",
-  "Diego Ignacio Reyes Jara", "Carla Valentina Sepúlveda Muñoz", "Marco Antonio Alvarez Reyes",
-  "Daniela Francisca Concha Salinas", "Pablo Rodrigo Fuentes Espinoza", "Javiera Alejandra Bravo Cáceres",
-  "Gonzalo Enrique Molina Herrera", "Constanza Beatriz Ibarra Rojas", "Cristóbal Ernesto Saavedra Lagos",
-  "Francisca Paz Núñez Vidal", "Tomás Andrés Carrasco Morales", "Isidora Renata Espinoza Fuentes",
-  "Álvaro Nicolás Pinto Ramos", "Verónica Soledad Gutiérrez Torres", "Agustín Rafael Castro Ortiz",
-  "Montserrat Elena Pereira Díaz", "Héctor Guillermo Vargas Vega", "Lorena Patricia Soto Contreras",
-  "Emilio Rodrigo Flores Guerrero", "Pilar Fernanda Arenas Alcaíno", "Bruno Alejandro Muñoz Leiva",
-  "Valentina Paz Rojas Villalobos", "Maximiliano José Herrera Poblete", "Marcela Andrea Reyes Acevedo",
-  "Javier Ignacio Castro Jara", "Camila Sofía Mendez Salinas", "Nicolás Felipe Ramos Espinoza",
-  "Fernanda Isabel Torres Cáceres", "Lucas Andrés Silva Morales", "María Jesús Contreras Lagos",
-  "Renata Valentina Vidal Fuentes",
-];
-
-// RUTs base únicos para personas y tenants
-const RUTS_PERSONA  = [12345678, 15678234, 18234567, 11567890, 9876543, 10234567, 13456789, 16789012, 14321098, 17654321, 8901234, 19012345];
-const RUTS_TENANT   = [
-  20123456, 21234567, 22345678, 23456789, 24567890, 25678901, 26789012, 27890123,
-  28901234, 7654321,  8123456,  9234567,  10345678, 11456789, 12567890, 13678901,
-  14789012, 15890123, 16901234, 17012345, 18123456, 19234567, 20345678, 21456789,
-  22567890, 23678901, 24789012, 25890123, 26901234, 27012345, 28123456, 7890123,
-  8901235,  9012346,  10123457, 11234568, 12345679, 13456780, 14567891, 15678902,
-];
-
-// Plantillas de propiedades (tipo, piso/depto info, moneda preferida, rango monto)
-type PropTemplate = {
-  tipo: "DEPARTAMENTO" | "CASA" | "OFICINA" | "LOCAL" | "BODEGA";
-  sufijo: string;
-  moneda: "CLP" | "UF";
-  montoMin: number;
-  montoMax: number;
-  m2Min: number;
-  m2Max: number;
-};
-
-const TEMPLATES: PropTemplate[] = [
-  { tipo: "DEPARTAMENTO", sufijo: "Depto",   moneda: "UF",  montoMin: 14, montoMax: 32, m2Min: 45, m2Max: 110 },
-  { tipo: "DEPARTAMENTO", sufijo: "Depto",   moneda: "CLP", montoMin: 450000, montoMax: 900000, m2Min: 40, m2Max: 95 },
-  { tipo: "CASA",         sufijo: "Casa",    moneda: "CLP", montoMin: 600000, montoMax: 1400000, m2Min: 80, m2Max: 220 },
-  { tipo: "OFICINA",      sufijo: "Of",      moneda: "UF",  montoMin: 20, montoMax: 55, m2Min: 30, m2Max: 150 },
-  { tipo: "LOCAL",        sufijo: "Local",   moneda: "UF",  montoMin: 18, montoMax: 45, m2Min: 25, m2Max: 120 },
-  { tipo: "BODEGA",       sufijo: "Bodega",  moneda: "CLP", montoMin: 80000, montoMax: 250000, m2Min: 15, m2Max: 60 },
-];
-
-// Distribución de estados: 38 arrendadas, 7 disponibles, 3 desocupadas, 1 en venta, 1 uso propio
-const ESTADOS_DIST: Array<"ARRENDADA" | "DISPONIBLE" | "DESOCUPADA" | "EN_VENTA" | "USO_PROPIO"> = [
-  ...Array(38).fill("ARRENDADA"),
-  ...Array(7).fill("DISPONIBLE"),
-  ...Array(3).fill("DESOCUPADA"),
-  ...Array(1).fill("EN_VENTA"),
-  ...Array(1).fill("USO_PROPIO"),
-];
+  const donde = host === null ? "una dirección que no se pudo leer (¿falta DATABASE_URL?)" : `«${host}», que no es tu computador`;
+  console.error(
+    [
+      "",
+      "⛔  Este guion va a BORRAR TODA LA BASE y la va a volver a llenar con datos de ejemplo.",
+      `    DATABASE_URL apunta a ${donde}.`,
+      "    No se tocó nada: sin confirmación, el guion solo corre contra una base local (localhost, 127.0.0.1 o ::1).",
+      "",
+      "    Si de verdad quieres borrar esa base, confírmalo a propósito:",
+      '    SEED_CONFIRMAR=borrar-produccion npm run db:seed',
+      "",
+    ].join("\n"),
+  );
+  return false;
+}
 
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("🌱  Limpiando datos previos...");
-  await db.alert.deleteMany({ where: { organizationId: ORG } });
-  await db.propertyTax.deleteMany({ where: { organizationId: ORG } });
-  await db.propertyBill.deleteMany({ where: { organizationId: ORG } });
-  await db.movement.deleteMany({ where: { organizationId: ORG } });
-  await db.rentCharge.deleteMany({ where: { organizationId: ORG } });
-  await db.leaseContract.deleteMany({ where: { organizationId: ORG } });
-  await db.tenant.deleteMany({ where: { organizationId: ORG } });
-  await db.propertyAssessment.deleteMany({ where: { organizationId: ORG } });
-  await db.propertyUnit.deleteMany({ where: { organizationId: ORG } });
-  await db.propertyOwner.deleteMany({ where: { organizationId: ORG } });
-  await db.property.deleteMany({ where: { organizationId: ORG } });
-  await db.owner.deleteMany({ where: { organizationId: ORG } });
-  await db.grupo.deleteMany({ where: { organizationId: ORG } });
-  await db.propertyTag.deleteMany({ where: { organizationId: ORG } });
-  await db.currencyValue.deleteMany();
+  if (!puedeBorrar()) {
+    process.exitCode = 1;
+    return;
+  }
 
-  // -------------------------------------------------------------------------
-  // Tags
-  // -------------------------------------------------------------------------
-  console.log("🏷️   Creando tags...");
-  const tags = await Promise.all(
-    ["premium", "riesgo alto", "herencia", "hipotecada", "remodelada"].map((nombre) =>
-      db.propertyTag.create({ data: { organizationId: ORG, nombre } })
-    )
-  );
+  // Todo se arma y se revisa en memoria antes de abrir la transacción: si algo
+  // falla acá, la base ni se toca.
+  const propiedades = armarPropiedades();
 
-  // -------------------------------------------------------------------------
-  // Owners
-  // -------------------------------------------------------------------------
-  console.log("👤  Creando propietarios...");
+  // Los ids los ponemos nosotros (no la base) para poder crear cada tabla con un
+  // solo `createMany`: unas 30 consultas en total, en vez de más de mil. Importa
+  // contra una base remota, donde cada consulta tarda ~100 ms.
+  const idEtiqueta: Record<string, string> = Object.fromEntries(ETIQUETAS.map((nombre) => [nombre, randomUUID()]));
+  const idGrupo: Record<string, string> = Object.fromEntries(GRUPOS.map((g) => [g.nombre, randomUUID()]));
+  const idOwner = OWNERS.map(() => randomUUID());
+  const idTenant = TENANTS.map(() => randomUUID());
+  const idPropiedad = propiedades.map(() => randomUUID());
+  const idContrato = propiedades.map((p) => (p.contrato ? randomUUID() : null));
 
-  // Sociedades de un MISMO grupo económico (el dueño real). Concentran la GRAN
-  // MAYORÍA de las propiedades: el usuario típico es dueño de casi toda su cartera.
-  const empresasGrupo = await Promise.all(
-    [
-      ["Inversiones Vildósola SpA", 76543210],
-      ["Inmobiliaria VF Ltda.", 76012345],
-      ["Rentas Vildósola SpA", 77111222],
-      ["Constructora VF S.A.", 96333444],
-    ].map(([nombre, num]) =>
-      db.owner.create({
-        data: { organizationId: ORG, nombre: nombre as string, rut: rut(num as number), tipo: "SOCIEDAD" },
-      })
-    )
-  );
+  console.log("🌱  Borrando y creando todo en una sola transacción...");
+  await db.$transaction(
+    async (tx) => {
+      // -----------------------------------------------------------------------
+      // Borrar lo anterior (en orden: primero lo que depende de otra tabla)
+      // -----------------------------------------------------------------------
+      await tx.alert.deleteMany({ where: { organizationId: ORG } });
+      await tx.propertyTax.deleteMany({ where: { organizationId: ORG } });
+      await tx.propertyBill.deleteMany({ where: { organizationId: ORG } });
+      await tx.movement.deleteMany({ where: { organizationId: ORG } });
+      await tx.rentCharge.deleteMany({ where: { organizationId: ORG } });
+      await tx.leaseContract.deleteMany({ where: { organizationId: ORG } });
+      await tx.tenant.deleteMany({ where: { organizationId: ORG } });
+      await tx.propertyAssessment.deleteMany({ where: { organizationId: ORG } });
+      await tx.propertyUnit.deleteMany({ where: { organizationId: ORG } });
+      await tx.propertyOwner.deleteMany({ where: { organizationId: ORG } });
+      // Los documentos (sin archivos en el ejemplo) se van con su propiedad, en cascada.
+      await tx.property.deleteMany({ where: { organizationId: ORG } });
+      await tx.owner.deleteMany({ where: { organizationId: ORG } });
+      await tx.grupo.deleteMany({ where: { organizationId: ORG } });
+      await tx.propertyTag.deleteMany({ where: { organizationId: ORG } });
+      await tx.currencyValue.deleteMany();
 
-  // Pocos terceros sin grupo (copropietarios/otros dueños), con pocas propiedades.
-  const terceros = await Promise.all([
-    db.owner.create({
-      data: { organizationId: ORG, nombre: NOMBRES_PERSONA[0], rut: rut(RUTS_PERSONA[0]), tipo: "PERSONA" },
-    }),
-    db.owner.create({
-      data: { organizationId: ORG, nombre: NOMBRES_PERSONA[1], rut: rut(RUTS_PERSONA[1]), tipo: "PERSONA" },
-    }),
-    db.owner.create({
-      data: { organizationId: ORG, nombre: "Inmobiliaria Andes SpA", rut: rut(76998877), tipo: "SOCIEDAD" },
-    }),
-  ]);
-
-  // -------------------------------------------------------------------------
-  // Grupo económico: un controlador con varias sociedades (mismo dueño).
-  // Las independientes y las personas quedan sin grupo (para mostrar ese estado).
-  // -------------------------------------------------------------------------
-  console.log("🏛️   Creando grupo económico...");
-  const grupoVildosola = await db.grupo.create({
-    data: { organizationId: ORG, nombre: "Grupo Vildósola", rut: rut(11222333) },
-  });
-  await db.owner.updateMany({
-    where: { id: { in: empresasGrupo.map((e) => e.id) } },
-    data: { grupoId: grupoVildosola.id },
-  });
-
-  // -------------------------------------------------------------------------
-  // Tenants
-  // -------------------------------------------------------------------------
-  console.log("🏠  Creando arrendatarios...");
-  const tenants = await Promise.all(
-    NOMBRES_TENANT.map((nombre, i) =>
-      db.tenant.create({
-        data: {
+      // -----------------------------------------------------------------------
+      // Etiquetas, grupos económicos y dueños. El grupo reúne varias sociedades de
+      // un mismo dueño real; los terceros quedan sin grupo.
+      // -----------------------------------------------------------------------
+      console.log("🏷️   Creando etiquetas, grupos y propietarios...");
+      await tx.propertyTag.createMany({
+        data: ETIQUETAS.map((nombre) => ({ id: idEtiqueta[nombre], organizationId: ORG, nombre })),
+      });
+      await tx.grupo.createMany({
+        data: GRUPOS.map((g) => ({ id: idGrupo[g.nombre], organizationId: ORG, nombre: g.nombre, rut: g.rut })),
+      });
+      await tx.owner.createMany({
+        data: OWNERS.map((o, i) => ({
+          id: idOwner[i],
           organizationId: ORG,
-          nombre,
-          rut: rut(RUTS_TENANT[i]),
-          email: `${nombre.split(" ")[0].toLowerCase()}.${nombre.split(" ")[1].toLowerCase()}@ejemplo.cl`,
-          telefono: `+569${String(50000000 + i * 1234567).slice(0, 8)}`,
-        },
-      })
-    )
-  );
-
-  // -------------------------------------------------------------------------
-  // Propiedades
-  // -------------------------------------------------------------------------
-  console.log("🏢  Creando 50 propiedades...");
-  const estados = [...ESTADOS_DIST].sort(() => Math.random() - 0.5);
-  const properties: { prop: Property; tpl: PropTemplate; estado: string }[] = [];
-
-  for (let i = 0; i < 50; i++) {
-    const tpl = pick(TEMPLATES);
-    const [comuna, region] = pick(COMUNAS);
-    const calle = pick(CALLES);
-    const numero = 100 + Math.floor(Math.random() * 9900);
-    const unidad = tpl.tipo === "DEPARTAMENTO" ? `, ${tpl.sufijo} ${Math.floor(Math.random() * 30) + 1}${pick(["A","B","C","D","E"])}` : "";
-    const estado = estados[i];
-    const objetivo = estado === "EN_VENTA" ? "VENTA" : estado === "USO_PROPIO" ? "USO_PROPIO" : "INVERSION";
-
-    const valorComercial =
-      tpl.moneda === "UF"
-        ? +(3000 + Math.random() * 7000).toFixed(2)
-        : +(80000000 + Math.random() * 200000000).toFixed(0);
-
-    const prop = await db.property.create({
-      data: {
-        organizationId: ORG,
-        rolSII: rolSII(3000 + i * 17),
-        tipo: tpl.tipo,
-        direccion: `${calle} ${numero}${unidad}`,
-        comuna,
-        region,
-        objetivo,
-        estado,
-        monedaPrincipal: tpl.moneda,
-        m2Construidos: +(tpl.m2Min + Math.random() * (tpl.m2Max - tpl.m2Min)).toFixed(2),
-        m2Terreno: tpl.tipo === "CASA" ? +(100 + Math.random() * 300).toFixed(2) : null,
-        anoConstruccion: 1980 + Math.floor(Math.random() * 45),
-        valorComercial,
-        valorComercialMoneda: tpl.moneda,
-        tags: i % 7 === 0 ? { connect: [{ id: pick(tags).id }] } : undefined,
-      },
-    });
-
-    // Avalúo fiscal: SIEMPRE en CLP (en Chile el avalúo es en pesos; el modelo
-    // no guarda moneda). Se fija como ~55-80% del valor comercial en CLP, que es
-    // lo típico (el avalúo suele ir por debajo del comercial).
-    const comercialCLP =
-      tpl.moneda === "UF" ? valorComercial * UF_REF : valorComercial;
-    await db.propertyAssessment.create({
-      data: {
-        organizationId: ORG,
-        propertyId: prop.id,
-        anio: 2025,
-        valor: Math.round(comercialCLP * (0.55 + Math.random() * 0.25)),
-      },
-    });
-
-    // Propietario(s): el grupo concentra ~85% de la cartera; pocos a terceros.
-    if (i === 0) {
-      // Copropiedad entre DOS empresas del mismo grupo (Grupo Vildósola):
-      // el grupo ve el 100%, cada empresa su parte. Demuestra la consolidación.
-      await db.propertyOwner.create({
-        data: { organizationId: ORG, propertyId: prop.id, ownerId: empresasGrupo[0].id, porcentaje: 60 },
+          nombre: o.nombre,
+          rut: o.rut,
+          tipo: o.tipo,
+          grupoId: o.grupo ? idGrupo[o.grupo] : null,
+        })),
       });
-      await db.propertyOwner.create({
-        data: { organizationId: ORG, propertyId: prop.id, ownerId: empresasGrupo[1].id, porcentaje: 40 },
+
+      // -----------------------------------------------------------------------
+      // Arrendatarios
+      // -----------------------------------------------------------------------
+      console.log("🏠  Creando arrendatarios...");
+      await tx.tenant.createMany({
+        data: TENANTS.map((t, i) => ({
+          id: idTenant[i],
+          organizationId: ORG,
+          nombre: t.nombre,
+          rut: t.rut,
+          email: t.email,
+          telefono: t.telefono,
+        })),
       });
-    } else if (i % 7 === 6) {
-      // 1 de cada 7 va a un tercero sin grupo (≈7 propiedades en total).
-      const tercero = terceros[Math.floor(i / 7) % terceros.length];
-      await db.propertyOwner.create({
-        data: { organizationId: ORG, propertyId: prop.id, ownerId: tercero.id, porcentaje: 100 },
+
+      // -----------------------------------------------------------------------
+      // Propiedades y todo lo que cuelga de ellas
+      // -----------------------------------------------------------------------
+      console.log(`🏢  Creando ${propiedades.length} propiedades...`);
+      await tx.property.createMany({
+        data: propiedades.map((p, i) => ({
+          id: idPropiedad[i],
+          organizationId: ORG,
+          rolSII: p.rolSII,
+          tipo: p.tipo,
+          direccion: p.direccion,
+          comuna: p.comuna,
+          region: p.region,
+          objetivo: p.objetivo,
+          estado: p.estado,
+          monedaPrincipal: p.monedaPrincipal,
+          m2Construidos: p.m2Construidos,
+          m2Terreno: p.m2Terreno,
+          anoConstruccion: p.anoConstruccion,
+          valorComercial: p.valorComercial,
+          valorComercialMoneda: p.valorComercialMoneda,
+          valorComercialFecha: p.valorComercialFecha,
+          valorComercialFuente: p.valorComercialFuente,
+          compraFecha: p.compra?.fecha ?? null,
+          compraPrecio: p.compra?.precio ?? null,
+          compraMoneda: p.compra?.moneda ?? "CLP",
+          deudaSaldo: p.deuda?.saldo ?? null,
+          deudaMoneda: "UF" as const,
+          deudaFecha: p.deuda?.fecha ?? null,
+          deudaBanco: p.deuda?.banco ?? null,
+          deudaDividendo: p.deuda?.dividendo ?? null,
+          deudaTermino: p.deuda?.termino ?? null,
+          exentaContribuciones: p.exentaContribuciones,
+          // Se fija a mano solo en las desocupadas (ver PropiedadSpec.updatedAt).
+          ...(p.updatedAt && { updatedAt: p.updatedAt }),
+        })),
       });
-    } else {
-      // El resto se reparte entre las sociedades del grupo.
-      const empresa = empresasGrupo[i % empresasGrupo.length];
-      await db.propertyOwner.create({
-        data: { organizationId: ORG, propertyId: prop.id, ownerId: empresa.id, porcentaje: 100 },
-      });
-    }
 
-    properties.push({ prop, tpl, estado });
-  }
-
-  // -------------------------------------------------------------------------
-  // Ficha económica: fecha y fuente del valor, compra, deuda y exenta de
-  // contribuciones. Se reparte por índice para que los conteos sean fijos.
-  // -------------------------------------------------------------------------
-  console.log("📊  Cargando valor, compra y deuda...");
-  const todos = properties.map((_, i) => i);
-  const enEstado = (e: string) => todos.filter((i) => properties[i].estado === e);
-  const iUso = enEstado("USO_PROPIO")[0];
-  const iVenta = enEstado("EN_VENTA")[0];
-  // Arrendadas que no son bodega: una con deuda y compra en UF, otra con compra en CLP.
-  const arrendadasNoBodega = enEstado("ARRENDADA").filter((i) => properties[i].prop.tipo !== "BODEGA");
-  const iArrDeuda = arrendadasNoBodega[2];
-  const iArrClp = arrendadasNoBodega[5];
-  const forzadas = [iUso, iVenta, iArrDeuda, iArrClp];
-
-  const conFecha = elegir(todos, 35, 7, forzadas);
-  const viejas = conFecha.filter((i) => !forzadas.includes(i)).slice(0, 8); // valor de hace más de 12 meses
-  const conCompra = elegir(todos, 25, 11, forzadas);
-  const compraEnUF = new Set(conCompra.filter((_, k) => k % 2 === 0));
-  compraEnUF.add(iArrDeuda);
-  compraEnUF.delete(iArrClp);
-  const compraCara = conCompra.filter((i) => !forzadas.includes(i)).slice(2, 5); // plusvalía negativa
-  const conDeuda = elegir(
-    conCompra.filter((i) => properties[i].prop.tipo !== "BODEGA"),
-    15,
-    13,
-    [iArrDeuda],
-  );
-
-  for (let i = 0; i < properties.length; i++) {
-    const { prop } = properties[i];
-    const valor = Number(prop.valorComercial);
-    const valorUF = prop.valorComercialMoneda === "UF" ? valor : valor / UF_REF;
-    const data: Prisma.PropertyUpdateInput = { exentaContribuciones: prop.tipo === "BODEGA" };
-
-    if (conFecha.includes(i)) {
-      // Reciente: entre 1 y 11 meses atrás. Vieja: entre 14 y 30 meses atrás.
-      const mesesAtras = viejas.includes(i) ? 14 + Math.floor(Math.random() * 17) : 1 + Math.floor(Math.random() * 11);
-      const base = addMonths(HOY_FICHA, -mesesAtras);
-      data.valorComercialFecha = new Date(base.getTime() + Math.floor(Math.random() * 28) * 86400000);
-      data.valorComercialFuente = FUENTES[conFecha.indexOf(i) % FUENTES.length];
-    }
-
-    if (conCompra.includes(i)) {
-      const ratio = compraCara.includes(i) ? 1.05 + Math.random() * 0.2 : 0.45 + Math.random() * 0.4;
-      const enUF = compraEnUF.has(i);
-      data.compraFecha = date(2008 + Math.floor(Math.random() * 16), 1 + Math.floor(Math.random() * 12), 1 + Math.floor(Math.random() * 28));
-      data.compraMoneda = enUF ? "UF" : "CLP";
-      data.compraPrecio = enUF ? +(valorUF * ratio).toFixed(2) : Math.round(valorUF * UF_REF * ratio);
-    }
-
-    if (conDeuda.includes(i)) {
-      const saldo = +(valorUF * (0.2 + Math.random() * 0.4)).toFixed(2); // siempre bajo el valor
-      const dividendo = +(12 + Math.random() * 33).toFixed(2);
-      const deudaFecha = date(2026, 1 + Math.floor(Math.random() * 9), 5);
-      // El último dividendo sale de cuántos dividendos faltan, dentro de 2030-2045.
-      const termino = addMonths(deudaFecha, Math.round((saldo / dividendo) * 1.25));
-      data.deudaSaldo = saldo;
-      data.deudaMoneda = "UF";
-      data.deudaFecha = deudaFecha;
-      data.deudaBanco = BANCOS[conDeuda.indexOf(i) % BANCOS.length];
-      data.deudaDividendo = dividendo;
-      data.deudaTermino = new Date(
-        Math.min(Math.max(termino.getTime(), date(2030, 1, 5).getTime()), date(2045, 12, 5).getTime()),
-      );
-    }
-
-    await db.property.update({ where: { id: prop.id }, data });
-  }
-
-  // -------------------------------------------------------------------------
-  // Contratos y cobros (solo propiedades ARRENDADA)
-  // -------------------------------------------------------------------------
-  console.log("📄  Creando contratos y cobros...");
-  const arrendadas = properties.filter((p) => p.estado === "ARRENDADA");
-  const hoy = new Date(Date.UTC(2026, 5, 1)); // 2026-06-01
-
-  for (let i = 0; i < arrendadas.length; i++) {
-    const { prop, tpl } = arrendadas[i];
-    const tenant = tenants[i % tenants.length];
-
-    // Monto: UF con 2 decimales, CLP sin decimales
-    const montoRaw =
-      tpl.moneda === "UF"
-        ? +(tpl.montoMin + Math.random() * (tpl.montoMax - tpl.montoMin)).toFixed(2)
-        : Math.round(tpl.montoMin + Math.random() * (tpl.montoMax - tpl.montoMin));
-
-    // Algunos contratos por vencer en los próximos 2 meses
-    const esPorVencer = i < 4;
-    const inicioMesesAtras = 18 + Math.floor(Math.random() * 18); // 1.5-3 años atrás
-    const duracionMeses = esPorVencer ? inicioMesesAtras + 1 + Math.floor(Math.random() * 30) : inicioMesesAtras + 24 + Math.floor(Math.random() * 24);
-    const fechaInicio = addMonths(hoy, -inicioMesesAtras);
-    fechaInicio.setUTCDate(1);
-    const fechaTermino = addMonths(fechaInicio, duracionMeses);
-    fechaTermino.setUTCDate(0); // último día del mes
-
-    const diasHastaTermino = (fechaTermino.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24);
-    const estadoContrato: "VIGENTE" | "POR_VENCER" = diasHastaTermino <= 60 ? "POR_VENCER" : "VIGENTE";
-
-    const reajuste = pick(["NINGUNO", "NINGUNO", "NINGUNO", "IPC", "UF"] as const);
-
-    const contract = await db.leaseContract.create({
-      data: {
-        organizationId: ORG,
-        propertyId: prop.id,
-        tenantId: tenant.id,
-        monto: montoRaw,
-        moneda: tpl.moneda,
-        aplicaReajuste: reajuste !== "NINGUNO",
-        reajusteTipo: reajuste,
-        reajusteFrecuenciaMeses: reajuste !== "NINGUNO" ? 12 : null,
-        fechaInicio,
-        fechaTermino,
-        diaPago: pick([1, 5, 5, 10, 10, 15]),
-        estado: estadoContrato,
-      },
-    });
-
-    // Cobros: últimos 5 meses + mes actual
-    for (let m = -5; m <= 0; m++) {
-      const periodoDate = addMonths(hoy, m);
-      const periodo = periodoStr(periodoDate);
-      const vencimiento = new Date(Date.UTC(periodoDate.getUTCFullYear(), periodoDate.getUTCMonth(), contract.diaPago));
-
-      const esActual = m === 0;
-      const esMesAnterior = m === -1;
-
-      let estado: "PAGADO" | "PENDIENTE" | "ATRASADO";
-      let fechaPago: Date | null = null;
-      let montoPagado: number | null = null;
-
-      if (esActual) {
-        // Mes actual: mayoría pendiente, algunos ya pagaron
-        const yaPago = Math.random() < 0.3;
-        estado = yaPago ? "PAGADO" : "PENDIENTE";
-        if (yaPago) {
-          fechaPago = new Date(Date.UTC(2026, 5, Math.floor(Math.random() * 5) + 1));
-          montoPagado = montoRaw;
-        }
-      } else if (esMesAnterior) {
-        // Mes anterior: la mayoría pagó, algunos atrasados
-        const pagado = Math.random() < 0.85;
-        const atrasado = !pagado && Math.random() < 0.7;
-        estado = pagado ? "PAGADO" : atrasado ? "ATRASADO" : "PENDIENTE";
-        if (pagado) {
-          const diasDespues = Math.floor(Math.random() * 12);
-          fechaPago = new Date(vencimiento.getTime() + diasDespues * 86400000);
-          montoPagado = montoRaw;
-        }
-      } else {
-        // Meses anteriores: casi todos pagados
-        estado = Math.random() < 0.95 ? "PAGADO" : "ATRASADO";
-        if (estado === "PAGADO") {
-          const diasDespues = Math.floor(Math.random() * 10);
-          fechaPago = new Date(vencimiento.getTime() + diasDespues * 86400000);
-          montoPagado = montoRaw;
-        }
+      // Las etiquetas son una relación muchos a muchos: no se crean con createMany,
+      // se conectan una vez por etiqueta.
+      for (const nombre of ETIQUETAS) {
+        const conectar = propiedades.flatMap((p, i) => (p.etiquetas.includes(nombre) ? [{ id: idPropiedad[i] }] : []));
+        if (conectar.length === 0) continue;
+        await tx.propertyTag.update({ where: { id: idEtiqueta[nombre] }, data: { properties: { connect: conectar } } });
       }
 
-      await db.rentCharge.create({
-        data: {
-          organizationId: ORG,
-          contractId: contract.id,
-          periodo,
-          montoEsperado: montoRaw,
-          moneda: tpl.moneda,
-          fechaVencimiento: vencimiento,
-          estado,
-          fechaPago,
-          montoPagado,
-          interesMora: estado === "ATRASADO" ? +(montoRaw * 0.03).toFixed(0) : null,
-        },
-      });
-    }
-  }
-
-  // -------------------------------------------------------------------------
-  // Movimientos económicos 2026 (gastos manuales por propiedad)
-  // El ingreso por arriendo vive en RentCharge; aquí van los GASTOS del libro:
-  // gasto común, reparaciones, seguro. Todos en CLP (así se pagan en la práctica).
-  // -------------------------------------------------------------------------
-  console.log("💸  Creando movimientos de gasto 2026...");
-  const mesActual = hoy.getUTCMonth() + 1; // 6 (junio)
-  for (const { prop, tpl } of properties) {
-    // Gasto común mensual (depto/oficina/bodega/local en edificio)
-    if (["DEPARTAMENTO", "OFICINA", "BODEGA", "LOCAL"].includes(tpl.tipo)) {
-      const mensual = 40000 + Math.floor(Math.random() * 160000);
-      for (let mes = 1; mes <= mesActual; mes++) {
-        await db.movement.create({
-          data: {
+      await tx.propertyOwner.createMany({
+        data: propiedades.flatMap((p, i) =>
+          p.duenos.map((d) => ({
             organizationId: ORG,
-            propertyId: prop.id,
-            tipo: "GASTO",
-            categoria: "GASTO_COMUN",
-            monto: mensual,
-            moneda: "CLP",
-            fecha: date(2026, mes, 5),
-            descripcion: "Gasto común",
-          },
-        });
-      }
-    }
-    // Seguro anual (~enero)
-    if (Math.random() < 0.6) {
-      await db.movement.create({
-        data: {
-          organizationId: ORG,
-          propertyId: prop.id,
-          tipo: "GASTO",
-          categoria: "SEGURO",
-          monto: 150000 + Math.floor(Math.random() * 500000),
-          moneda: "CLP",
-          fecha: date(2026, 1, pick([10, 15, 20])),
-          descripcion: "Seguro anual",
-        },
+            propertyId: idPropiedad[i],
+            ownerId: idOwner[d.owner],
+            porcentaje: d.porcentaje,
+          })),
+        ),
       });
-    }
-    // Reparaciones ocasionales (0-2 en el año)
-    const nReparaciones = Math.floor(Math.random() * 3);
-    for (let r = 0; r < nReparaciones; r++) {
-      await db.movement.create({
-        data: {
-          organizationId: ORG,
-          propertyId: prop.id,
-          tipo: "GASTO",
-          categoria: "REPARACION",
-          monto: 80000 + Math.floor(Math.random() * 1500000),
-          moneda: "CLP",
-          fecha: date(2026, 1 + Math.floor(Math.random() * mesActual), pick([3, 12, 21, 27])),
-          descripcion: pick(["Reparación gasfitería", "Pintura", "Arreglo eléctrico", "Cambio de artefactos"]),
-        },
+
+      await tx.propertyUnit.createMany({
+        data: propiedades.flatMap((p, i) =>
+          p.anexos.map((a) => ({
+            organizationId: ORG,
+            propertyId: idPropiedad[i],
+            tipo: a.tipo,
+            numero: a.numero,
+            rolSII: a.rolSII,
+            avaluoFiscal: a.avaluoFiscal,
+          })),
+        ),
       });
-    }
-  }
 
-  // -------------------------------------------------------------------------
-  // Contribuciones 2026 (todas las propiedades, salvo las exentas: bodegas)
-  // -------------------------------------------------------------------------
-  console.log("🧾  Creando contribuciones 2026...");
-  const CUOTAS = [
-    { cuota: 1, mes: 4, dia: 30 },  // Abril — ya vencida
-    { cuota: 2, mes: 6, dia: 30 },  // Junio — vence este mes
-    { cuota: 3, mes: 9, dia: 30 },  // Septiembre
-    { cuota: 4, mes: 12, dia: 15 }, // Diciembre
-  ];
-
-  for (const { prop } of properties) {
-    if (prop.tipo === "BODEGA") continue; // las bodegas están exentas de contribuciones
-    const montoBase = 80000 + Math.floor(Math.random() * 320000);
-    for (const { cuota, mes, dia } of CUOTAS) {
-      const vencimiento = date(2026, mes, dia);
-      const yaVencio = vencimiento < hoy;
-      const estado: "PAGADA" | "PENDIENTE" = yaVencio && Math.random() < 0.9 ? "PAGADA" : "PENDIENTE";
-      await db.propertyTax.create({
-        data: {
-          organizationId: ORG,
-          propertyId: prop.id,
-          anio: 2026,
-          cuota,
-          monto: montoBase / 4,
-          fechaVencimiento: vencimiento,
-          estado,
-          fechaPago: estado === "PAGADA" ? new Date(vencimiento.getTime() - 5 * 86400000) : null,
-        },
+      // Avalúo fiscal: el de 2026, y el de 2025 un 4,5 % más bajo.
+      await tx.propertyAssessment.createMany({
+        data: propiedades.flatMap((p, i) => [
+          { organizationId: ORG, propertyId: idPropiedad[i], anio: 2025, valor: Math.round(p.avaluoFiscal / 1.045) },
+          { organizationId: ORG, propertyId: idPropiedad[i], anio: 2026, valor: p.avaluoFiscal },
+        ]),
       });
-    }
-  }
 
-  // -------------------------------------------------------------------------
-  // Cuentas por pagar de ejemplo (vencida, por vencer, pagada, lejana)
-  // -------------------------------------------------------------------------
-  console.log("💡  Creando cuentas por pagar...");
-  const DIA = 86400000;
-  const cuentasEjemplo = [
-    { i: 0, tipo: "GASTO_COMUN", monto: 95000, venc: -10, estado: "PENDIENTE" },
-    { i: 1, tipo: "LUZ", monto: 42000, venc: 3, estado: "PENDIENTE" },
-    { i: 2, tipo: "AGUA", monto: 18500, venc: -20, estado: "PAGADA" },
-    { i: 3, tipo: "GAS", monto: 27000, venc: 25, estado: "PENDIENTE" },
-  ] as const;
-  for (const c of cuentasEjemplo) {
-    const vencimiento = new Date(Date.now() + c.venc * DIA);
-    await db.propertyBill.create({
-      data: {
-        organizationId: ORG,
-        propertyId: properties[c.i].prop.id,
-        tipo: c.tipo,
-        periodo: vencimiento.toISOString().slice(0, 7),
-        monto: c.monto,
-        fechaVencimiento: vencimiento,
-        estado: c.estado,
-        fechaPago: c.estado === "PAGADA" ? new Date(vencimiento.getTime() - 2 * DIA) : null,
-      },
-    });
-  }
+      // -----------------------------------------------------------------------
+      // Contratos y cobros
+      // -----------------------------------------------------------------------
+      console.log("📄  Creando contratos y cobros...");
+      await tx.leaseContract.createMany({
+        data: propiedades.flatMap((p, i) => {
+          const c = p.contrato;
+          const id = idContrato[i];
+          if (!c || !id) return [];
+          return [
+            {
+              id,
+              organizationId: ORG,
+              propertyId: idPropiedad[i],
+              tenantId: idTenant[c.tenant],
+              monto: c.monto,
+              moneda: c.moneda,
+              aplicaReajuste: c.reajuste !== "NINGUNO",
+              reajusteTipo: c.reajuste,
+              reajusteFrecuenciaMeses: c.reajuste !== "NINGUNO" ? 12 : null,
+              fechaInicio: c.fechaInicio,
+              fechaTermino: c.fechaTermino,
+              diaPago: c.diaPago,
+              estado: c.estado,
+            },
+          ];
+        }),
+      });
+      await tx.rentCharge.createMany({
+        data: propiedades.flatMap((p, i) => {
+          const c = p.contrato;
+          const contractId = idContrato[i];
+          if (!c || !contractId) return [];
+          return c.cobros.map((x) => ({
+            organizationId: ORG,
+            contractId,
+            periodo: x.periodo,
+            montoEsperado: c.monto,
+            moneda: c.moneda,
+            fechaVencimiento: x.fechaVencimiento,
+            estado: x.estado,
+            fechaPago: x.fechaPago,
+            montoPagado: x.montoPagado,
+            interesMora: x.interesMora,
+          }));
+        }),
+      });
 
-  // -------------------------------------------------------------------------
-  // Valor UF histórico (últimos 6 meses + hoy)
-  // -------------------------------------------------------------------------
-  console.log("💱  Cargando valores UF...");
-  const UF_VALORES = [
-    { mes: 1, valor: 37856.23 },
-    { mes: 2, valor: 37923.45 },
-    { mes: 3, valor: 37991.12 },
-    { mes: 4, valor: 38045.67 },
-    { mes: 5, valor: 38102.89 },
-    { mes: 6, valor: 38145.34 },
-  ];
-  for (const { mes, valor } of UF_VALORES) {
-    await db.currencyValue.upsert({
-      where: { fecha_tipo: { fecha: date(2026, mes, 1), tipo: "UF" } },
-      update: { valor },
-      create: { fecha: date(2026, mes, 1), tipo: "UF", valor },
-    });
-  }
+      // -----------------------------------------------------------------------
+      // Gastos, contribuciones y cuentas por pagar
+      // -----------------------------------------------------------------------
+      console.log("💸  Creando gastos, contribuciones y cuentas...");
+      // El ingreso por arriendo vive en los cobros; acá van solo los gastos del
+      // libro (en pesos, que es como se pagan en la práctica).
+      await tx.movement.createMany({
+        data: propiedades.flatMap((p, i) =>
+          p.gastos.map((g) => ({
+            organizationId: ORG,
+            propertyId: idPropiedad[i],
+            tipo: "GASTO" as const,
+            categoria: g.categoria,
+            monto: g.monto,
+            moneda: "CLP" as const,
+            fecha: g.fecha,
+            descripcion: g.descripcion,
+          })),
+        ),
+      });
+      await tx.propertyTax.createMany({
+        data: propiedades.flatMap((p, i) =>
+          p.contribuciones.map((t) => ({
+            organizationId: ORG,
+            propertyId: idPropiedad[i],
+            anio: 2026,
+            cuota: t.cuota,
+            monto: t.monto,
+            fechaVencimiento: t.fechaVencimiento,
+            estado: t.estado,
+            fechaPago: t.fechaPago,
+          })),
+        ),
+      });
+      await tx.propertyBill.createMany({
+        data: propiedades.flatMap((p, i) =>
+          p.cuentas.map((b) => ({
+            organizationId: ORG,
+            propertyId: idPropiedad[i],
+            tipo: b.tipo,
+            periodo: b.periodo,
+            monto: b.monto,
+            fechaVencimiento: b.fechaVencimiento,
+            estado: b.estado,
+            fechaPago: b.fechaPago,
+          })),
+        ),
+      });
+
+      // -----------------------------------------------------------------------
+      // Valor UF: el día 1 de cada mes, de 2025-10 a 2026-10, creciendo ~0,3 % al
+      // mes y terminando en UF_HOY.
+      // -----------------------------------------------------------------------
+      console.log("💱  Cargando valores UF...");
+      await tx.currencyValue.createMany({
+        data: Array.from({ length: 13 }, (_, k) => ({
+          fecha: date(2025, 10 + k, 1),
+          tipo: "UF" as const,
+          valor: k === 12 ? UF_HOY : +(UF_HOY / 1.003 ** (12 - k)).toFixed(2),
+        })),
+      });
+    },
+    // Holgado a propósito: contra una base remota la transacción tarda más.
+    { timeout: 600_000, maxWait: 30_000 },
+  );
 
   // -------------------------------------------------------------------------
   // Resumen
   // -------------------------------------------------------------------------
+  const where = { organizationId: ORG };
   const counts = {
-    propiedades: await db.property.count({ where: { organizationId: ORG } }),
-    contratos: await db.leaseContract.count({ where: { organizationId: ORG } }),
-    cobros: await db.rentCharge.count({ where: { organizationId: ORG } }),
-    contribuciones: await db.propertyTax.count({ where: { organizationId: ORG } }),
+    propiedades: await db.property.count({ where }),
+    dueños: await db.owner.count({ where }),
+    arrendatarios: await db.tenant.count({ where }),
+    contratos: await db.leaseContract.count({ where }),
+    cobros: await db.rentCharge.count({ where }),
+    gastos: await db.movement.count({ where }),
+    contribuciones: await db.propertyTax.count({ where }),
+    cuentas: await db.propertyBill.count({ where }),
   };
 
   console.log("\n✅  Seed completado:");
   console.log(`   Propiedades:    ${counts.propiedades}`);
+  console.log(`   Propietarios:   ${counts.dueños}`);
+  console.log(`   Arrendatarios:  ${counts.arrendatarios}`);
   console.log(`   Contratos:      ${counts.contratos}`);
   console.log(`   Cobros:         ${counts.cobros}`);
+  console.log(`   Gastos:         ${counts.gastos}`);
   console.log(`   Contribuciones: ${counts.contribuciones}`);
+  console.log(`   Cuentas:        ${counts.cuentas}`);
 }
 
 main()
-  .catch((e) => { console.error(e); process.exit(1); })
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
   .finally(() => db.$disconnect());
