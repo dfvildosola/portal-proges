@@ -55,14 +55,14 @@ Las decisiones 3 y 6 se documentan en el ADR `docs/decisiones/0002-ficha-cifras-
 ### Etapas
 
 - ⏳ **Etapa 1: ficha nueva con los datos que ya existen** (no toca la base). Piezas en serie, cada una con un subagente Sonnet:
-  - ◻️ **A. Cálculos:** `src/lib/property-metrics.ts`.
-  - ◻️ **B. Pestañas y cuadros.**
+  - ✅ **A. Cálculos:** `src/lib/property-metrics.ts`.
+  - ⏳ **B. Pestañas y cuadros.**
   - ◻️ **C. Resumen y armado de `page.tsx`.**
-  - ◻️ **Coordinador:**
-    - escribe el ADR 0002;
-    - actualiza `PENDIENTES.md` (lista de abajo) y saca de ahí la línea del selector de estado;
-    - prueba en el navegador;
-    - hace commit y pausa.
+  - **Coordinador:**
+    - ✅ escribe el ADR 0002;
+    - ✅ actualiza `PENDIENTES.md` (lista de abajo) y saca de ahí la línea del selector de estado;
+    - ◻️ prueba en el navegador;
+    - ◻️ hace commit y pausa.
 - ◻️ **Etapa 2: valores con fecha y fuente, compra y deuda** (con migración).
   - Primero partir `propiedades/actions.ts` (765 líneas).
   - Campos nuevos en `Property`:
@@ -162,30 +162,60 @@ Las decisiones 3 y 6 se documentan en el ADR `docs/decisiones/0002-ficha-cifras-
 - **Portal Inmobiliario, Mercado Libre y TocToc:** sus condiciones prohíben extraer datos. La API de Mercado Libre pide OAuth y sirve para avisos propios.
 - **Proveedores pagados con API:** Data Inmobiliaria ($99.990 al mes con 600 llamadas) y HousePricing (venta y arriendo; API en plan Empresa, a cotizar). Tinsa y Databam tienen cobertura limitada.
 
+## Lo que hay en `property-metrics.ts` (pieza A)
+
+Funciones puras, sin acceso a la base. La página les pasa lo que carga.
+
+- `rentaMensual(contratos)` → `{ monto, moneda }` del primer VIGENTE, o null. Sirve para mostrar el monto en su moneda.
+- `rentaAnualCLP(contratos, uf)` → suma de **todos** los VIGENTE × 12 en CLP, igual que `/resumen`. Devuelve null si no hay vigente o si falta la UF para convertir (`/resumen` en ese caso descarta en silencio).
+- `costoEnPeriodo({ taxes, movements, uf, desde, hasta })` y `costoAnual({ taxes, movements, uf, now })` → `Costo = { contribuciones, gastosPorCategoria[], total, sinConvertir }`. `sinConvertir` cuenta los gastos en UF que no se pudieron convertir; si es mayor que 0, el total queda corto y conviene avisarlo.
+- `rentabilidad({ rentaAnualCLP, costoAnualCLP, valorCLP })` → `{ bruta, neta }` en %, o null.
+- `diasSinContrato(contratos, now)` → días desde la `fechaTermino` más reciente; null si nunca tuvo contrato o si hay uno VIGENTE.
+- `tiraDePagos(charges, now, meses = 12)` → `[{ periodo: "YYYY-MM", estado }]`, con estado PAGADO, ATRASADO, PENDIENTE o SIN_COBRO. Si en un mes hay varios cobros, manda el peor.
+- `datosAlDia({ assessments, taxes, documents, now })` → 3 chequeos `{ clave, texto, estado: ok|falta|vencido }`.
+
+Decisiones tomadas en el camino:
+- Solo `VIGENTE` cuenta como contrato vigente, igual que `/resumen` y las alertas. `POR_VENCER` lo crean solo los datos de ejemplo, y quedó en `PENDIENTES.md`.
+- Para «costo desde que quedó libre» (DISPONIBLE/DESOCUPADA), la página llama a `costoEnPeriodo` con `desde` = `fechaTermino` del último contrato.
+- **Datos de ejemplo:** ninguna propiedad tiene contratos terminados, así que `diasSinContrato` da null en las 50. Para probar el caso «disponible» en el navegador, crear a mano un contrato TERMINADO en una propiedad disponible. Todas tienen avalúo solo de 2025, así que el chequeo de avalúo da «falta».
+
 ## Lo que falló y cómo se resolvió
 
 Nada todavía.
 
 ## Paso siguiente exacto
 
-**Pieza A.** Lanzar un subagente con `model: sonnet` y este encargo:
+**Pieza B** (en curso o por lanzar). Un subagente con `model: sonnet`, con este encargo:
 
-> **Objetivo:** crear `src/lib/property-metrics.ts`, con funciones puras (sin acceso a la base, sin JSX) que calculen las cifras de la ficha. Lee primero `TAREA.md` (decisiones 3, 4 y 5, y «Lo que se sabe del código»).
+> **Objetivo:** dejar las pestañas de la ficha en archivos propios, pasar los formularios de agregar a cuadros, y arreglar el selector de estado. Todo en `src/app/(app)/propiedades/[id]/`. Lee antes las decisiones 7, 8, 9 y 10 de este archivo, y «Lo que se sabe del código».
 >
-> **Funciones** (los nombres y tipos exactos los decide el subagente; cada una con un comentario en español):
-> - `rentaMensual(contratos)`: monto y moneda del contrato VIGENTE, o null.
-> - `costoAnual({ taxes, movements, uf, now })`: desglose en CLP (contribuciones, gastos por categoría, total), con la regla de la decisión 3.
-> - `rentabilidad({ rentaAnualCLP, costoAnualCLP, valorCLP })`: bruta y neta en %, o null si no hay contrato o el valor es 0.
-> - `diasSinContrato(contratos, now)`.
-> - `tiraDePagos(charges, now, meses = 12)`: un punto por mes, del más antiguo al más reciente, con estado PAGADO, ATRASADO, PENDIENTE o SIN_COBRO.
-> - `datosAlDia({ assessments, taxes, documents, now })`: lista de chequeos, cada uno con texto y estado ok/falta/vencido.
+> 1. **Pestañas en archivos nuevos.** Sacar de `page.tsx` el contenido de tres pestañas a componentes de servidor (sin `"use client"`, salvo que haga falta) que reciben los datos por props:
+>    - `lease-tab.tsx`: lo que hoy está en la pestaña `contrato` (contratos y cobros).
+>    - `finance-tab.tsx`: junta lo de las pestañas `economico` (movimientos y `AddMovementForm`), `contribuciones` (`TaxesTab`) y `cuentas` (`BillsTab`), en secciones con su título. `TaxesTab` y `BillsTab` se reutilizan tal cual.
+>    - `documents-tab.tsx`: lo de la pestaña `documentos`.
+>    - Los tipos de las props tienen que encajar con lo que `page.tsx` ya carga: usar `Prisma.PropertyGetPayload<…>` o `Pick<>` de los modelos.
+>    - Los componentes nuevos no fijan su ancho (nada de `max-w-3xl` adentro): el ancho lo decide la página.
+> 2. **Conectarlas en `page.tsx`** (cambio mínimo): reemplazar el contenido de esas pestañas por los componentes nuevos, y dejar las pestañas así: Resumen · Arriendo · Finanzas · Documentos · Alertas. Alertas desaparece en la pieza C, cuando llegue la franja «Requiere atención». La pestaña Resumen **no se toca**: la reescribe la pieza C.
+> 3. **Cuadros.** En `owners-tags-forms.tsx`, `AddOwnerForm`, `AddTagForm`, `AddUnitForm` y `AddAssessmentForm` pasan a abrirse desde un botón «+ Agregar …» en un `Dialog`, con el mismo patrón que `UploadDocumentDialog` en `documents-forms.tsx`. El cuadro se cierra cuando se guarda bien y muestra los errores de campo si falla. Se pueden renombrar (por ejemplo `AddOwnerDialog`), actualizando los imports en `page.tsx`.
+> 4. **Selector de estado.** `status-quick-edit.tsx` muestra el valor interno (`ARRENDADA`) en vez de la etiqueta (`Arrendada`). Buscar cómo lo resuelven otros `Select` del repo, o en la documentación de base-ui en `node_modules`, que `SelectValue` muestre la etiqueta de `src/lib/domain.ts`.
 >
-> Usa `toCLP` de `src/lib/currency.ts` y compara las fechas en UTC.
+> **Ojo con:** los componentes de `src/components/ui` son de base-ui. Usan la prop `render`, `nativeButton={false}` en los botones que hacen de link, y `DialogTrigger render={<Button/>}`. Next 16 trae cambios: ante la duda, leer `node_modules/next/dist/docs/`.
 >
-> **No tocar:** ningún otro archivo.
+> **No tocar:**
+> - `src/lib/` (incluido `property-metrics.ts`);
+> - `actions.ts` y las acciones del servidor;
+> - `taxes-tab.tsx`, `bills-tab.tsx`, `economic-forms.tsx`, `documents-forms.tsx` y `delete-button.tsx`;
+> - nada fuera de `propiedades/[id]/`.
 >
-> **Para darlo por hecho:** `npm run lint` sin errores nuevos y `npm run build` pasan.
+> No instalar librerías, no hacer commit.
 >
-> **Devolver:** un informe corto (qué funciones, sus firmas, dudas), no el código.
+> **Para darlo por hecho:** `npm run lint` con 0 errores y `npm run build` pasan.
+>
+> **Devolver:** un informe corto, no el código: archivos creados y tocados, las props de cada pestaña nueva, cuántas líneas quedó `page.tsx`, el resultado de lint y build, y las dudas.
 
-Después vienen la **pieza B** y la **pieza C**, como se describen en el plan.
+Después viene la **pieza C**, como dice el plan. Además de lo del plan, la C:
+- quita la pestaña Alertas;
+- usa `costoEnPeriodo` para el costo de las propiedades disponibles;
+- avisa en la ficha si `sinConvertir` es mayor que 0.
+
+Al final, el coordinador prueba en el navegador (antes hay que crear a mano un contrato TERMINADO en una propiedad disponible), hace commit y pausa.
