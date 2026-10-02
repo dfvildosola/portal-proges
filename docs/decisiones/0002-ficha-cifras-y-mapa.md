@@ -1,4 +1,4 @@
-# 0002 — Ficha de propiedad: cómo se calculan las cifras y cómo se muestra el mapa
+# 0002 — Ficha de propiedad: cifras, mapa y alertas
 
 Fecha: 2026-10-01 · Estado: aceptada
 
@@ -28,6 +28,16 @@ Tampoco hay todavía **fecha del valor comercial**: la ficha lo muestra como «s
 Se usa el Google Maps incrustado **sin clave**: un recuadro (`iframe`) que carga `https://www.google.com/maps?q=<dirección, comuna, Chile>&output=embed`, con carga diferida (solo se pide cuando el usuario baja hasta él), más un enlace «Abrir en Google Maps».
 
 Es como pegar en la ficha la ventana de Google Maps con la dirección ya buscada: no hay que instalar nada, ni crear cuenta, ni guardar coordenadas.
+
+## Decisión 3: la franja «Requiere atención» no tiene botón «Resolver»
+
+La ficha recalcula las alertas cada vez que se abre (`syncAlerts`), para no mostrar alertas viejas. Las alertas funcionan como un detector de humo: suenan mientras la causa exista (un arriendo atrasado, una contribución impaga) y se apagan solas cuando se arregla, por ejemplo al registrar el pago. Un botón «Resolver» es como tapar el detector con la mano: al recalcular, el sistema ve que la causa sigue y la alerta vuelve al instante. Por eso la franja muestra las alertas con su causa y un enlace (como «Ver contrato →»), pero sin botón. Lo decidió Diego el 2026-10-01.
+
+Alternativas descartadas:
+- **Un «Posponer» que funcione**, que silencie una alerta por un tiempo aunque la causa siga. Obliga a guardar ese estado en la base y a que `syncAlerts` lo respete. Se puede hacer más adelante si hace falta.
+- **Dejar el botón** sin efecto visible.
+
+`/pendientes` tiene el mismo problema desde antes (quedó en `PENDIENTES.md`).
 
 ## Alternativas descartadas
 

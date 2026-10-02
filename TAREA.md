@@ -54,16 +54,22 @@ Las decisiones 3 y 6 se documentan en el ADR `docs/decisiones/0002-ficha-cifras-
 
 ### Etapas
 
-- ⏳ **Etapa 1: ficha nueva con los datos que ya existen** (no toca la base). Piezas en serie, cada una con un subagente Sonnet:
+- ✅ **Etapa 1: ficha nueva con los datos que ya existen** (no tocó la base). Commits en la branch:
   - ✅ **A. Cálculos:** `src/lib/property-metrics.ts`.
-  - ✅ **B. Pestañas y cuadros.** Quedaron `lease-tab.tsx` (`{ propertyId, contracts: LeaseContractRow[] }`), `finance-tab.tsx` (`{ propertyId, movements, taxes, bills }`) y `documents-tab.tsx` (`{ propertyId, documents }`). Los cuadros se llaman `AddOwnerDialog`, `AddTagDialog`, `AddUnitDialog` y `AddAssessmentDialog`. El selector se arregló con `items={propertyStatusLabels}` en el `<Select>`. `page.tsx` bajó a 479 líneas y tiene 5 pestañas (la de Alertas sigue ahí).
-  - ⏳ **C. Resumen y armado de `page.tsx`.**
-  - **Coordinador:**
-    - ✅ escribe el ADR 0002;
-    - ✅ actualiza `PENDIENTES.md` (lista de abajo) y saca de ahí la línea del selector de estado;
-    - ◻️ prueba en el navegador;
-    - ◻️ hace commit y pausa.
-- ◻️ **Etapa 2: valores con fecha y fuente, compra y deuda** (con migración).
+  - ✅ **B. Pestañas y cuadros:**
+    - `lease-tab.tsx`, `finance-tab.tsx` y `documents-tab.tsx`;
+    - los cuadros `AddOwnerDialog`, `AddTagDialog`, `AddUnitDialog` y `AddAssessmentDialog`;
+    - el selector de estado, arreglado con `items={propertyStatusLabels}`.
+  - ✅ **C. Resumen y armado:**
+    - `property-header`, `attention-strip`, `key-figures`, `situation-card`, `data-freshness`, `property-map`, `facts-card` y `facts-parts`;
+    - `page.tsx` en 206 líneas, con 4 pestañas;
+    - la pestaña Alertas se eliminó.
+  - ✅ **Coordinador:**
+    - ADR 0002 escrito;
+    - `PENDIENTES.md` al día;
+    - probado en el navegador;
+    - revisión del `revisor` hecha, con sus hallazgos arreglados o anotados.
+- ⏳ **Etapa 2: valores con fecha y fuente, compra y deuda** (con migración).
   - Primero partir `propiedades/actions.ts` (765 líneas).
   - Campos nuevos en `Property`:
     - fecha y fuente del valor comercial;
@@ -77,7 +83,7 @@ Las decisiones 3 y 6 se documentan en el ADR `docs/decisiones/0002-ficha-cifras-
   - Lista por defecto según tipo de propiedad, escrita en `src/lib/papeles.ts`, y una tarjeta «Papeles» con ✓/✗ y fecha de emisión.
   - ADR 0004: se parte con la lista en el código y se personaliza por empresa cuando un cliente lo pida.
 
-### Para `PENDIENTES.md` (el coordinador los agrega en la etapa 1)
+### Para `PENDIENTES.md` (✅ ya agregados en la etapa 1)
 
 1. **UF e IPC automáticos** desde la API del Banco Central (BDE), que es oficial y gratis. Diego tiene que crear la cuenta y el token dura un año. La CMF queda de respaldo. Hoy la última UF en la base es del 2026-06-01.
 2. **Leer con IA** el certificado de avalúo y la escritura, para llenar los datos de la ficha.
@@ -181,91 +187,36 @@ Decisiones tomadas en el camino:
 
 ## Lo que falló y cómo se resolvió
 
-Nada todavía.
+- **«Resolver» no hacía nada en la ficha.** La ficha llama a `syncAlerts` al cargar, y una alerta resuelta a mano vuelve al instante si la causa sigue. Diego eligió quitar el botón de la franja (ADR 0002, decisión 3). `/pendientes` tiene el mismo problema desde antes: quedó en `PENDIENTES.md`.
+- **La ventana de «últimos 12 meses» tenía un día de más** (sumaba 5 cuotas o 13 gastos comunes el día del vencimiento). `costoAnual` ahora parte al día siguiente de «hoy hace un año».
+- **Plural «contribuciónes»** en `alerts.ts`: corregido. El mensaje guardado se actualiza solo al recalcular.
+- **No se pudo achicar la ventana de Chrome** (está en pantalla completa). La vista de celular se revisó en el código (`grid-cols-2 lg:grid-cols-4` y `lg:grid-cols-2`), pero **no en pantalla**: la tiene que mirar Diego.
+- **El cuadro «Agregar dueño» no marca el error del porcentaje en el campo.** Ya pasaba en `main`; quedó en `PENDIENTES.md` para arreglarlo al partir `actions.ts`.
 
 ## Paso siguiente exacto
 
-**Pieza C** (en curso o por lanzar). Un subagente con `model: sonnet`, con este encargo:
+**Etapa 2.** Antes de planear las piezas, confirmar con Diego el detalle (el plan dice «el detalle se confirma con Diego al empezar»). Explicarle cada concepto con una analogía antes de preguntar:
 
-> **Objetivo:** que la pestaña Resumen de la ficha responda en 5 segundos tres preguntas: ¿algo requiere atención?, ¿cómo le va a la propiedad? y ¿qué datos faltan o están viejos? Además, reescribir `page.tsx` para que solo cargue datos y arme el diseño. Antes de empezar, lee en este archivo el objetivo, las decisiones 1 a 9, «Lo que hay en `property-metrics.ts`» y «Lo que se sabe del código». Lee también el ADR `docs/decisiones/0002-ficha-cifras-y-mapa.md`.
->
-> **Componentes nuevos** en `src/app/(app)/propiedades/[id]/`. Cada uno recibe sus datos por props, ya calculados:
-> - `property-header.tsx`:
->   - la dirección es el título;
->   - debajo va tipo · comuna · m² · ROL;
->   - a la derecha van `StatusQuickEdit`, el objetivo, y los botones Editar y Eliminar que ya existen.
-> - `attention-strip.tsx`: muestra las alertas ACTIVAS de la propiedad, cada una con su botón «Resolver» (`resolveAlert`, de `pendientes/actions`, como en la pestaña Alertas de hoy). Si no hay ninguna, dice «Todo en orden». Reemplaza la pestaña Alertas, que se elimina.
-> - `key-figures.tsx`: las 4 cifras.
->   - **Valor comercial**, en su moneda, con «sin fecha».
->   - **Renta mensual**, de `rentaMensual`.
->   - **Rentabilidad neta** en grande, con la bruta en chico (de `rentabilidad`, alimentada por `rentaAnualCLP` y `costoAnual`).
->   - **Costo anual** (de `costoAnual`).
->   - Si falta un dato, va «—» con una línea que diga por qué; por ejemplo «sin contrato vigente» o «falta valor comercial».
->   - Si `sinConvertir > 0`, un aviso chico: «N gastos en UF sin convertir: falta el valor UF».
-> - `situation-card.tsx`: cambia según el estado (decisión 4).
->   - **ARRENDADA:**
->     - arrendatario;
->     - días para el término del contrato vigente;
->     - el reajuste, con las etiquetas de `domain.ts`;
->     - la tira de 12 meses de `tiraDePagos`, una celda por mes con color según el estado y el mes en `title`, más una leyenda.
->   - **DISPONIBLE o DESOCUPADA:**
->     - días sin contrato (`diasSinContrato`);
->     - lo que costó desde entonces: `costoEnPeriodo` con `desde` = la `fechaTermino` más reciente y `hasta` = `now`;
->     - si nunca tuvo contrato, «Sin contratos registrados».
->   - **USO_PROPIO:** el costo anual desglosado (contribuciones y cada categoría de gasto, con las etiquetas de `domain.ts`).
->   - **EN_VENTA:** solo el valor comercial.
-> - `data-freshness.tsx`: «Datos al día». Muestra los 3 chequeos de `datosAlDia`, cada uno con su ícono ok/falta/vencido, más una línea fija: «Valor comercial: sin fecha».
-> - `property-map.tsx`: el mapa de la decisión 6 y del ADR 0002.
->   - Un `<iframe>` con `src="https://www.google.com/maps?q=<encodeURIComponent(dirección + ', ' + comuna + ', Chile')>&output=embed"`, con `loading="lazy"`, `title` y `referrerPolicy="no-referrer-when-downgrade"`.
->   - Un enlace «Abrir en Google Maps» a `https://www.google.com/maps/search/?api=1&query=<lo mismo>`, que abra en una pestaña nueva.
-> - `facts-card.tsx`: lo que hoy muestra la pestaña Resumen, sin formularios en línea:
->   - datos de la propiedad y anexos;
->   - avalúo (historial);
->   - dueños con su %;
->   - etiquetas, con su botón para quitar.
->   - Los «+ Agregar» son los cuadros que ya existen (`AddOwnerDialog`, `AddTagDialog`, `AddUnitDialog` y `AddAssessmentDialog`).
->
-> **`page.tsx`:**
-> - Solo carga los datos, llama a `syncAlerts(orgId)` antes de leer las alertas (igual que `/pendientes`), calcula las cifras con `property-metrics.ts` y arma el diseño.
-> - Tiene que quedar **bajo 300 líneas**.
-> - La UF sale de `getLatestUf`; el valor en CLP, de `toCLP`.
-> - **Orden:**
->   1. el encabezado;
->   2. la franja de atención;
->   3. las 4 pestañas: Resumen · Arriendo · Finanzas · Documentos.
-> - **En Resumen:**
->   - las 4 cifras en una fila (2×2 en el celular);
->   - debajo, dos columnas en el computador (`lg:`) y una en el celular;
->   - a la izquierda, Situación y Datos de la propiedad;
->   - a la derecha, Datos al día y el mapa.
-> - **Ancho completo:** se sacan los `max-w-3xl` de todas las pestañas.
->
-> **Estilo:** imita lo que ya hay. Usa las tarjetas, `Badge` y tipografía de `/resumen` y `/pendientes`, y los componentes de `src/components/ui` (base-ui: prop `render`, `nativeButton={false}` en botones que son links). Usa los colores del tema (variables CSS), no colores fijos, salvo para los estados de la tira, si el tema no los tiene. Los textos van en español.
->
-> **No tocar:**
-> - `src/lib/` (incluido `property-metrics.ts`; si le falta algo, dilo en el informe);
-> - `actions.ts`;
-> - `pendientes/`;
-> - `lease-tab.tsx`, `finance-tab.tsx` y `documents-tab.tsx` (salvo para sacarles un `max-w`);
-> - `owners-tags-forms.tsx`, `taxes-tab.tsx`, `bills-tab.tsx`, `economic-forms.tsx`, `documents-forms.tsx` y `delete-button.tsx`.
->
-> No instalar librerías ni hacer commit.
->
-> **Para darlo por hecho:**
-> - `npm run lint` con 0 errores y `npm run build` pasan.
-> - Con el servidor de desarrollo que ya corre en `localhost:3000` (no lo apagues ni levantes otro), `curl` devuelve 200 en estas 4 fichas, y el HTML trae lo esperado:
->   - una arrendada con cobros atrasados (búscala en la base);
->   - `cmuq647zs0029nsuvdaojsbgw` (disponible, con contrato terminado: debe decir los días sin contrato);
->   - `cmuq6481i005cnsuv7desng6n` (uso propio);
->   - `cmuq64805002unsuvwipb4wgf` (en venta).
->
-> **Devolver:** un informe corto, no el código:
-> - los archivos creados y tocados, con las líneas de `page.tsx`;
-> - el resultado de lint, build y los 4 `curl`;
-> - el id de la arrendada con atrasos que usaste;
-> - las dudas.
+1. **Valor comercial:** fecha y fuente. ¿Qué fuentes ofrecer? El plan propone tasación, corredor, estimación propia y estimación automática.
+2. **Compra:** fecha, precio y moneda. ¿Hace falta registrar también gastos de compra (notaría, CBR, comisión) para la plusvalía, o basta con el precio?
+3. **Deuda:** ¿solo el saldo, con su moneda y su fecha, o también banco, dividendo y plazo? La regla 1 de código pide partir por lo mínimo.
+4. **Exenta de contribuciones:** ¿se agrega ahora el campo? Sale de `PENDIENTES.md`.
 
-Al final, el coordinador prueba en el navegador, hace commit y pausa.
+Después, el plan de piezas en serie, cada una con un subagente Sonnet:
+
+- **(a) Partir `propiedades/actions.ts` (765 líneas) por tema.** Solo mover código. De paso:
+  - arreglar el error de porcentaje de `addOwner`;
+  - sacar a `src/lib/` los helpers copiados, si se llega a la tercera copia.
+- **(b) Migración** con los campos nuevos, y los formularios de propiedad para editarlos.
+- **(c) Ficha:**
+  - valor neto;
+  - plusvalía;
+  - «valor comercial hace N meses», desactualizado pasados los 12;
+  - «Datos al día» deja de decir «sin fecha».
+- **(d) Partir `resumen/page.tsx` (773 líneas)** y mostrar el patrimonio neto.
+- **Coordinador:** ADR 0003, `PENDIENTES.md`, navegador, `revisor`, commit y pausa.
+
+Al cerrar la etapa 3, y antes de mezclar: `/code-review` sobre la branch, borrar `TAREA.md` y el contrato de prueba (ver abajo).
 
 **Datos de prueba para el navegador:**
 - **Contrato terminado (ya creado en `proges_dev`):** `LeaseContract` con id `prueba-ficha-terminado`, TERMINADO, del 2025-03-01 al 2026-07-31, en la propiedad DISPONIBLE «Av. Tobalaba 635, Depto 2A» (`cmuq647zs0029nsuvdaojsbgw`). Se borra al cerrar la tarea con `delete from "LeaseContract" where id='prueba-ficha-terminado';`.

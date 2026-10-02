@@ -131,8 +131,9 @@ export function costoEnPeriodo({
   };
 }
 
-// Costo de los últimos 12 meses: desde la medianoche UTC de hoy hace un año
-// hasta `now`.
+// Costo de los últimos 12 meses: desde la medianoche UTC del día siguiente a
+// hoy hace un año, hasta `now`. Así la ventana tiene 365 días y no cuenta dos
+// veces la cuota o el gasto mensual que vence justo hoy.
 export function costoAnual({
   taxes,
   movements,
@@ -140,7 +141,7 @@ export function costoAnual({
   now,
 }: EntradaCosto & { now: Date }): Costo {
   const desde = new Date(
-    Date.UTC(now.getUTCFullYear() - 1, now.getUTCMonth(), now.getUTCDate()),
+    Date.UTC(now.getUTCFullYear() - 1, now.getUTCMonth(), now.getUTCDate() + 1),
   );
   return costoEnPeriodo({ taxes, movements, uf, desde, hasta: now });
 }

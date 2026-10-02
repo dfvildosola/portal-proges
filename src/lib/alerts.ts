@@ -116,7 +116,7 @@ export async function syncAlerts(
     specs.push({
       tipo: AlertType.CONTRIBUCION_IMPAGA,
       severidad: AlertSeverity.ALTA,
-      mensaje: `${count} contribución${count === 1 ? "" : "es"} impaga${count === 1 ? "" : "s"} y vencida${count === 1 ? "" : "s"}.`,
+      mensaje: `${count} contribuci${count === 1 ? "ón" : "ones"} impaga${count === 1 ? "" : "s"} y vencida${count === 1 ? "" : "s"}.`,
       propertyId,
     });
   }
