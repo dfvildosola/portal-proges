@@ -159,7 +159,7 @@ export function PatrimonioCard({
                 </Dato>
               )}
               {p.deudaTermino && (
-                <Dato label="Último dividendo">
+                <Dato label="Último dividendo (fin del crédito)">
                   {formatDate(p.deudaTermino)}
                 </Dato>
               )}
@@ -207,14 +207,18 @@ export function PatrimonioCard({
                   plus === null
                     ? compra === null
                       ? "Falta el precio de compra."
-                      : hayValor
-                        ? "Falta el valor UF para comparar."
-                        : "Falta el valor comercial."
+                      : compra.monto <= 0
+                        ? "Sin precio de compra: no se calcula."
+                        : hayValor
+                          ? "Falta el valor UF para comparar."
+                          : "Falta el valor comercial."
                     : plus.nominal
                       ? "En pesos de la fecha de compra: incluye la inflación."
                       : undefined
                 }
-                aviso={plus === null && compra !== null && hayValor}
+                aviso={
+                  plus === null && compra !== null && compra.monto > 0 && hayValor
+                }
               >
                 {plus
                   ? `${plus.monto > 0 ? "+" : ""}${formatMoney(plus.monto, plus.moneda)} (${PCT.format(plus.pct)}%)`

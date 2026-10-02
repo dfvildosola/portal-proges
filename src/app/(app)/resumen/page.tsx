@@ -154,6 +154,7 @@ export default async function ResumenPage({
   // --- Acumuladores -----------------------------------------------------------
   let patrimonioCLP = 0;
   let deudaCLP = 0; // deuda hipotecaria, ponderada por participación
+  let deudasSinConvertir = 0; // deudas con saldo en UF que no se pudieron pasar a CLP
   let avaluoCLP = 0;
   let comercialComparable = 0; // solo propiedades con comercial Y avalúo
   let avaluoComparable = 0;
@@ -187,9 +188,11 @@ export default async function ResumenPage({
     propsCount++;
 
     // Deuda hipotecaria: cuenta aunque la propiedad no tenga valor comercial.
-    // Si es en UF y falta el valor UF, no se suma (igual que el valor comercial).
+    // Si es en UF y falta el valor UF, no se suma (igual que el valor comercial),
+    // pero se cuenta aparte para avisarlo en el subtítulo del patrimonio neto.
     const deuda = toCLP(p.deudaSaldo, p.deudaMoneda, uf);
     if (deuda !== null && deuda > 0) deudaCLP += deuda * frac;
+    else if (deuda === null && Number(p.deudaSaldo ?? 0) > 0) deudasSinConvertir++;
 
     const comercial = toCLP(p.valorComercial, p.valorComercialMoneda, uf);
     if (comercial !== null) {
@@ -344,6 +347,19 @@ export default async function ResumenPage({
       ? { title: "Patrimonio por titular", items: titularChart }
       : null;
 
+  // Subtítulo del patrimonio neto: la deuda sumada y, aparte, las deudas en UF que
+  // no se pudieron convertir (sin ellas el neto queda más alto de lo real).
+  const deudaNota = [
+    deudaCLP > 0 ? `deuda ${formatMoney(deudaCLP, "CLP")}` : null,
+    deudasSinConvertir > 0
+      ? deudaCLP > 0
+        ? `${deudasSinConvertir} en UF sin convertir`
+        : `${deudasSinConvertir} ${deudasSinConvertir === 1 ? "deuda" : "deudas"} en UF sin convertir`
+      : null,
+  ]
+    .filter((parte) => parte !== null)
+    .join(" · ");
+
   const ufNota = uf
     ? `Montos en UF convertidos a 1 UF = ${formatMoney(uf, "CLP")}.`
     : "Sin valor UF cargado: los montos en UF no se incluyen en los totales.";
@@ -387,11 +403,7 @@ export default async function ResumenPage({
               <Metric
                 label="Patrimonio neto"
                 value={formatMoney(patrimonioCLP - deudaCLP, "CLP")}
-                sub={
-                  deudaCLP > 0
-                    ? `deuda ${formatMoney(deudaCLP, "CLP")}`
-                    : "sin deuda registrada"
-                }
+                sub={deudaNota || "sin deuda registrada"}
                 icon={PiggyBank}
                 emphasis={patrimonioCLP - deudaCLP < 0 ? "negative" : undefined}
               />

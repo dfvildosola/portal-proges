@@ -75,8 +75,9 @@ export const dateField = (obligatorio = "La fecha es obligatoria") =>
     })
     .transform((v) => new Date(`${v}T00:00:00Z`));
 
-// Fecha opcional "AAAA-MM-DD": "" queda como null. Con `noFutura`, rechaza
-// fechas posteriores a hoy (se compara por día, en UTC).
+// Fecha opcional "AAAA-MM-DD": "" queda como null. Rechaza años anteriores a 1900
+// (un año mal tipeado, p. ej. 0026) y, con `noFutura`, fechas posteriores a hoy
+// (se compara por día, en UTC).
 export const optionalDateField = ({ noFutura = false } = {}) =>
   z
     .string()
@@ -87,6 +88,9 @@ export const optionalDateField = ({ noFutura = false } = {}) =>
       message: "Fecha inválida",
     })
     .transform((v) => (v === null ? null : new Date(`${v}T00:00:00Z`)))
+    .refine((d) => d === null || d.getUTCFullYear() >= 1900, {
+      message: "Revisa el año de la fecha.",
+    })
     .refine(
       (d) => {
         if (!noFutura || d === null) return true;

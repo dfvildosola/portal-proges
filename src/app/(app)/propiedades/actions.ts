@@ -52,7 +52,21 @@ const propertySchema = z.object({
   deudaDividendo: moneyField,
   deudaTermino: optionalDateField(),
   exentaContribuciones: z.boolean(),
-});
+})
+  // Si hay cualquier dato de la deuda, el saldo es obligatorio: sin él la ficha dice
+  // «Sin deuda registrada» y esconde lo que se escribió. El error cuelga del saldo.
+  .refine(
+    (d) =>
+      (d.deudaSaldo !== null && Number(d.deudaSaldo) > 0) ||
+      (d.deudaBanco === null &&
+        d.deudaDividendo === null &&
+        d.deudaFecha === null &&
+        d.deudaTermino === null),
+    {
+      path: ["deudaSaldo"],
+      message: "Anota el saldo: sin él, la deuda no se cuenta.",
+    },
+  );
 
 function parse(formData: FormData) {
   return propertySchema.safeParse({

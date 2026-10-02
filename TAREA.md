@@ -69,7 +69,7 @@ Las decisiones 3 y 6 se documentan en el ADR `docs/decisiones/0002-ficha-cifras-
     - `PENDIENTES.md` al día;
     - probado en el navegador;
     - revisión del `revisor` hecha, con sus hallazgos arreglados o anotados.
-- ⏳ **Etapa 2: valores con fecha y fuente, compra y deuda** (con migración). Plan de piezas aprobado el 2026-10-01: `~/.claude/plans/glowing-mixing-biscuit.md`. Decisiones (van al ADR 0003):
+- ✅ **Etapa 2: valores con fecha y fuente, compra y deuda** (con migración). Plan de piezas aprobado el 2026-10-01: `~/.claude/plans/glowing-mixing-biscuit.md`. Decisiones (van al ADR 0003):
   1. Fuente del valor comercial: tasación, corredor o estimación propia (enum `ValorFuente`). «Estimación automática» cuando exista el piloto.
   2. Compra: fecha, precio y moneda, sin gastos de compra.
   3. Deuda: saldo, moneda (por defecto UF) y fecha del saldo, más banco, dividendo mensual (en la moneda del saldo) y fecha del último dividendo.
@@ -81,7 +81,20 @@ Las decisiones 3 y 6 se documentan en el ADR `docs/decisiones/0002-ficha-cifras-
   9. El dividendo se muestra, pero no entra al costo anual (mezcla capital e intereses).
   10. Valor comercial desactualizado pasados 12 meses.
   11. Sin saldo = sin deuda («Sin deuda registrada»).
-  - Piezas en serie: ✅ (a) partir `propiedades/actions.ts` · ✅ (b) migración, formulario y seed · ✅ (c) ficha · ⏳ (d) partir `/resumen` y patrimonio neto · ◻️ coordinador (ADR 0003, pendientes, memoria, navegador, revisor, commit).
+  - Piezas en serie: ✅ (a) partir `propiedades/actions.ts` · ✅ (b) migración, formulario y seed · ✅ (c) ficha · ✅ (d) partir `/resumen` y patrimonio neto · ✅ coordinador (ADR 0003, pendientes, memoria, navegador, revisor, commit).
+  - **Cierre de la etapa 2:**
+    - **Navegador:** se probaron las 4 situaciones; valor de más de 12 meses; valor neto con deuda en UF (CLP − UF y UF − UF); plusvalía en UF, en pesos con aviso y negativa en rojo; bodega exenta en «Datos al día» y en Finanzas; editar y guardar los campos nuevos; fecha futura con el error en su campo; dueño con 150 %; y `/resumen` en la cartera completa (8.875.620.293 = 10.171.884.773 − 1.296.264.480) y filtrado por «Inmobiliaria Andes SpA» (144.678.442). Los números calzan con la base.
+    - **Ojo, navegador:** los clics de la extensión de Chrome en «Guardar cambios» no envían el formulario. Con `form.requestSubmit()` desde la página sí se envía: es la herramienta, no la app.
+    - **Revisor:** no hubo graves. Se arreglaron (último commit de la etapa):
+      - deuda sin saldo: ahora da error en el saldo;
+      - `/resumen` dice cuántas deudas en UF no pudo convertir;
+      - precio de compra 0;
+      - año mínimo 1900 en las fechas;
+      - la etiqueta «Último dividendo (fin del crédito)»;
+      - `dia` reemplazada por `toDateInputValue`.
+
+      Pasaron a `PENDIENTES.md`: `Field` copiado 6 veces, los `catch` que esconden la causa y la hora UTC en `noFutura` y `mesesDesde`. Al ADR se sumaron dos consecuencias.
+    - La propiedad `cmuqaempk003ovkuvg65dofnq` se editó en la prueba y se devolvió por SQL a su estado: sin fecha de valor, sin compra y sin deuda.
   - **Qué dejó (c)**, decisiones tomadas en el camino:
     - `property-metrics.ts` (477 líneas) suma `mesesDesde`, `antiguedad`, `valorDesactualizado`, `valorNeto` y `plusvalia`. `datosAlDia` ahora da 4 chequeos y recibe además `hayValorComercial`, para distinguir «Falta el valor comercial» de «Valor comercial sin fecha».
     - **Desactualizado = 12 meses completos o más** (`>= 12`). El subagente lo había dejado en `> 12`, y lo corrigió el coordinador.
@@ -89,7 +102,7 @@ Las decisiones 3 y 6 se documentan en el ADR `docs/decisiones/0002-ficha-cifras-
     - Tarjeta nueva `patrimonio-card.tsx` arriba de la columna derecha del Resumen. Si falta la UF para convertir, el neto o la plusvalía muestran «—» con un aviso.
     - Exenta: en Finanzas, el botón «Generar cuotas del año» se cambia por la etiqueta «Exenta de contribuciones».
     - Todavía **no** se probó en el navegador: va en el cierre de la etapa.
-- ◻️ **Etapa 3: papeles en regla.**
+- ⏳ **Etapa 3: papeles en regla.**
   - Tipos de documento nuevos (migración): dominio vigente, hipotecas y gravámenes, certificado de avalúo, recepción final, reglamento de copropiedad, permiso de edificación, plano, derechos de agua y subdivisión SAG.
   - Lista por defecto según tipo de propiedad, escrita en `src/lib/papeles.ts`, y una tarjeta «Papeles» con ✓/✗ y fecha de emisión.
   - ADR 0004: se parte con la lista en el código y se personaliza por empresa cuando un cliente lo pida.
@@ -206,7 +219,23 @@ Decisiones tomadas en el camino:
 
 ## Paso siguiente exacto
 
-**Etapa 2, pieza (d): `/resumen`**, con un subagente Sonnet. Primero se parte `resumen/page.tsx` (solo mover código) y después se agrega el patrimonio neto. El encargo está en el plan `~/.claude/plans/glowing-mixing-biscuit.md`, sección «(d)». Después viene el cierre del coordinador, que incluye probar en el navegador lo de (c) y (d). Después de cada pieza, el coordinador corre `npm run lint && npm run build` y revisa el diff.
+**Etapa 3: papeles en regla. Primero el plan de piezas, en plan mode y aprobado por Diego, igual que en la etapa 2.** El alcance general ya está aprobado (ver arriba y el plan `~/.claude/plans/parallel-juggling-lagoon.md`). Falta cortarlo en piezas en serie, por ejemplo:
+
+- (a) migración con los tipos de documento nuevos;
+- (b) `src/lib/papeles.ts`, con la lista por defecto según el tipo de propiedad y una función pura que diga qué papel está, cuál falta y cuál está viejo;
+- (c) la tarjeta «Papeles» en la ficha;
+- después, el cierre del coordinador con el ADR 0004.
+
+Antes de la etapa 3, el plan tiene que traer 3 decisiones, explicadas para Diego:
+1. ¿Se marca «viejo» el dominio vigente o el certificado de hipotecas y gravámenes con más de 30 días? En la práctica se piden con menos de 30 días.
+2. ¿La fecha de emisión es un campo nuevo del documento o se usa la fecha de subida?
+3. ¿«Papeles» va en el Resumen o en la pestaña Documentos?
+
+Revisar primero qué tiene hoy `Documento` en `prisma/schema.prisma` (tipos, fechas).
+
+**Al terminar la etapa 3 (última de la tarea):** `/code-review` sobre la branch, borrar el contrato de prueba (abajo) y `TAREA.md`, y después mezclar cuando Diego lo pida.
+
+El servidor `next dev` de `:3000` se reinició el 2026-10-01 y ya tiene el cliente de Prisma nuevo. Si la etapa 3 trae migración, hay que reiniciarlo otra vez.
 
 **Qué dejaron (a) y (b)**, para los encargos:
 - **Acciones:** viven en `src/app/(app)/propiedades/{actions,facts-actions,finance-actions,documents-actions}.ts`. Los helpers de validación están en `src/lib/form-helpers.ts`, incluido `optionalDateField({ noFutura })`.
@@ -219,8 +248,6 @@ Decisiones tomadas en el camino:
 - **Probado solo con curl** (crear, editar, vaciar, fechas futuras e inválidas). Falta probar el formulario con clics en el navegador al cerrar la etapa.
 - **Ojo:** el `next dev` que estaba corriendo en `:3000` tiene el cliente de Prisma viejo en memoria. Hay que reiniciarlo antes de probar en el navegador.
 - **Datos de ejemplo:** el seed sigue usando `Math.random` para tipos y montos; volver a sembrar cambia todos los ids.
-
-Al cerrar la etapa 3, y antes de mezclar: `/code-review` sobre la branch, borrar `TAREA.md` y el contrato de prueba (ver abajo).
 
 **Datos de prueba para el navegador** (seed del 2026-10-01, etapa 2):
 - **Contrato terminado:** `LeaseContract` con id `prueba-ficha-terminado`, TERMINADO, del 2025-03-01 al 2026-07-31, en la propiedad DISPONIBLE «Av. Marathon 556» (`cmuqaempw0046vkuvg3oind4k`, una casa con valor, compra y deuda). Se borra al cerrar la tarea con `delete from "LeaseContract" where id='prueba-ficha-terminado';`. Para `psql`, quítale a `DATABASE_URL` el `?schema=…`.

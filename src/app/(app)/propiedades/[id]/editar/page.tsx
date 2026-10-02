@@ -1,13 +1,11 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
+import { toDateInputValue } from "@/lib/format";
 import { BackLink } from "@/components/back-link";
 import { PageHeader } from "@/components/page-header";
 import { PropertyForm } from "../../property-form";
 import { updateProperty } from "../../actions";
-
-// Las fechas se guardan a medianoche UTC: se leen en UTC como "AAAA-MM-DD".
-const dia = (d: Date | null) => d?.toISOString().slice(0, 10);
 
 export default async function EditarPropiedadPage({
   params,
@@ -41,17 +39,17 @@ export default async function EditarPropiedadPage({
           anoConstruccion: p.anoConstruccion?.toString(),
           valorComercial: p.valorComercial?.toString(),
           valorComercialMoneda: p.valorComercialMoneda,
-          valorComercialFecha: dia(p.valorComercialFecha),
+          valorComercialFecha: toDateInputValue(p.valorComercialFecha),
           valorComercialFuente: p.valorComercialFuente ?? undefined,
-          compraFecha: dia(p.compraFecha),
+          compraFecha: toDateInputValue(p.compraFecha),
           compraPrecio: p.compraPrecio?.toString(),
           compraMoneda: p.compraMoneda,
           deudaSaldo: p.deudaSaldo?.toString(),
           deudaMoneda: p.deudaMoneda,
-          deudaFecha: dia(p.deudaFecha),
+          deudaFecha: toDateInputValue(p.deudaFecha),
           deudaBanco: p.deudaBanco ?? undefined,
           deudaDividendo: p.deudaDividendo?.toString(),
-          deudaTermino: dia(p.deudaTermino),
+          deudaTermino: toDateInputValue(p.deudaTermino),
           exentaContribuciones: p.exentaContribuciones,
         }}
       />

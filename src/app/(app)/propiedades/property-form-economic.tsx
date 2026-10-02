@@ -240,7 +240,7 @@ export function PropertyFormEconomic({
             </Field>
 
             <Field
-              label="Último dividendo"
+              label="Último dividendo (fin del crédito)"
               htmlFor="deudaTermino"
               error={err("deudaTermino")}
             >
