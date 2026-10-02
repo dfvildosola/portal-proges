@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, type ReactNode } from "react";
 import { Plus } from "lucide-react";
 import type { OwnerType } from "@/generated/prisma/enums";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -13,25 +14,105 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   ownerTypeLabels,
   propertyUnitTypeLabels,
   enumOptions,
 } from "@/lib/domain";
 import { addOwner, addTag, addUnit, addAssessment } from "../actions";
+import type { PropertyFormState } from "../actions";
 
 const NUEVA = "__nueva__";
 
 type Entidad = { id: string; nombre: string; tipo: OwnerType };
 
-export function AddOwnerForm({
+// Cuadro con un botón «+ Agregar …» que lo abre. El formulario va adentro y solo
+// existe mientras el cuadro está abierto, así que cada vez que se abre parte limpio
+// (sin errores ni valores de la vez anterior). Recibe `close` para cerrarse al guardar.
+function AddDialog({
+  title,
+  children,
+}: {
+  title: string;
+  children: (close: () => void) => ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<Button size="sm" variant="outline" />}>
+        <Plus className="size-3.5" />
+        {title}
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {children(() => setOpen(false))}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Corre la acción del servidor y cierra el cuadro solo si se guardó bien
+// (la acción devuelve `{}` sin error ni errores de campo).
+function useAddAction(
+  action: (
+    prev: PropertyFormState,
+    formData: FormData,
+  ) => Promise<PropertyFormState>,
+  close: () => void,
+) {
+  const [state, formAction, pending] = useActionState(
+    async (prev: PropertyFormState, formData: FormData) => {
+      const result = await action(prev, formData);
+      if (!result.error && !result.fieldErrors) close();
+      return result;
+    },
+    {} as PropertyFormState,
+  );
+  const err = (f: string) => state?.fieldErrors?.[f];
+  return { state, formAction, pending, err };
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="text-xs text-destructive">{message}</p>;
+}
+
+// Error general del formulario (el que no es de un campo en particular).
+function FormError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="text-sm text-destructive">{message}</p>;
+}
+
+function SubmitFooter({ pending }: { pending: boolean }) {
+  return (
+    <DialogFooter>
+      <Button type="submit" disabled={pending}>
+        {pending ? "Guardando…" : "Agregar"}
+      </Button>
+    </DialogFooter>
+  );
+}
+
+function OwnerFormBody({
   propertyId,
   entidades,
+  close,
 }: {
   propertyId: string;
   entidades: Entidad[];
+  close: () => void;
 }) {
-  const [state, formAction, pending] = useActionState(addOwner, {});
-  const err = (f: string) => state?.fieldErrors?.[f];
+  const { state, formAction, pending, err } = useAddAction(addOwner, close);
   const [sel, setSel] = useState(NUEVA);
   const isNew = sel === NUEVA;
 
@@ -41,12 +122,12 @@ export function AddOwnerForm({
     items[e.id] = `${e.nombre} · ${ownerTypeLabels[e.tipo]}`;
 
   return (
-    <form action={formAction} className="space-y-2">
+    <form action={formAction}>
       <input type="hidden" name="propertyId" value={propertyId} />
       <input type="hidden" name="ownerId" value={isNew ? "" : sel} />
-
-      <div className="flex flex-wrap items-start gap-2">
-        <div className="min-w-56 flex-1">
+      <div className="space-y-4 py-4">
+        <div className="flex flex-col gap-1.5">
+          <Label>Entidad</Label>
           <Select
             items={items}
             value={sel}
@@ -65,8 +146,51 @@ export function AddOwnerForm({
             </SelectContent>
           </Select>
         </div>
-        <div className="w-24">
+
+        {isNew && (
+          <>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="owner-nombre">Nombre o razón social</Label>
+              <Input
+                id="owner-nombre"
+                name="nombre"
+                placeholder="Nombre o razón social"
+              />
+              <FieldError message={err("nombre")} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="owner-rut">RUT</Label>
+                <Input id="owner-rut" name="rut" placeholder="RUT" />
+                <FieldError message={err("rut")} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Tipo</Label>
+                <Select
+                  name="tipo"
+                  defaultValue="PERSONA"
+                  items={ownerTypeLabels}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {enumOptions(ownerTypeLabels).map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="owner-porcentaje">Porcentaje</Label>
           <Input
+            id="owner-porcentaje"
             name="porcentaje"
             type="number"
             step="0.01"
@@ -74,36 +198,61 @@ export function AddOwnerForm({
             max="100"
             placeholder="%"
           />
-          {err("porcentaje") && (
-            <p className="mt-1 text-xs text-destructive">{err("porcentaje")}</p>
-          )}
+          <FieldError message={err("porcentaje")} />
         </div>
-        <Button type="submit" variant="outline" disabled={pending}>
-          <Plus className="size-4" />
-          Agregar
-        </Button>
-      </div>
 
-      {isNew && (
-        <div className="flex flex-wrap items-start gap-2">
-          <div className="min-w-48 flex-1">
-            <Input name="nombre" placeholder="Nombre o razón social" />
-            {err("nombre") && (
-              <p className="mt-1 text-xs text-destructive">{err("nombre")}</p>
-            )}
-          </div>
-          <div className="min-w-32 flex-1">
-            <Input name="rut" placeholder="RUT" />
-            {err("rut") && (
-              <p className="mt-1 text-xs text-destructive">{err("rut")}</p>
-            )}
-          </div>
-          <Select name="tipo" defaultValue="PERSONA">
-            <SelectTrigger className="w-32">
+        <FormError message={state?.error} />
+      </div>
+      <SubmitFooter pending={pending} />
+    </form>
+  );
+}
+
+export function AddOwnerDialog({
+  propertyId,
+  entidades,
+}: {
+  propertyId: string;
+  entidades: Entidad[];
+}) {
+  return (
+    <AddDialog title="Agregar dueño">
+      {(close) => (
+        <OwnerFormBody
+          propertyId={propertyId}
+          entidades={entidades}
+          close={close}
+        />
+      )}
+    </AddDialog>
+  );
+}
+
+function UnitFormBody({
+  propertyId,
+  close,
+}: {
+  propertyId: string;
+  close: () => void;
+}) {
+  const { state, formAction, pending, err } = useAddAction(addUnit, close);
+
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="propertyId" value={propertyId} />
+      <div className="space-y-4 py-4">
+        <div className="flex flex-col gap-1.5">
+          <Label>Tipo</Label>
+          <Select
+            name="tipo"
+            defaultValue="ESTACIONAMIENTO"
+            items={propertyUnitTypeLabels}
+          >
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {enumOptions(ownerTypeLabels).map((o) => (
+              {enumOptions(propertyUnitTypeLabels).map((o) => (
                 <SelectItem key={o.value} value={o.value}>
                   {o.label}
                 </SelectItem>
@@ -111,121 +260,143 @@ export function AddOwnerForm({
             </SelectContent>
           </Select>
         </div>
-      )}
-
-      {state?.error && (
-        <p className="text-xs text-destructive">{state.error}</p>
-      )}
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="unit-numero">N° o identificador</Label>
+          <Input
+            id="unit-numero"
+            name="numero"
+            placeholder="N° o identificador"
+          />
+          <FieldError message={err("numero")} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="unit-rol">ROL SII (opcional)</Label>
+          <Input id="unit-rol" name="rolSII" placeholder="ROL SII (opcional)" />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="unit-avaluo">Avalúo (opcional)</Label>
+          <Input
+            id="unit-avaluo"
+            name="avaluoFiscal"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="Avalúo (opcional)"
+          />
+          <FieldError message={err("avaluoFiscal")} />
+        </div>
+        <FormError message={state?.error} />
+      </div>
+      <SubmitFooter pending={pending} />
     </form>
   );
 }
 
-export function AddUnitForm({ propertyId }: { propertyId: string }) {
-  const [state, formAction, pending] = useActionState(addUnit, {});
-  const err = (f: string) => state?.fieldErrors?.[f];
-
+export function AddUnitDialog({ propertyId }: { propertyId: string }) {
   return (
-    <form
-      action={formAction}
-      className="grid grid-cols-1 items-start gap-2 sm:grid-cols-[auto_1fr_1fr_1fr_auto]"
-    >
-      <input type="hidden" name="propertyId" value={propertyId} />
-      <Select name="tipo" defaultValue="ESTACIONAMIENTO">
-        <SelectTrigger className="w-40">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {enumOptions(propertyUnitTypeLabels).map((o) => (
-            <SelectItem key={o.value} value={o.value}>
-              {o.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <div>
-        <Input name="numero" placeholder="N° o identificador" />
-        {err("numero") && (
-          <p className="mt-1 text-xs text-destructive">{err("numero")}</p>
-        )}
-      </div>
-      <Input name="rolSII" placeholder="ROL SII (opcional)" />
-      <div>
-        <Input
-          name="avaluoFiscal"
-          type="number"
-          step="0.01"
-          min="0"
-          placeholder="Avalúo (opcional)"
+    <AddDialog title="Agregar anexo">
+      {(close) => (
+        <UnitFormBody
+          propertyId={propertyId}
+          close={close}
         />
-        {err("avaluoFiscal") && (
-          <p className="mt-1 text-xs text-destructive">{err("avaluoFiscal")}</p>
-        )}
+      )}
+    </AddDialog>
+  );
+}
+
+function AssessmentFormBody({
+  propertyId,
+  close,
+}: {
+  propertyId: string;
+  close: () => void;
+}) {
+  const { state, formAction, pending, err } = useAddAction(addAssessment, close);
+
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="propertyId" value={propertyId} />
+      <div className="space-y-4 py-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="assessment-anio">Año</Label>
+          <Input
+            id="assessment-anio"
+            name="anio"
+            type="number"
+            step="1"
+            min="1800"
+            max="2100"
+            placeholder="Año"
+          />
+          <FieldError message={err("anio")} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="assessment-valor">Valor ($)</Label>
+          <Input
+            id="assessment-valor"
+            name="valor"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="Valor ($)"
+          />
+          <FieldError message={err("valor")} />
+        </div>
+        <FormError message={state?.error} />
       </div>
-      <Button type="submit" variant="outline" disabled={pending}>
-        <Plus className="size-4" />
-        Agregar
-      </Button>
+      <SubmitFooter pending={pending} />
     </form>
   );
 }
 
-export function AddAssessmentForm({ propertyId }: { propertyId: string }) {
-  const [state, formAction, pending] = useActionState(addAssessment, {});
-  const err = (f: string) => state?.fieldErrors?.[f];
-
+export function AddAssessmentDialog({ propertyId }: { propertyId: string }) {
   return (
-    <form
-      action={formAction}
-      className="grid grid-cols-1 items-start gap-2 sm:grid-cols-[auto_1fr_auto]"
-    >
-      <input type="hidden" name="propertyId" value={propertyId} />
-      <div>
-        <Input
-          name="anio"
-          type="number"
-          step="1"
-          min="1800"
-          max="2100"
-          placeholder="Año"
-          className="w-24"
+    <AddDialog title="Agregar avalúo">
+      {(close) => (
+        <AssessmentFormBody
+          propertyId={propertyId}
+          close={close}
         />
-        {err("anio") && (
-          <p className="mt-1 text-xs text-destructive">{err("anio")}</p>
-        )}
-      </div>
-      <div>
-        <Input name="valor" type="number" step="0.01" min="0" placeholder="Valor ($)" />
-        {err("valor") && (
-          <p className="mt-1 text-xs text-destructive">{err("valor")}</p>
-        )}
-      </div>
-      <Button type="submit" variant="outline" disabled={pending}>
-        <Plus className="size-4" />
-        Agregar
-      </Button>
-      {state?.error && (
-        <p className="col-span-full text-xs text-destructive">{state.error}</p>
       )}
+    </AddDialog>
+  );
+}
+
+function TagFormBody({
+  propertyId,
+  close,
+}: {
+  propertyId: string;
+  close: () => void;
+}) {
+  const { state, formAction, pending, err } = useAddAction(addTag, close);
+
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="propertyId" value={propertyId} />
+      <div className="space-y-4 py-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="tag-nombre">Etiqueta</Label>
+          <Input id="tag-nombre" name="nombre" placeholder="Nueva etiqueta" />
+          <FieldError message={err("nombre")} />
+        </div>
+        <FormError message={state?.error} />
+      </div>
+      <SubmitFooter pending={pending} />
     </form>
   );
 }
 
-export function AddTagForm({ propertyId }: { propertyId: string }) {
-  const [state, formAction, pending] = useActionState(addTag, {});
-
+export function AddTagDialog({ propertyId }: { propertyId: string }) {
   return (
-    <form action={formAction} className="flex items-center gap-2">
-      <input type="hidden" name="propertyId" value={propertyId} />
-      <Input name="nombre" placeholder="Nueva etiqueta" className="h-8 w-48" />
-      <Button type="submit" size="sm" variant="outline" disabled={pending}>
-        <Plus className="size-4" />
-        Agregar
-      </Button>
-      {state?.fieldErrors?.nombre && (
-        <span className="text-xs text-destructive">
-          {state.fieldErrors.nombre}
-        </span>
+    <AddDialog title="Agregar etiqueta">
+      {(close) => (
+        <TagFormBody
+          propertyId={propertyId}
+          close={close}
+        />
       )}
-    </form>
+    </AddDialog>
   );
 }

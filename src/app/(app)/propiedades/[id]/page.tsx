@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Pencil, X, Plus, Download, FileText } from "lucide-react";
+import { Pencil, X } from "lucide-react";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import { BackLink } from "@/components/back-link";
@@ -20,33 +20,24 @@ import {
   currencyLabels,
   ownerTypeLabels,
   propertyUnitTypeLabels,
-  contractStatusLabels,
-  contractStatusVariant,
-  movementTypeLabels,
-  movementCategoryLabels,
-  movementTypeVariant,
   alertTypeLabels,
   alertSeverityLabels,
   alertSeverityVariant,
-  documentTypeLabels,
 } from "@/lib/domain";
 import { resolveAlert } from "../../pendientes/actions";
-import { formatMoney, formatDate, formatM2 } from "@/lib/format";
+import { formatMoney, formatM2 } from "@/lib/format";
 import { DeletePropertyButton } from "./delete-button";
-import { AddOwnerForm, AddTagForm, AddUnitForm, AddAssessmentForm } from "./owners-tags-forms";
-import { AddMovementForm } from "./economic-forms";
-import { TaxesTab } from "./taxes-tab";
-import { BillsTab } from "./bills-tab";
-import { UploadDocumentDialog } from "./documents-forms";
-import { StatusQuickEdit } from "./status-quick-edit";
 import {
-  removeOwner,
-  removeTag,
-  removeUnit,
-  removeAssessment,
-  removeMovement,
-  deleteDocument,
-} from "../actions";
+  AddOwnerDialog,
+  AddTagDialog,
+  AddUnitDialog,
+  AddAssessmentDialog,
+} from "./owners-tags-forms";
+import { LeaseTab } from "./lease-tab";
+import { FinanceTab } from "./finance-tab";
+import { DocumentsTab } from "./documents-tab";
+import { StatusQuickEdit } from "./status-quick-edit";
+import { removeOwner, removeTag, removeUnit, removeAssessment } from "../actions";
 
 // Par etiqueta/valor dentro de una grilla de definición.
 function DataItem({ label, value }: { label: string; value: string }) {
@@ -62,11 +53,9 @@ function DataItem({ label, value }: { label: string; value: string }) {
 
 const TABS = [
   { value: "resumen", label: "Resumen" },
+  { value: "arriendo", label: "Arriendo" },
+  { value: "finanzas", label: "Finanzas" },
   { value: "documentos", label: "Documentos" },
-  { value: "contrato", label: "Contrato" },
-  { value: "economico", label: "Económico" },
-  { value: "contribuciones", label: "Contribuciones" },
-  { value: "cuentas", label: "Cuentas" },
   { value: "alertas", label: "Alertas" },
 ];
 
@@ -97,26 +86,6 @@ export default async function PropiedadDetallePage({
     },
   });
   if (!p) notFound();
-
-  // Agrupa documentos por categoría (tipo) para mostrarlos en secciones.
-  const docsByType = p.documents.reduce<Record<string, typeof p.documents>>(
-    (acc, doc) => {
-      (acc[doc.tipo] ??= []).push(doc);
-      return acc;
-    },
-    {},
-  );
-
-  const today = new Date();
-  const in30Days = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-  function expiryBadge(fechaVencimiento: Date | null) {
-    if (!fechaVencimiento) return null;
-    if (fechaVencimiento < today)
-      return <Badge variant="destructive">Vencido</Badge>;
-    if (fechaVencimiento < in30Days)
-      return <Badge variant="secondary">Por vencer</Badge>;
-    return null;
-  }
 
   // Entidades existentes (para reutilizar en vez de duplicar), excluyendo las
   // que ya figuran como dueñas de esta propiedad.
@@ -273,7 +242,7 @@ export default async function PropiedadDetallePage({
               )}
             </CardContent>
             <CardFooter className="border-t">
-              <AddOwnerForm propertyId={p.id} entidades={entidadesDisponibles} />
+              <AddOwnerDialog propertyId={p.id} entidades={entidadesDisponibles} />
             </CardFooter>
           </Card>
 
@@ -307,7 +276,7 @@ export default async function PropiedadDetallePage({
                   ))
                 )}
               </div>
-              <AddTagForm propertyId={p.id} />
+              <AddTagDialog propertyId={p.id} />
             </CardContent>
           </Card>
 
@@ -382,7 +351,7 @@ export default async function PropiedadDetallePage({
               )}
             </CardContent>
             <CardFooter className="border-t">
-              <AddAssessmentForm propertyId={p.id} />
+              <AddAssessmentDialog propertyId={p.id} />
             </CardFooter>
           </Card>
 
@@ -430,222 +399,26 @@ export default async function PropiedadDetallePage({
                   ))}
                 </div>
               )}
-              <AddUnitForm propertyId={p.id} />
+              <AddUnitDialog propertyId={p.id} />
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="documentos" className="mt-6 max-w-3xl space-y-6">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              {p.documents.length === 0
-                ? "Sin documentos cargados"
-                : `${p.documents.length} ${p.documents.length === 1 ? "documento" : "documentos"}`}
-            </p>
-            <UploadDocumentDialog propertyId={p.id} />
-          </div>
-
-          {p.documents.length === 0 ? (
-            <div className="rounded-xl border border-dashed bg-muted/30 p-8 text-center">
-              <p className="text-sm font-medium">Sin documentos</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Sube escrituras, contratos, avalúos, seguros y más.
-              </p>
-            </div>
-          ) : (
-            Object.entries(docsByType).map(([tipo, docs]) => (
-              <div key={tipo}>
-                <h3 className="mb-2 text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  {documentTypeLabels[tipo as keyof typeof documentTypeLabels]}
-                </h3>
-                <div className="divide-y rounded-lg border">
-                  {docs.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-start justify-between px-3 py-2.5 gap-3"
-                    >
-                      <div className="flex items-start gap-2.5 min-w-0">
-                        <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <p className="truncate text-sm font-medium">
-                              {doc.nombre}
-                            </p>
-                            <Badge variant="secondary" className="text-xs font-normal">
-                              {documentTypeLabels[doc.tipo]}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {doc.fechaEmision
-                              ? `Emisión: ${formatDate(doc.fechaEmision)} · `
-                              : ""}
-                            Subido: {formatDate(doc.createdAt)}
-                            {doc.fechaVencimiento
-                              ? ` · Vence: ${formatDate(doc.fechaVencimiento)}`
-                              : ""}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        {expiryBadge(doc.fechaVencimiento)}
-                        <a
-                          href={doc.blobKey}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          download={doc.nombre}
-                          className="inline-flex h-7 items-center gap-1 rounded-lg border border-border bg-background px-2 text-xs font-medium transition-colors hover:bg-muted"
-                        >
-                          <Download className="size-3.5" />
-                          Descargar
-                        </a>
-                        <form action={deleteDocument}>
-                          <input type="hidden" name="documentId" value={doc.id} />
-                          <input type="hidden" name="propertyId" value={p.id} />
-                          <button
-                            type="submit"
-                            aria-label="Eliminar documento"
-                            className="text-muted-foreground transition-colors hover:text-destructive"
-                          >
-                            <X className="size-4" />
-                          </button>
-                        </form>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
+        <TabsContent value="arriendo" className="mt-6 max-w-3xl">
+          <LeaseTab propertyId={p.id} contracts={p.contracts} />
         </TabsContent>
 
-        <TabsContent value="contrato" className="mt-6 max-w-3xl">
-          {p.contracts.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-muted/30 p-8 text-center">
-              <p className="text-sm font-medium">Sin contratos de arriendo</p>
-              <p className="text-sm text-muted-foreground">
-                Esta propiedad no tiene contratos cargados.
-              </p>
-              <Button
-                size="sm"
-                render={
-                  <Link href={`/contratos/nuevo?propertyId=${p.id}`} />
-                }
-              >
-                <Plus className="size-4" />
-                Nuevo contrato
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  {p.contracts.length}{" "}
-                  {p.contracts.length === 1 ? "contrato" : "contratos"} en esta
-                  propiedad.
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  nativeButton={false} render={<Link href={`/contratos/nuevo?propertyId=${p.id}`} />}
-                >
-                  <Plus className="size-4" />
-                  Nuevo contrato
-                </Button>
-              </div>
-              <div className="divide-y rounded-lg border">
-                {p.contracts.map((c) => (
-                  <Link
-                    key={c.id}
-                    href={`/contratos/${c.id}`}
-                    className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-muted/50"
-                  >
-                    <div>
-                      <span className="text-sm font-medium tabular-nums">
-                        {formatMoney(c.monto, c.moneda)}
-                      </span>
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {c.tenant.nombre}
-                      </span>
-                      <span className="block text-xs text-muted-foreground">
-                        {formatDate(c.fechaInicio)} → {formatDate(c.fechaTermino)}
-                      </span>
-                    </div>
-                    <Badge variant={contractStatusVariant(c.estado)}>
-                      {contractStatusLabels[c.estado]}
-                    </Badge>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
+        <TabsContent value="finanzas" className="mt-6 max-w-3xl">
+          <FinanceTab
+            propertyId={p.id}
+            movements={p.movements}
+            taxes={p.taxes}
+            bills={p.bills}
+          />
         </TabsContent>
 
-        <TabsContent value="economico" className="mt-6 max-w-3xl">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Movimientos</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {p.movements.length === 0 ? (
-                <div className="rounded-lg border border-dashed bg-muted/30 p-6 text-center">
-                  <p className="text-sm font-medium">Sin movimientos registrados</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Registra ingresos y gastos asociados a esta propiedad.
-                  </p>
-                </div>
-              ) : (
-                <div className="divide-y rounded-lg border">
-                  {p.movements.map((m) => (
-                    <div
-                      key={m.id}
-                      className="flex items-start justify-between px-3 py-2.5"
-                    >
-                      <div>
-                        <span className="text-sm font-medium tabular-nums">
-                          {formatMoney(m.monto, m.moneda)}
-                        </span>
-                        <Badge
-                          variant={movementTypeVariant(m.tipo)}
-                          className="ml-2 text-xs"
-                        >
-                          {movementTypeLabels[m.tipo]}
-                        </Badge>
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          {movementCategoryLabels[m.categoria]}
-                        </span>
-                        <span className="block text-xs text-muted-foreground">
-                          {formatDate(m.fecha)}
-                          {m.descripcion && ` · ${m.descripcion}`}
-                        </span>
-                      </div>
-                      <form action={removeMovement}>
-                        <input type="hidden" name="movementId" value={m.id} />
-                        <input type="hidden" name="propertyId" value={p.id} />
-                        <button
-                          type="submit"
-                          aria-label="Quitar movimiento"
-                          className="text-muted-foreground transition-colors hover:text-destructive"
-                        >
-                          <X className="size-4" />
-                        </button>
-                      </form>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="border-t">
-              <AddMovementForm propertyId={p.id} />
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="contribuciones" className="mt-6 max-w-3xl">
-          <TaxesTab propertyId={p.id} taxes={p.taxes} />
-        </TabsContent>
-
-        <TabsContent value="cuentas" className="mt-6 max-w-3xl">
-          <BillsTab propertyId={p.id} bills={p.bills} />
+        <TabsContent value="documentos" className="mt-6 max-w-3xl">
+          <DocumentsTab propertyId={p.id} documents={p.documents} />
         </TabsContent>
 
         <TabsContent value="alertas" className="mt-6 max-w-3xl">

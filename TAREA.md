@@ -56,8 +56,8 @@ Las decisiones 3 y 6 se documentan en el ADR `docs/decisiones/0002-ficha-cifras-
 
 - ⏳ **Etapa 1: ficha nueva con los datos que ya existen** (no toca la base). Piezas en serie, cada una con un subagente Sonnet:
   - ✅ **A. Cálculos:** `src/lib/property-metrics.ts`.
-  - ⏳ **B. Pestañas y cuadros.**
-  - ◻️ **C. Resumen y armado de `page.tsx`.**
+  - ✅ **B. Pestañas y cuadros.** Quedaron `lease-tab.tsx` (`{ propertyId, contracts: LeaseContractRow[] }`), `finance-tab.tsx` (`{ propertyId, movements, taxes, bills }`) y `documents-tab.tsx` (`{ propertyId, documents }`). Los cuadros se llaman `AddOwnerDialog`, `AddTagDialog`, `AddUnitDialog` y `AddAssessmentDialog`. El selector se arregló con `items={propertyStatusLabels}` en el `<Select>`. `page.tsx` bajó a 479 líneas y tiene 5 pestañas (la de Alertas sigue ahí).
+  - ⏳ **C. Resumen y armado de `page.tsx`.**
   - **Coordinador:**
     - ✅ escribe el ADR 0002;
     - ✅ actualiza `PENDIENTES.md` (lista de abajo) y saca de ahí la línea del selector de estado;
@@ -185,37 +185,89 @@ Nada todavía.
 
 ## Paso siguiente exacto
 
-**Pieza B** (en curso o por lanzar). Un subagente con `model: sonnet`, con este encargo:
+**Pieza C** (en curso o por lanzar). Un subagente con `model: sonnet`, con este encargo:
 
-> **Objetivo:** dejar las pestañas de la ficha en archivos propios, pasar los formularios de agregar a cuadros, y arreglar el selector de estado. Todo en `src/app/(app)/propiedades/[id]/`. Lee antes las decisiones 7, 8, 9 y 10 de este archivo, y «Lo que se sabe del código».
+> **Objetivo:** que la pestaña Resumen de la ficha responda en 5 segundos tres preguntas: ¿algo requiere atención?, ¿cómo le va a la propiedad? y ¿qué datos faltan o están viejos? Además, reescribir `page.tsx` para que solo cargue datos y arme el diseño. Antes de empezar, lee en este archivo el objetivo, las decisiones 1 a 9, «Lo que hay en `property-metrics.ts`» y «Lo que se sabe del código». Lee también el ADR `docs/decisiones/0002-ficha-cifras-y-mapa.md`.
 >
-> 1. **Pestañas en archivos nuevos.** Sacar de `page.tsx` el contenido de tres pestañas a componentes de servidor (sin `"use client"`, salvo que haga falta) que reciben los datos por props:
->    - `lease-tab.tsx`: lo que hoy está en la pestaña `contrato` (contratos y cobros).
->    - `finance-tab.tsx`: junta lo de las pestañas `economico` (movimientos y `AddMovementForm`), `contribuciones` (`TaxesTab`) y `cuentas` (`BillsTab`), en secciones con su título. `TaxesTab` y `BillsTab` se reutilizan tal cual.
->    - `documents-tab.tsx`: lo de la pestaña `documentos`.
->    - Los tipos de las props tienen que encajar con lo que `page.tsx` ya carga: usar `Prisma.PropertyGetPayload<…>` o `Pick<>` de los modelos.
->    - Los componentes nuevos no fijan su ancho (nada de `max-w-3xl` adentro): el ancho lo decide la página.
-> 2. **Conectarlas en `page.tsx`** (cambio mínimo): reemplazar el contenido de esas pestañas por los componentes nuevos, y dejar las pestañas así: Resumen · Arriendo · Finanzas · Documentos · Alertas. Alertas desaparece en la pieza C, cuando llegue la franja «Requiere atención». La pestaña Resumen **no se toca**: la reescribe la pieza C.
-> 3. **Cuadros.** En `owners-tags-forms.tsx`, `AddOwnerForm`, `AddTagForm`, `AddUnitForm` y `AddAssessmentForm` pasan a abrirse desde un botón «+ Agregar …» en un `Dialog`, con el mismo patrón que `UploadDocumentDialog` en `documents-forms.tsx`. El cuadro se cierra cuando se guarda bien y muestra los errores de campo si falla. Se pueden renombrar (por ejemplo `AddOwnerDialog`), actualizando los imports en `page.tsx`.
-> 4. **Selector de estado.** `status-quick-edit.tsx` muestra el valor interno (`ARRENDADA`) en vez de la etiqueta (`Arrendada`). Buscar cómo lo resuelven otros `Select` del repo, o en la documentación de base-ui en `node_modules`, que `SelectValue` muestre la etiqueta de `src/lib/domain.ts`.
+> **Componentes nuevos** en `src/app/(app)/propiedades/[id]/`. Cada uno recibe sus datos por props, ya calculados:
+> - `property-header.tsx`:
+>   - la dirección es el título;
+>   - debajo va tipo · comuna · m² · ROL;
+>   - a la derecha van `StatusQuickEdit`, el objetivo, y los botones Editar y Eliminar que ya existen.
+> - `attention-strip.tsx`: muestra las alertas ACTIVAS de la propiedad, cada una con su botón «Resolver» (`resolveAlert`, de `pendientes/actions`, como en la pestaña Alertas de hoy). Si no hay ninguna, dice «Todo en orden». Reemplaza la pestaña Alertas, que se elimina.
+> - `key-figures.tsx`: las 4 cifras.
+>   - **Valor comercial**, en su moneda, con «sin fecha».
+>   - **Renta mensual**, de `rentaMensual`.
+>   - **Rentabilidad neta** en grande, con la bruta en chico (de `rentabilidad`, alimentada por `rentaAnualCLP` y `costoAnual`).
+>   - **Costo anual** (de `costoAnual`).
+>   - Si falta un dato, va «—» con una línea que diga por qué; por ejemplo «sin contrato vigente» o «falta valor comercial».
+>   - Si `sinConvertir > 0`, un aviso chico: «N gastos en UF sin convertir: falta el valor UF».
+> - `situation-card.tsx`: cambia según el estado (decisión 4).
+>   - **ARRENDADA:**
+>     - arrendatario;
+>     - días para el término del contrato vigente;
+>     - el reajuste, con las etiquetas de `domain.ts`;
+>     - la tira de 12 meses de `tiraDePagos`, una celda por mes con color según el estado y el mes en `title`, más una leyenda.
+>   - **DISPONIBLE o DESOCUPADA:**
+>     - días sin contrato (`diasSinContrato`);
+>     - lo que costó desde entonces: `costoEnPeriodo` con `desde` = la `fechaTermino` más reciente y `hasta` = `now`;
+>     - si nunca tuvo contrato, «Sin contratos registrados».
+>   - **USO_PROPIO:** el costo anual desglosado (contribuciones y cada categoría de gasto, con las etiquetas de `domain.ts`).
+>   - **EN_VENTA:** solo el valor comercial.
+> - `data-freshness.tsx`: «Datos al día». Muestra los 3 chequeos de `datosAlDia`, cada uno con su ícono ok/falta/vencido, más una línea fija: «Valor comercial: sin fecha».
+> - `property-map.tsx`: el mapa de la decisión 6 y del ADR 0002.
+>   - Un `<iframe>` con `src="https://www.google.com/maps?q=<encodeURIComponent(dirección + ', ' + comuna + ', Chile')>&output=embed"`, con `loading="lazy"`, `title` y `referrerPolicy="no-referrer-when-downgrade"`.
+>   - Un enlace «Abrir en Google Maps» a `https://www.google.com/maps/search/?api=1&query=<lo mismo>`, que abra en una pestaña nueva.
+> - `facts-card.tsx`: lo que hoy muestra la pestaña Resumen, sin formularios en línea:
+>   - datos de la propiedad y anexos;
+>   - avalúo (historial);
+>   - dueños con su %;
+>   - etiquetas, con su botón para quitar.
+>   - Los «+ Agregar» son los cuadros que ya existen (`AddOwnerDialog`, `AddTagDialog`, `AddUnitDialog` y `AddAssessmentDialog`).
 >
-> **Ojo con:** los componentes de `src/components/ui` son de base-ui. Usan la prop `render`, `nativeButton={false}` en los botones que hacen de link, y `DialogTrigger render={<Button/>}`. Next 16 trae cambios: ante la duda, leer `node_modules/next/dist/docs/`.
+> **`page.tsx`:**
+> - Solo carga los datos, llama a `syncAlerts(orgId)` antes de leer las alertas (igual que `/pendientes`), calcula las cifras con `property-metrics.ts` y arma el diseño.
+> - Tiene que quedar **bajo 300 líneas**.
+> - La UF sale de `getLatestUf`; el valor en CLP, de `toCLP`.
+> - **Orden:**
+>   1. el encabezado;
+>   2. la franja de atención;
+>   3. las 4 pestañas: Resumen · Arriendo · Finanzas · Documentos.
+> - **En Resumen:**
+>   - las 4 cifras en una fila (2×2 en el celular);
+>   - debajo, dos columnas en el computador (`lg:`) y una en el celular;
+>   - a la izquierda, Situación y Datos de la propiedad;
+>   - a la derecha, Datos al día y el mapa.
+> - **Ancho completo:** se sacan los `max-w-3xl` de todas las pestañas.
+>
+> **Estilo:** imita lo que ya hay. Usa las tarjetas, `Badge` y tipografía de `/resumen` y `/pendientes`, y los componentes de `src/components/ui` (base-ui: prop `render`, `nativeButton={false}` en botones que son links). Usa los colores del tema (variables CSS), no colores fijos, salvo para los estados de la tira, si el tema no los tiene. Los textos van en español.
 >
 > **No tocar:**
-> - `src/lib/` (incluido `property-metrics.ts`);
-> - `actions.ts` y las acciones del servidor;
-> - `taxes-tab.tsx`, `bills-tab.tsx`, `economic-forms.tsx`, `documents-forms.tsx` y `delete-button.tsx`;
-> - nada fuera de `propiedades/[id]/`.
+> - `src/lib/` (incluido `property-metrics.ts`; si le falta algo, dilo en el informe);
+> - `actions.ts`;
+> - `pendientes/`;
+> - `lease-tab.tsx`, `finance-tab.tsx` y `documents-tab.tsx` (salvo para sacarles un `max-w`);
+> - `owners-tags-forms.tsx`, `taxes-tab.tsx`, `bills-tab.tsx`, `economic-forms.tsx`, `documents-forms.tsx` y `delete-button.tsx`.
 >
-> No instalar librerías, no hacer commit.
+> No instalar librerías ni hacer commit.
 >
-> **Para darlo por hecho:** `npm run lint` con 0 errores y `npm run build` pasan.
+> **Para darlo por hecho:**
+> - `npm run lint` con 0 errores y `npm run build` pasan.
+> - Con el servidor de desarrollo que ya corre en `localhost:3000` (no lo apagues ni levantes otro), `curl` devuelve 200 en estas 4 fichas, y el HTML trae lo esperado:
+>   - una arrendada con cobros atrasados (búscala en la base);
+>   - `cmuq647zs0029nsuvdaojsbgw` (disponible, con contrato terminado: debe decir los días sin contrato);
+>   - `cmuq6481i005cnsuv7desng6n` (uso propio);
+>   - `cmuq64805002unsuvwipb4wgf` (en venta).
 >
-> **Devolver:** un informe corto, no el código: archivos creados y tocados, las props de cada pestaña nueva, cuántas líneas quedó `page.tsx`, el resultado de lint y build, y las dudas.
+> **Devolver:** un informe corto, no el código:
+> - los archivos creados y tocados, con las líneas de `page.tsx`;
+> - el resultado de lint, build y los 4 `curl`;
+> - el id de la arrendada con atrasos que usaste;
+> - las dudas.
 
-Después viene la **pieza C**, como dice el plan. Además de lo del plan, la C:
-- quita la pestaña Alertas;
-- usa `costoEnPeriodo` para el costo de las propiedades disponibles;
-- avisa en la ficha si `sinConvertir` es mayor que 0.
+Al final, el coordinador prueba en el navegador, hace commit y pausa.
 
-Al final, el coordinador prueba en el navegador (antes hay que crear a mano un contrato TERMINADO en una propiedad disponible), hace commit y pausa.
+**Datos de prueba para el navegador:**
+- **Contrato terminado (ya creado en `proges_dev`):** `LeaseContract` con id `prueba-ficha-terminado`, TERMINADO, del 2025-03-01 al 2026-07-31, en la propiedad DISPONIBLE «Av. Tobalaba 635, Depto 2A» (`cmuq647zs0029nsuvdaojsbgw`). Se borra al cerrar la tarea con `delete from "LeaseContract" where id='prueba-ficha-terminado';`.
+- **Uso propio:** `cmuq6481i005cnsuv7desng6n`.
+- **En venta:** `cmuq64805002unsuvwipb4wgf`.

@@ -40,7 +40,12 @@ export function StatusQuickEdit({
   }
 
   return (
-    <Select value={current} onValueChange={handleChange} disabled={isPending}>
+    <Select
+      items={propertyStatusLabels}
+      value={current}
+      onValueChange={handleChange}
+      disabled={isPending}
+    >
       <SelectTrigger
         className={`h-6 w-auto gap-1 rounded-[6px] border px-2.5 py-0 text-xs font-semibold shadow-none focus:ring-0 ${triggerClass[variant]} ${isPending ? "opacity-60" : ""}`}
       >

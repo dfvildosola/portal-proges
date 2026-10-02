@@ -10,6 +10,7 @@
 - **Alertas se actualizan solo al abrir `/pendientes` o la ficha de una propiedad.** Pagar una cuenta deja su alerta activa y el contador del menú desfasado hasta la próxima visita a una de esas dos páginas (igual que los otros tipos). 2026-10-01.
 - **Cuentas: `revalidatePath` usa el `propertyId` del formulario**, no el de la cuenta; si llega vacío la ficha queda en caché. 2026-10-01.
 - **Cuentas: «Marcar pagada» no propone la fecha de hoy.** 2026-10-01.
+- **Selectores que muestran el valor interno** (`PERSONA`, `GASTO_COMUN`…) en vez de la etiqueta: les falta `items={…Labels}` en el `<Select>`, como ya se hizo en la ficha. Quedan `propiedades/[id]/economic-forms.tsx`, `property-form.tsx`, `contract-form.tsx` y `duenos/forms.tsx`. 2026-10-01.
 - **Contratos con estado guardado `POR_VENCER`.** Solo los crea `prisma/seed.ts`; la app nunca lo asigna, y `/resumen`, las alertas y la ficha cuentan como vigente solo `VIGENTE`. Un contrato guardado como `POR_VENCER` deja la propiedad sin renta ni rentabilidad. Decidir si ese estado se elimina (el «por vencer» ya lo calcula la alerta a partir de la fecha de término) o si cuenta como vigente en todas partes. 2026-10-01.
 
 ## Datos automáticos y fuentes externas
