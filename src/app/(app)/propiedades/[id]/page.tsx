@@ -13,6 +13,7 @@ import {
   rentabilidad,
   tiraDePagos,
 } from "@/lib/property-metrics";
+import { chequeoPapeles, estadoPapeles } from "@/lib/papeles";
 import { BackLink } from "@/components/back-link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PropertyHeader } from "./property-header";
@@ -102,6 +103,14 @@ export default async function PropiedadDetallePage({
     valorCLP,
   });
 
+  // Papeles que pide la propiedad y cuáles están al día (src/lib/papeles.ts).
+  const papeles = estadoPapeles({
+    tipo: p.tipo,
+    estado: p.estado,
+    documents: p.documents,
+    now,
+  });
+
   // Situación: contrato vigente, tira de pagos y, si está libre, desde cuándo y
   // cuánto costó desde entonces.
   const ultimoTermino =
@@ -182,16 +191,19 @@ export default async function PropiedadDetallePage({
                 now={now}
               />
               <DataFreshness
-                chequeos={datosAlDia({
-                  assessments: p.assessments,
-                  taxes: p.taxes,
-                  documents: p.documents,
-                  hayValorComercial:
-                    valorComercial !== null && valorComercial.monto > 0,
-                  valorComercialFecha: p.valorComercialFecha,
-                  exentaContribuciones: p.exentaContribuciones,
-                  now,
-                })}
+                chequeos={[
+                  ...datosAlDia({
+                    assessments: p.assessments,
+                    taxes: p.taxes,
+                    documents: p.documents,
+                    hayValorComercial:
+                      valorComercial !== null && valorComercial.monto > 0,
+                    valorComercialFecha: p.valorComercialFecha,
+                    exentaContribuciones: p.exentaContribuciones,
+                    now,
+                  }),
+                  chequeoPapeles(papeles),
+                ]}
               />
               <PropertyMap direccion={p.direccion} comuna={p.comuna} />
             </div>
@@ -213,7 +225,11 @@ export default async function PropiedadDetallePage({
         </TabsContent>
 
         <TabsContent value="documentos" className="mt-6">
-          <DocumentsTab propertyId={p.id} documents={p.documents} />
+          <DocumentsTab
+            propertyId={p.id}
+            documents={p.documents}
+            papeles={papeles}
+          />
         </TabsContent>
       </Tabs>
     </>

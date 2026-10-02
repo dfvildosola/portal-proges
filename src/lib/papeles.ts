@@ -172,7 +172,8 @@ export function estadoPapeles({
 
 // Chequeo «papeles» de la ficha: cuántos de los requeridos están cargados. Un
 // papel vencido cuenta como presente: ya sale en la línea «documentos vencidos»
-// de datosAlDia y no se marca dos veces.
+// de datosAlDia y no se marca dos veces. El texto se acorta según cuántos faltan:
+// todos → «ninguno cargado»; más de 3 → los 3 primeros y «K más»; 1 a 3 → todos.
 export function chequeoPapeles(estados: EstadoPapel[]): Chequeo {
   const total = estados.length;
   const faltantes = estados.filter((e) => e.estado === "falta");
@@ -185,8 +186,19 @@ export function chequeoPapeles(estados: EstadoPapel[]): Chequeo {
     };
   }
 
+  if (faltantes.length === total) {
+    return {
+      clave: "papeles",
+      texto: `Papeles: ninguno cargado (faltan los ${total})`,
+      estado: "falta",
+    };
+  }
+
+  const nombres = faltantes.map((e) => papelLabels[e.papel]);
   const lista = new Intl.ListFormat("es", { type: "conjunction" }).format(
-    faltantes.map((e) => papelLabels[e.papel]),
+    nombres.length > 3
+      ? [...nombres.slice(0, 3), `${nombres.length - 3} más`]
+      : nombres,
   );
   const verbo = faltantes.length === 1 ? "falta" : "faltan";
   return {

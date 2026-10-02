@@ -3,16 +3,21 @@ import type { Document as PropertyDocument } from "@/generated/prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { documentTypeLabels, papelLabels } from "@/lib/domain";
 import { formatDate } from "@/lib/format";
+import type { EstadoPapel } from "@/lib/papeles";
 import { UploadDocumentDialog } from "./documents-forms";
+import { PapelesList } from "./papeles-list";
 import { deleteDocument } from "../documents-actions";
 
-// Contenido de la pestaña «Documentos» de la ficha: los documentos agrupados por tipo.
+// Contenido de la pestaña «Documentos» de la ficha: arriba la lista de papeles de
+// la propiedad y abajo todos los documentos agrupados por tipo.
 export function DocumentsTab({
   propertyId,
   documents,
+  papeles,
 }: {
   propertyId: string;
   documents: PropertyDocument[];
+  papeles: EstadoPapel[];
 }) {
   // Agrupa documentos por categoría (tipo) para mostrarlos en secciones.
   const docsByType = documents.reduce<Record<string, PropertyDocument[]>>(
@@ -36,12 +41,17 @@ export function DocumentsTab({
 
   return (
     <div className="space-y-6">
+      <PapelesList propertyId={propertyId} papeles={papeles} />
+
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {documents.length === 0
-            ? "Sin documentos cargados"
-            : `${documents.length} ${documents.length === 1 ? "documento" : "documentos"}`}
-        </p>
+        <div className="flex items-baseline gap-2">
+          <h3 className="text-sm font-medium">Todos los documentos</h3>
+          <span className="text-xs text-muted-foreground">
+            {documents.length === 0
+              ? "ninguno cargado"
+              : `${documents.length} ${documents.length === 1 ? "documento" : "documentos"}`}
+          </span>
+        </div>
         <UploadDocumentDialog propertyId={propertyId} />
       </div>
 
