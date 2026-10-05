@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/app-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getOrgId } from "@/lib/org";
-import { getActiveAlertCount } from "@/lib/alerts";
+import { agenda, resumenAgenda } from "@/lib/agenda";
 
 export default async function AppLayout({
   children,
@@ -12,11 +12,11 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const orgId = await getOrgId();
-  const alertCount = await getActiveAlertCount(orgId);
+  const pendientes = resumenAgenda(await agenda(orgId)).urgentes;
 
   return (
     <SidebarProvider>
-      <AppSidebar alertCount={alertCount} />
+      <AppSidebar pendientes={pendientes} />
       <SidebarInset>
         <AppHeader />
         <div className="min-w-0 flex-1 p-4 md:p-6 lg:p-8">{children}</div>

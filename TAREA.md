@@ -21,16 +21,17 @@ Desarrollar y mejorar los paneles `/contratos`, `/cobranza` y `/cuentas`: resolv
 4. `/code-review` sobre la branch, hallazgos arreglados o anotados en `PENDIENTES.md`; las líneas resueltas salen de `PENDIENTES.md` en el mismo commit.
 
 ## Paso siguiente
-**Etapa 3, pieza 3c** (sacar la tabla `Alert`) → un subagente Sonnet, sin `isolation`. 3b ya está hecha (commit siguiente a `407204e`). Orden: 3a → 3b → 3c (sacar la tabla `Alert`), en serie: 3c usa el componente de línea que crea 3b en Inicio y en la ficha (cambio respecto del plan, que decía 3b ∥ 3c).
+**Las tres etapas están hechas. Falta el cierre de la tarea** (en este orden):
 
-- **3b — archivos:** nuevo `src/components/agenda-linea.tsx` (una línea de `ItemAgenda`: etiqueta del tipo, texto, propiedad con enlace —ocultable con una prop para la ficha—, arrendatario, monto en pesos, y botón de acción; para `CUENTA`, «Marcar pagada» ahí mismo con la fecha de hoy usando `markBillPaid`), y un componente cliente chico para el estado «guardando» del botón; `pendientes/page.tsx` rehecho con `agenda(orgId)` y `resumenAgenda`: secciones Atrasado (con total en $ y «+ N sin monto»), Esta semana, Este mes, Próximos meses; sin «Resolver»; borrar `pendientes/actions.ts` y `pendientes/alert-group.tsx`; en `cuentas/actions.ts`, `markBillPaid` suma `revalidatePath("/", "layout")` para que bajen la lista y el contador del menú. No toca `layout.tsx`, Inicio, la ficha, `alerts.ts`, `domain.ts` ni el schema (eso es 3c): sus errores de `tsc` en esos archivos son esperables mientras 3c no pase.
-- **3c — archivos:** `layout.tsx` (contador = `resumenAgenda(...).urgentes`), Inicio (KPI «Pendientes» y lista de urgentes con `AgendaLinea`), `attention-strip.tsx` y la ficha (`agenda` filtrada por propiedad, con `AgendaLinea` sin propiedad; se quita `syncAlerts`), `schema.prisma` + migración que borra `Alert` y sus enums (nombre con la hora UTC real, `date -u +%Y%m%d%H%M%S`; SQL a mano si `migrate dev` no corre sin terminal), `domain.ts` (sacar etiquetas de alertas), `prisma/seed.ts` (línea 105, `tx.alert.deleteMany`), y borrar `src/lib/alerts.ts`. Verificación: `npm run lint`, `npm run build`, y que `grep -rn "db.alert\|syncAlerts\|alertTypeLabels" src prisma` no encuentre nada.
-- Al final: navegador (Pendientes con sus 4 secciones; marcar pagada una cuenta desde Pendientes y ver bajar el contador; ficha solo con lo suyo; Inicio), commit, cierre de etapa.
+1. **`/code-review` sobre la branch** contra `main` (regla 6). Cada hallazgo se arregla (con un subagente Sonnet, sin `isolation`) o queda anotado en `PENDIENTES.md`. Después de arreglar: `npm run lint`, `npm run build` y probar en el navegador lo que se haya tocado.
+2. **Pasar «Lo que queda fuera» (sección del plan, abajo) a `PENDIENTES.md`**, una línea por punto, con fecha 2026-10-04. Ya están en `PENDIENTES.md`: «Posponer» y «al terminar un contrato, la propiedad sigue Arrendada».
+3. **Último commit: borrar `TAREA.md`** (regla 10).
+4. Decirle a Diego que el espacio está listo para mezclar: «Mezcla contratos-cobranza» se pide **desde la sesión de control**, no desde este espacio. Recordarle que **al subir** hay que aplicar en Neon, antes del push, las tres migraciones de esta tarea: `20261005002925_cobros_sin_generar`, `20261005004449_contratos_renovacion` y `20261005010944_sacar_alertas` (esta última borra la tabla `Alert`; ver `AGENTS.md`).
 
 ## Etapas
 ✅ Etapa 1 — La plata que se escapa (1a → 1b ∥ 1c). Commits `b01bc74` y siguiente.
 ✅ Etapa 2 — Contratos que se renuevan solos (2a → 2b ∥ 2c ∥ 2d). Commits `c010ef2` y siguiente.
-⏳ Etapa 3 — Pendientes: anticiparse (3a ✅ → 3b ✅ → 3c)
+✅ Etapa 3 — Pendientes: anticiparse (3a → 3b → 3c, en serie). Commits `407204e` y siguientes.
 
 ## Bitácora
 - 2026-10-04: espacio abierto; Diego confirmó que los pendientes entran en la tarea.
@@ -55,6 +56,11 @@ Desarrollar y mejorar los paneles `/contratos`, `/cobranza` y `/cuentas`: resolv
   - Quedó: la tabla `Alert` de la base del espacio tiene 41 filas activas del contraste; se va con 3c.
 - 2026-10-04: **pieza 3b hecha.** `src/components/agenda-linea.tsx` (`AgendaLinea`, con `conPropiedad` para la ficha; las cuentas se marcan pagadas ahí mismo con la fecha de hoy) y `src/components/boton-enviar.tsx` («Guardando…» con `useFormStatus`). `/pendientes` rehecha con 4 secciones (las vacías no salen; Atrasado con su total en $). Borrados `pendientes/actions.ts` y `alert-group.tsx`. `markBillPaid` suma `revalidatePath("/", "layout")`. `curl /pendientes`: 200, Atrasado 40 · $11.880.968, Esta semana 3, Este mes 3. Falta probarla en el navegador (al cerrar la etapa).
   - Aprendido: `Button` de este repo es de base-ui, sin `asChild`: los botones-enlace son `Link` con `buttonVariants(...)`.
+- 2026-10-04: **etapa 3 cerrada.** 3c: el contador del menú y Inicio salen de la agenda (`resumenAgenda(...).urgentes`; KPI «Pendientes» con «$X atrasado»; lista «Para esta semana»: primero los atrasados y después los de la semana, 8 líneas y «Ver N más»). La ficha muestra la agenda filtrada por la propiedad con `AgendaLinea` sin la columna de propiedad. Migración `20261005010944_sacar_alertas` (SQL sacado con `prisma migrate diff`, porque `migrate dev` no corre sin terminal): borra `Alert` y sus 3 enums; Property 80, LeaseContract 69 y RentCharge 695 antes y después. Borrados `alerts.ts` y las etiquetas de alertas de `domain.ts`.
+  - Decidido por Diego: **la plata primero.** Dentro de cada sección van primero los ítems con monto, de mayor a menor, y después los sin monto, por fecha (en los datos de ejemplo, 14 reajustes «pendientes desde 2023», de contratos sin «Último reajuste», tapaban los arriendos atrasados). Anotado en el ADR 0008.
+  - Arreglado al probar: el monto ya no se repite en el texto (cuentas en UF sí lo dicen en UF); en la ficha no hay botón «Ver propiedad» que lleve a la misma ficha.
+  - Probado en el navegador: Pendientes con Atrasado (40 · $11.880.968), Esta semana (3) y Este mes (3). «Marcar pagada» del gas de Mariluan 2240 desde Pendientes: la línea se va y el contador baja de 43 a 42 sin recargar (`fechaPago` = 04-10-2026). Registrar el pago de un cobro de $538.000 en `/cobranza/<id>`: el contador baja a 42 ahí mismo y Pendientes muestra 39 · $11.342.968. Ficha de Diego de Rosales: solo sus 2 ítems. Consola sin errores. Datos restaurados con `psql`.
+  - `PENDIENTES.md`: salen el botón dentro de otro botón, alertas que se actualizan solo al abrir Pendientes, «Resolver» que no sirve, desocupada medida desde la última edición y `syncAlerts` antes de comprobar la propiedad; entra «Posponer».
 
 ## Plan aprobado (2026-10-04)
 

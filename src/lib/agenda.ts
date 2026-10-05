@@ -405,7 +405,7 @@ export async function calcularAgenda(
       montoCLP: sinUf ? null : total,
       propiedad: null,
       contrato: null,
-      texto: `${semana.length} arriendo${semana.length === 1 ? " vence" : "s vencen"} esta semana${sinUf ? "" : ` · $${formatMoney(total)}`}.`,
+      texto: `${semana.length} arriendo${semana.length === 1 ? " vence" : "s vencen"} esta semana.`,
       accion: {
         texto: "Ver cobranza",
         href: `/cobranza?mes=${primero.fechaVencimiento.toISOString().slice(0, 7)}`,
@@ -443,7 +443,7 @@ export async function calcularAgenda(
       montoCLP: monto,
       propiedad: propDe(t.property),
       contrato: null,
-      texto: `Contribución ${t.anio}, cuota ${t.cuota}: ${vencida ? "vencida el" : "vence el"} ${formatDate(t.fechaVencimiento)} · ${monto === null ? "sin monto registrado" : `$${formatMoney(monto)}`}.`,
+      texto: `Contribución ${t.anio}, cuota ${t.cuota}: ${vencida ? "vencida el" : "vence el"} ${formatDate(t.fechaVencimiento)}${monto === null ? " · sin monto registrado" : ""}.`,
       accion: { texto: "Ver propiedad", href: `/propiedades/${t.propertyId}` },
       ref: { modelo: "contribucion", id: t.id },
     });
@@ -461,7 +461,7 @@ export async function calcularAgenda(
       montoCLP: toCLP(monto, b.moneda, uf),
       propiedad: propDe(b.property),
       contrato: null,
-      texto: `${billTypeLabels[b.tipo]} de ${minuscula(formatPeriodo(b.periodo))}: ${vencida ? "vencida el" : "vence el"} ${formatDate(b.fechaVencimiento)} · ${monto === null ? "sin monto registrado" : dinero(monto, b.moneda)}.`,
+      texto: `${billTypeLabels[b.tipo]} de ${minuscula(formatPeriodo(b.periodo))}: ${vencida ? "vencida el" : "vence el"} ${formatDate(b.fechaVencimiento)}${monto === null ? " · sin monto registrado" : b.moneda === "CLP" ? "" : ` · ${dinero(monto, b.moneda)}`}.`,
       accion: { texto: "Marcar pagada", href: `/propiedades/${b.propertyId}` },
       ref: { modelo: "cuenta", id: b.id },
     });
@@ -517,7 +517,17 @@ export async function calcularAgenda(
     });
   }
 
-  return items.sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
+  // La plata primero (mayor monto arriba), para que en cada sección y en las 8
+  // líneas de Inicio salga lo que más cuesta y no reajustes viejos sin monto.
+  return items.sort((a, b) => {
+    if (a.montoCLP !== null && b.montoCLP !== null && a.montoCLP !== b.montoCLP)
+      return b.montoCLP - a.montoCLP;
+    if ((a.montoCLP !== null) !== (b.montoCLP !== null))
+      return a.montoCLP !== null ? -1 : 1;
+    return (
+      a.fecha.getTime() - b.fecha.getTime() || a.clave.localeCompare(b.clave)
+    );
+  });
 }
 
 // Una sola vez por página: `cache` compara argumentos por identidad, por eso

@@ -3,32 +3,26 @@ import { Building2, Percent, Wallet, Bell } from "lucide-react";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import { PageHeader } from "@/components/page-header";
-import { Badge } from "@/components/ui/badge";
+import { AgendaLinea } from "@/components/agenda-linea";
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  alertTypeLabels,
-  alertSeverityLabels,
-  alertSeverityVariant,
-} from "@/lib/domain";
+import { agenda, resumenAgenda } from "@/lib/agenda";
 import { formatMoney } from "@/lib/format";
 import { mesActual, rangoDelMes } from "@/lib/fechas";
 import { getLatestUf, toCLP } from "@/lib/currency";
-
-const SEVERITY_ORDER = { ALTA: 0, MEDIA: 1, INFO: 2 } as const;
 
 export default async function InicioPage() {
   const orgId = await getOrgId();
   const { inicio: startOfMonth, fin: endOfMonth } = rangoDelMes(mesActual());
 
-  const [total, arrendadas, alertasActivas, cobrosMes, uf] = await Promise.all([
+  const [total, arrendadas, items, cobrosMes, uf] = await Promise.all([
     db.property.count({ where: { organizationId: orgId } }),
     db.property.count({ where: { organizationId: orgId, estado: "ARRENDADA" } }),
-    db.alert.count({ where: { organizationId: orgId, estado: "ACTIVA" } }),
+    agenda(orgId),
     // Cualquier cobro con pago dentro del mes, también los parciales.
     db.rentCharge.findMany({
       where: {
@@ -59,6 +53,14 @@ export default async function InicioPage() {
         ? `arriendos cobrados · UF a $${formatMoney(Math.round(uf))}`
         : "arriendos cobrados";
 
+  const { urgentes, atrasadoCLP } = resumenAgenda(items);
+  // Primero todo lo atrasado y después lo de esta semana (como en Pendientes);
+  // dentro de cada grupo se respeta el orden de la agenda.
+  const paraSemana = [
+    ...items.filter((i) => i.cuando === "ATRASADO"),
+    ...items.filter((i) => i.cuando === "SEMANA"),
+  ];
+
   const pct = total > 0 ? Math.round((arrendadas / total) * 100) : 0;
 
   const kpis = [
@@ -76,26 +78,16 @@ export default async function InicioPage() {
       icon: Wallet,
     },
     {
-      label: "Alertas activas",
-      value: String(alertasActivas),
+      label: "Pendientes",
+      value: String(urgentes),
+      sub:
+        atrasadoCLP > 0
+          ? `$${formatMoney(atrasadoCLP)} atrasado`
+          : "atrasados y de esta semana",
       icon: Bell,
       href: "/pendientes",
     },
   ];
-
-  const alerts = await db.alert.findMany({
-    where: { organizationId: orgId, estado: "ACTIVA" },
-    include: {
-      property: { select: { id: true, rolSII: true, direccion: true } },
-      contract: { select: { id: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 8,
-  });
-
-  alerts.sort(
-    (a, b) => SEVERITY_ORDER[a.severidad] - SEVERITY_ORDER[b.severidad],
-  );
 
   return (
     <>
@@ -138,63 +130,24 @@ export default async function InicioPage() {
 
       <div className="mt-8">
         <h2 className="mb-3 text-sm font-medium text-muted-foreground">
-          Alertas activas
+          Para esta semana
         </h2>
-        {alerts.length === 0 ? (
+        {paraSemana.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Sin alertas activas.{" "}
-            <Link
-              href="/pendientes"
-              className="underline underline-offset-2 hover:text-foreground"
-            >
-              Recalcular
-            </Link>
+            Nada atrasado ni para esta semana.
           </p>
         ) : (
           <div className="divide-y rounded-xl border">
-            {alerts.map((alert) => (
-              <div
-                key={alert.id}
-                className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={alertSeverityVariant(alert.severidad)}>
-                    {alertSeverityLabels[alert.severidad]}
-                  </Badge>
-                  <span className="text-sm font-medium">
-                    {alertTypeLabels[alert.tipo]}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {alert.mensaje}
-                  </span>
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  {alert.property && (
-                    <Link
-                      href={`/propiedades/${alert.property.id}`}
-                      className="text-xs text-muted-foreground underline-offset-2 hover:underline"
-                    >
-                      {alert.property.rolSII}
-                    </Link>
-                  )}
-                  {alert.contract && (
-                    <Link
-                      href={`/contratos/${alert.contract.id}`}
-                      className="text-xs text-muted-foreground underline-offset-2 hover:underline"
-                    >
-                      Contrato →
-                    </Link>
-                  )}
-                </div>
-              </div>
+            {paraSemana.slice(0, 8).map((item) => (
+              <AgendaLinea key={item.clave} item={item} />
             ))}
-            {alertasActivas > 8 && (
+            {paraSemana.length > 8 && (
               <div className="px-4 py-3">
                 <Link
                   href="/pendientes"
                   className="text-sm text-muted-foreground underline-offset-2 hover:underline"
                 >
-                  Ver {alertasActivas - 8} más en Pendientes →
+                  Ver {paraSemana.length - 8} más en Pendientes →
                 </Link>
               </div>
             )}

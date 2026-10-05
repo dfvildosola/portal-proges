@@ -3,7 +3,7 @@ import { hoyChile } from "@/lib/fechas";
 import { estaVigente } from "@/lib/contratos";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
-import { syncAlerts } from "@/lib/alerts";
+import { agenda } from "@/lib/agenda";
 import { getLatestUf, toCLP } from "@/lib/currency";
 import {
   costoAnual,
@@ -47,10 +47,7 @@ export default async function PropiedadDetallePage({
   const { id } = await params;
   const orgId = await getOrgId();
 
-  // Se recalculan las alertas antes de leerlas, igual que /pendientes.
-  await syncAlerts(orgId);
-
-  const [p, uf, entidades] = await Promise.all([
+  const [p, uf, entidades, items] = await Promise.all([
     db.property.findFirst({
       where: { id, organizationId: orgId },
       include: {
@@ -71,7 +68,6 @@ export default async function PropiedadDetallePage({
         movements: { orderBy: { fecha: "desc" } },
         taxes: { orderBy: [{ anio: "desc" }, { cuota: "asc" }] },
         bills: { orderBy: { fechaVencimiento: "asc" } },
-        alerts: { where: { estado: "ACTIVA" }, orderBy: { createdAt: "desc" } },
       },
     }),
     getLatestUf(),
@@ -80,8 +76,10 @@ export default async function PropiedadDetallePage({
       select: { id: true, nombre: true, tipo: true },
       orderBy: { nombre: "asc" },
     }),
+    agenda(orgId),
   ]);
   if (!p) notFound();
+  const pendientes = items.filter((i) => i.propiedad?.id === id);
 
   // Entidades existentes (para reutilizar en vez de duplicar), sin las que ya
   // figuran como dueñas de esta propiedad.
@@ -138,7 +136,7 @@ export default async function PropiedadDetallePage({
       <BackLink href="/propiedades">Propiedades</BackLink>
 
       <PropertyHeader property={p} />
-      <AttentionStrip alerts={p.alerts} />
+      <AttentionStrip items={pendientes} />
 
       <Tabs defaultValue="resumen">
         <TabsList className="flex-wrap">

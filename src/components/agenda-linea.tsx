@@ -17,6 +17,9 @@ export function AgendaLinea({
   conPropiedad?: boolean;
 }) {
   const { propiedad, contrato, accion } = item;
+  // En la ficha, un botón que lleva a esa misma ficha no sirve de nada.
+  const enlazaASiMisma =
+    !conPropiedad && !!propiedad && accion.href === `/propiedades/${propiedad.id}`;
   return (
     <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 space-y-1">
@@ -53,7 +56,7 @@ export function AgendaLinea({
             />
             <BotonEnviar texto={accion.texto} />
           </form>
-        ) : (
+        ) : enlazaASiMisma ? null : (
           <Link
             href={accion.href}
             className={buttonVariants({ variant: "outline", size: "sm" })}

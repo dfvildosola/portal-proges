@@ -16,6 +16,8 @@ Hasta ahora los avisos («alertas») se guardaban en una tabla, como una libreta
 
 Cada ítem dice **cuándo hay que actuar** (Atrasado, Esta semana, Este mes o Próximos meses), **cuánto es en pesos** (la UF se convierte con la última UF registrada) y **qué hacer**, con un botón que lleva al lugar donde se resuelve. Un ítem desaparece solo cuando su causa se resuelve: se paga el cobro, se renueva el contrato, se sube la póliza nueva. Por eso ya no hay «Resolver».
 
+**El orden pone la plata primero.** Dentro de cada sección (y en las líneas que se ven en Inicio) salen primero los ítems con monto, del más caro al más barato; después los que no tienen monto, del más antiguo al más nuevo. Así lo que más plata cuesta no queda tapado por un reajuste viejo que no mueve plata.
+
 Algunos ítems son uno por cosa (un cobro atrasado, una cuota de contribución, una cuenta) y otros son uno solo para toda la cartera (los arriendos de la semana, los cobros sin generar), para que el día 1 no aparezcan 50 líneas.
 
 Se elimina la tabla `Alert` (lo hace la pieza 3c de esta tarea).

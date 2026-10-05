@@ -14,8 +14,6 @@ import {
   TaxStatus,
   BillType,
   BillStatus,
-  AlertType,
-  AlertSeverity,
   DocumentType,
   Papel,
   ValorFuente,
@@ -150,64 +148,6 @@ export function movementTypeVariant(
   tipo: MovementType,
 ): "success" | "secondary" {
   return tipo === "INGRESO" ? "success" : "secondary";
-}
-
-export const alertTypeLabels: Record<AlertType, string> = {
-  ARRENDADA_SIN_CONTRATO: "Arrendada sin contrato",
-  CONTRATO_POR_VENCER: "Contrato por vencer",
-  ARRIENDO_ATRASADO: "Arriendo atrasado",
-  CONTRIBUCION_IMPAGA: "Contribución impaga",
-  CONTRIBUCION_POR_VENCER: "Contribución por vencer",
-  DESOCUPADA_PROLONGADA: "Desocupada prolongada",
-  CUENTA_VENCIDA: "Cuenta vencida",
-  CUENTA_POR_VENCER: "Cuenta por vencer",
-  COBROS_SIN_GENERAR: "Cobros sin generar",
-  AVISO_NO_RENOVACION: "Aviso de no renovación",
-  REAJUSTE_PENDIENTE: "Reajuste pendiente",
-  CONTRATO_VENCIDO: "Contrato vencido",
-};
-
-export type AlertCategory = "cobranza" | "contribuciones" | "propiedad" | "cuentas";
-
-export const alertTypeCategory: Record<AlertType, AlertCategory> = {
-  ARRENDADA_SIN_CONTRATO: "cobranza",
-  CONTRATO_POR_VENCER: "cobranza",
-  ARRIENDO_ATRASADO: "cobranza",
-  CONTRIBUCION_IMPAGA: "contribuciones",
-  CONTRIBUCION_POR_VENCER: "contribuciones",
-  DESOCUPADA_PROLONGADA: "propiedad",
-  CUENTA_VENCIDA: "cuentas",
-  CUENTA_POR_VENCER: "cuentas",
-  COBROS_SIN_GENERAR: "cobranza",
-  AVISO_NO_RENOVACION: "cobranza",
-  REAJUSTE_PENDIENTE: "cobranza",
-  CONTRATO_VENCIDO: "cobranza",
-};
-
-export const alertCategoryLabels: Record<AlertCategory, string> = {
-  cobranza: "Cobranza",
-  contribuciones: "Contribuciones",
-  propiedad: "Propiedad",
-  cuentas: "Cuentas",
-};
-
-export const alertSeverityLabels: Record<AlertSeverity, string> = {
-  INFO: "Info",
-  MEDIA: "Media",
-  ALTA: "Alta",
-};
-
-export function alertSeverityVariant(
-  severidad: AlertSeverity,
-): "info" | "warning" | "destructive" {
-  switch (severidad) {
-    case "ALTA":
-      return "destructive";
-    case "MEDIA":
-      return "warning";
-    default:
-      return "info";
-  }
 }
 
 export const documentTypeLabels: Record<DocumentType, string> = {

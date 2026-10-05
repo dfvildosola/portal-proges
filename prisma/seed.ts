@@ -102,7 +102,6 @@ async function main() {
       // -----------------------------------------------------------------------
       // Borrar lo anterior (en orden: primero lo que depende de otra tabla)
       // -----------------------------------------------------------------------
-      await tx.alert.deleteMany({ where: { organizationId: ORG } });
       await tx.propertyTax.deleteMany({ where: { organizationId: ORG } });
       await tx.propertyBill.deleteMany({ where: { organizationId: ORG } });
       await tx.movement.deleteMany({ where: { organizationId: ORG } });
