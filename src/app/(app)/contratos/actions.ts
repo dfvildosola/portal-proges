@@ -6,30 +6,19 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import {
-  Currency,
-  AdjustmentType,
-  ContractStatus,
-} from "@/generated/prisma/enums";
+  dateField,
+  enumField,
+  moneyField,
+  optionalDateField,
+  toFieldErrors,
+} from "@/lib/form-helpers";
+import { plazoEnMeses } from "@/lib/contratos";
+import { Currency, AdjustmentType } from "@/generated/prisma/enums";
 
 export type ContractFormState = {
   error?: string;
   fieldErrors?: Record<string, string>;
 };
-
-// Preserva el tipo literal del enum para que calce con lo que Prisma espera.
-const enumField = <T extends Record<string, string>>(e: T) =>
-  z.enum(Object.values(e) as [T[keyof T], ...T[keyof T][]]);
-
-// Fecha desde un <input type="date"> ("YYYY-MM-DD") a medianoche UTC.
-// Se usa UTC para que una fecha "solo fecha" no se corra de día según la zona.
-const dateField = z
-  .string()
-  .trim()
-  .min(1, "La fecha es obligatoria")
-  .refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)), {
-    message: "Fecha inválida",
-  })
-  .transform((v) => new Date(`${v}T00:00:00Z`));
 
 const contractSchema = z
   .object({
@@ -53,8 +42,29 @@ const contractSchema = z
         (v) => v === null || (Number.isInteger(Number(v)) && Number(v) > 0),
         { message: "Debe ser un número de meses válido" },
       ),
-    fechaInicio: dateField,
-    fechaTermino: dateField,
+    fechaInicio: dateField(),
+    fechaTermino: dateField(),
+    renovacionAutomatica: z.boolean(),
+    diasAviso: z
+      .string()
+      .trim()
+      .min(1, "Los días de aviso son obligatorios")
+      .refine((v) => Number.isInteger(Number(v)) && Number(v) >= 0, {
+        message: "Debe ser un número entero, 0 o más",
+      }),
+    plazoMeses: z
+      .string()
+      .trim()
+      .optional()
+      .transform((v) => (v === undefined || v === "" ? null : v))
+      .refine(
+        (v) => v === null || (Number.isInteger(Number(v)) && Number(v) >= 1),
+        { message: "Debe ser un número de meses, 1 o más" },
+      ),
+    garantia: moneyField,
+    fechaSalida: optionalDateField(),
+    // Puede ser futura: «Reajustar» guarda la fecha efectiva, que suele ser la del próximo reajuste.
+    ultimoReajuste: optionalDateField(),
     diaPago: z
       .string()
       .trim()
@@ -63,12 +73,32 @@ const contractSchema = z
         (v) => Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= 31,
         { message: "Debe ser un día entre 1 y 31" },
       ),
-    estado: enumField(ContractStatus),
   })
   .refine((d) => d.fechaTermino >= d.fechaInicio, {
     message: "El término no puede ser anterior al inicio",
     path: ["fechaTermino"],
-  });
+  })
+  .refine(
+    (d) => d.reajusteTipo === AdjustmentType.NINGUNO || d.reajusteFrecuenciaMeses,
+    {
+      message: "Indica cada cuántos meses se reajusta",
+      path: ["reajusteFrecuenciaMeses"],
+    },
+  )
+  .refine((d) => d.fechaSalida === null || d.fechaSalida >= d.fechaInicio, {
+    message: "La salida no puede ser anterior al inicio",
+    path: ["fechaSalida"],
+  })
+  .refine(
+    (d) =>
+      d.reajusteTipo === AdjustmentType.NINGUNO ||
+      d.ultimoReajuste === null ||
+      d.ultimoReajuste >= d.fechaInicio,
+    {
+      message: "El reajuste no puede ser anterior al inicio",
+      path: ["ultimoReajuste"],
+    },
+  );
 
 function parse(formData: FormData) {
   return contractSchema.safeParse({
@@ -80,18 +110,14 @@ function parse(formData: FormData) {
     reajusteFrecuenciaMeses: formData.get("reajusteFrecuenciaMeses") ?? "",
     fechaInicio: formData.get("fechaInicio"),
     fechaTermino: formData.get("fechaTermino"),
+    renovacionAutomatica: formData.get("renovacionAutomatica") !== null,
+    diasAviso: formData.get("diasAviso"),
+    plazoMeses: formData.get("plazoMeses") ?? "",
+    garantia: formData.get("garantia") ?? "",
+    fechaSalida: formData.get("fechaSalida") ?? "",
+    ultimoReajuste: formData.get("ultimoReajuste") ?? "",
     diaPago: formData.get("diaPago"),
-    estado: formData.get("estado"),
   });
-}
-
-function toFieldErrors(error: z.ZodError): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? "");
-    if (key && !out[key]) out[key] = issue.message;
-  }
-  return out;
 }
 
 // Construye el objeto de datos para Prisma a partir de lo validado.
@@ -110,10 +136,17 @@ function toData(d: z.infer<typeof contractSchema>) {
         ? Number(d.reajusteFrecuenciaMeses)
         : null
       : null,
+    // Sin reajuste no hay «último reajuste».
+    ultimoReajuste: aplicaReajuste ? d.ultimoReajuste : null,
     fechaInicio: d.fechaInicio,
     fechaTermino: d.fechaTermino,
     diaPago: Number(d.diaPago),
-    estado: d.estado,
+    renovacionAutomatica: d.renovacionAutomatica,
+    diasAviso: Number(d.diasAviso),
+    plazoMeses: d.plazoMeses
+      ? Number(d.plazoMeses)
+      : plazoEnMeses(d.fechaInicio, d.fechaTermino),
+    garantia: d.garantia,
   };
 }
 
@@ -174,13 +207,20 @@ export async function updateContract(
 
   const res = await db.leaseContract.updateMany({
     where: { id, organizationId: orgId },
-    data: toData(parsed.data),
+    data: {
+      ...toData(parsed.data),
+      // Solo se toca la salida si el formulario trajo el campo (contratos que ya la tenían).
+      ...(formData.has("fechaSalida") && { fechaSalida: parsed.data.fechaSalida }),
+    },
   });
   if (res.count === 0) return { error: "Contrato no encontrado." };
 
   revalidatePath("/contratos");
   revalidatePath(`/contratos/${id}`);
   revalidatePath(`/propiedades/${parsed.data.propertyId}`);
+  revalidatePath("/cobranza");
+  revalidatePath("/pendientes");
+  revalidatePath("/");
   redirect(`/contratos/${id}`);
 }
 

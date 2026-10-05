@@ -7,7 +7,6 @@ import {
   Currency,
   OwnerType,
   PropertyUnitType,
-  ContractStatus,
   AdjustmentType,
   ChargeStatus,
   MovementType,
@@ -15,12 +14,11 @@ import {
   TaxStatus,
   BillType,
   BillStatus,
-  AlertType,
-  AlertSeverity,
   DocumentType,
   Papel,
   ValorFuente,
 } from "@/generated/prisma/enums";
+import type { EstadoContrato } from "./contratos";
 
 export const propertyTypeLabels: Record<PropertyType, string> = {
   DEPARTAMENTO: "Departamento",
@@ -69,12 +67,12 @@ export const propertyUnitTypeLabels: Record<PropertyUnitType, string> = {
   BODEGA: "Bodega",
 };
 
-export const contractStatusLabels: Record<ContractStatus, string> = {
+export const estadoContratoLabels: Record<EstadoContrato, string> = {
+  POR_EMPEZAR: "Por empezar",
   VIGENTE: "Vigente",
-  POR_VENCER: "Por vencer",
-  VENCIDO: "Vencido",
-  RENOVADO: "Renovado",
+  TERMINA: "Termina",
   TERMINADO: "Terminado",
+  VENCIDO: "Vencido",
 };
 
 export const adjustmentTypeLabels: Record<AdjustmentType, string> = {
@@ -152,56 +150,6 @@ export function movementTypeVariant(
   return tipo === "INGRESO" ? "success" : "secondary";
 }
 
-export const alertTypeLabels: Record<AlertType, string> = {
-  ARRENDADA_SIN_CONTRATO: "Arrendada sin contrato",
-  CONTRATO_POR_VENCER: "Contrato por vencer",
-  ARRIENDO_ATRASADO: "Arriendo atrasado",
-  CONTRIBUCION_IMPAGA: "Contribución impaga",
-  CONTRIBUCION_POR_VENCER: "Contribución por vencer",
-  DESOCUPADA_PROLONGADA: "Desocupada prolongada",
-  CUENTA_VENCIDA: "Cuenta vencida",
-  CUENTA_POR_VENCER: "Cuenta por vencer",
-};
-
-export type AlertCategory = "cobranza" | "contribuciones" | "propiedad" | "cuentas";
-
-export const alertTypeCategory: Record<AlertType, AlertCategory> = {
-  ARRENDADA_SIN_CONTRATO: "cobranza",
-  CONTRATO_POR_VENCER: "cobranza",
-  ARRIENDO_ATRASADO: "cobranza",
-  CONTRIBUCION_IMPAGA: "contribuciones",
-  CONTRIBUCION_POR_VENCER: "contribuciones",
-  DESOCUPADA_PROLONGADA: "propiedad",
-  CUENTA_VENCIDA: "cuentas",
-  CUENTA_POR_VENCER: "cuentas",
-};
-
-export const alertCategoryLabels: Record<AlertCategory, string> = {
-  cobranza: "Cobranza",
-  contribuciones: "Contribuciones",
-  propiedad: "Propiedad",
-  cuentas: "Cuentas",
-};
-
-export const alertSeverityLabels: Record<AlertSeverity, string> = {
-  INFO: "Info",
-  MEDIA: "Media",
-  ALTA: "Alta",
-};
-
-export function alertSeverityVariant(
-  severidad: AlertSeverity,
-): "info" | "warning" | "destructive" {
-  switch (severidad) {
-    case "ALTA":
-      return "destructive";
-    case "MEDIA":
-      return "warning";
-    default:
-      return "info";
-  }
-}
-
 export const documentTypeLabels: Record<DocumentType, string> = {
   ESCRITURA_TITULO: "Escrituras y títulos",
   CONTRATO: "Contratos",
@@ -254,13 +202,13 @@ export function propertyStatusVariant(
 }
 
 // Variante de color del badge según el estado del contrato.
-export function contractStatusVariant(
-  estado: ContractStatus,
+export function estadoContratoVariant(
+  estado: EstadoContrato,
 ): "success" | "warning" | "outline" | "destructive" {
   switch (estado) {
     case "VIGENTE":
       return "success";
-    case "POR_VENCER":
+    case "TERMINA":
       return "warning";
     case "VENCIDO":
       return "destructive";

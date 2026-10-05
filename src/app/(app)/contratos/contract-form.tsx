@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,6 @@ import { Combobox } from "@/components/ui/combobox";
 import {
   currencyLabels,
   adjustmentTypeLabels,
-  contractStatusLabels,
   enumOptions,
 } from "@/lib/domain";
 import type { ContractFormState } from "./actions";
@@ -39,7 +38,12 @@ export type ContractValues = {
   fechaInicio?: string;
   fechaTermino?: string;
   diaPago?: string;
-  estado?: string;
+  renovacionAutomatica?: boolean;
+  diasAviso?: string;
+  plazoMeses?: string;
+  garantia?: string;
+  fechaSalida?: string;
+  ultimoReajuste?: string;
 };
 
 type Option = { value: string; label: string };
@@ -84,6 +88,10 @@ export function ContractForm({
 }) {
   const [state, formAction, pending] = useActionState(action, {});
   const err = (f: string) => state?.fieldErrors?.[f];
+  const [reajusteTipo, setReajusteTipo] = useState(
+    initial?.reajusteTipo ?? "NINGUNO",
+  );
+  const hayReajuste = reajusteTipo !== "NINGUNO";
 
   return (
     <form action={formAction} className="max-w-2xl">
@@ -132,7 +140,11 @@ export function ContractForm({
             </Field>
 
             <Field label="Moneda" error={err("moneda")}>
-              <Select name="moneda" defaultValue={initial?.moneda ?? "CLP"}>
+              <Select
+                name="moneda"
+                items={currencyLabels}
+                defaultValue={initial?.moneda ?? "CLP"}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -149,7 +161,9 @@ export function ContractForm({
             <Field label="Reajuste" error={err("reajusteTipo")}>
               <Select
                 name="reajusteTipo"
-                defaultValue={initial?.reajusteTipo ?? "NINGUNO"}
+                items={adjustmentTypeLabels}
+                value={reajusteTipo}
+                onValueChange={(v) => setReajusteTipo(v ?? "NINGUNO")}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -168,7 +182,7 @@ export function ContractForm({
               label="Frecuencia de reajuste (meses)"
               htmlFor="reajusteFrecuenciaMeses"
               error={err("reajusteFrecuenciaMeses")}
-              hint="Solo aplica si hay reajuste. Ej: 12 = anual."
+              hint="Obligatoria si hay reajuste. Ej: 12 = anual."
             >
               <Input
                 id="reajusteFrecuenciaMeses"
@@ -178,6 +192,38 @@ export function ContractForm({
                 min="1"
                 defaultValue={initial?.reajusteFrecuenciaMeses}
                 placeholder="12"
+              />
+            </Field>
+
+            {hayReajuste && (
+              <Field
+                label="Último reajuste"
+                htmlFor="ultimoReajuste"
+                error={err("ultimoReajuste")}
+                hint="Si el monto ingresado ya incluye un reajuste, la fecha en que se aplicó. Vacío = se cuenta desde el inicio."
+              >
+                <Input
+                  id="ultimoReajuste"
+                  name="ultimoReajuste"
+                  type="date"
+                  defaultValue={initial?.ultimoReajuste}
+                />
+              </Field>
+            )}
+
+            <Field
+              label="Garantía"
+              htmlFor="garantia"
+              error={err("garantia")}
+              hint="Monto del mes de garantía, en la misma moneda del arriendo."
+            >
+              <Input
+                id="garantia"
+                name="garantia"
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={initial?.garantia}
               />
             </Field>
           </div>
@@ -227,20 +273,64 @@ export function ContractForm({
               />
             </Field>
 
-            <Field label="Estado" error={err("estado")}>
-              <Select name="estado" defaultValue={initial?.estado ?? "VIGENTE"}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {enumOptions(contractStatusLabels).map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-2 sm:col-span-2">
+              <input
+                id="renovacionAutomatica"
+                name="renovacionAutomatica"
+                type="checkbox"
+                className="size-4 accent-primary"
+                defaultChecked={initial?.renovacionAutomatica ?? true}
+              />
+              <Label htmlFor="renovacionAutomatica">Se renueva solo</Label>
+            </div>
+
+            <Field
+              label="Días de aviso"
+              htmlFor="diasAviso"
+              error={err("diasAviso")}
+              hint="Con cuántos días de anticipación hay que avisar si no se quiere renovar."
+            >
+              <Input
+                id="diasAviso"
+                name="diasAviso"
+                type="number"
+                step="1"
+                min="0"
+                defaultValue={initial?.diasAviso ?? "60"}
+              />
             </Field>
+
+            <Field
+              label="Se renueva por (meses)"
+              htmlFor="plazoMeses"
+              error={err("plazoMeses")}
+              hint="Vacío = se calcula con las fechas de inicio y término."
+            >
+              <Input
+                id="plazoMeses"
+                name="plazoMeses"
+                type="number"
+                step="1"
+                min="1"
+                defaultValue={initial?.plazoMeses}
+              />
+            </Field>
+
+            {initial?.fechaSalida && (
+              <Field
+                label="Fecha de salida"
+                htmlFor="fechaSalida"
+                error={err("fechaSalida")}
+                hint="Bórrala para anular el término del contrato."
+              >
+                <Input
+                  id="fechaSalida"
+                  name="fechaSalida"
+                  type="date"
+                  defaultValue={initial.fechaSalida}
+                />
+              </Field>
+            )}
           </div>
 
           {state?.error && (

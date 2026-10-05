@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
+import { toFieldErrors } from "@/lib/form-helpers";
 
 export type TenantFormState = {
   error?: string;
@@ -35,15 +36,6 @@ function parse(formData: FormData) {
     email: formData.get("email") ?? "",
     telefono: formData.get("telefono") ?? "",
   });
-}
-
-function toFieldErrors(error: z.ZodError): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? "");
-    if (key && !out[key]) out[key] = issue.message;
-  }
-  return out;
 }
 
 export async function createTenant(

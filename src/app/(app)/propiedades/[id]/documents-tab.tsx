@@ -1,4 +1,5 @@
 import { Download, FileText, X } from "lucide-react";
+import { hoyChile } from "@/lib/fechas";
 import type { Document as PropertyDocument } from "@/generated/prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { documentTypeLabels, papelLabels } from "@/lib/domain";
@@ -28,7 +29,7 @@ export function DocumentsTab({
     {},
   );
 
-  const today = new Date();
+  const today = hoyChile();
   const in30Days = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
   function expiryBadge(fechaVencimiento: Date | null) {
     if (!fechaVencimiento) return null;

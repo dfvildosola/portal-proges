@@ -3,7 +3,8 @@ import { Plus } from "lucide-react";
 import type { LeaseContract, Tenant } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { contractStatusLabels, contractStatusVariant } from "@/lib/domain";
+import { estadoContratoLabels, estadoContratoVariant } from "@/lib/domain";
+import { estadoContrato, terminoVigente } from "@/lib/contratos";
 import { formatMoney, formatDate } from "@/lib/format";
 
 // Contrato con el arrendatario que lo firmó (lo que carga la ficha).
@@ -15,9 +16,11 @@ export type LeaseContractRow = LeaseContract & {
 export function LeaseTab({
   propertyId,
   contracts,
+  hoy,
 }: {
   propertyId: string;
   contracts: LeaseContractRow[];
+  hoy: Date;
 }) {
   if (contracts.length === 0) {
     return (
@@ -56,28 +59,37 @@ export function LeaseTab({
         </Button>
       </div>
       <div className="divide-y rounded-lg border">
-        {contracts.map((c) => (
-          <Link
-            key={c.id}
-            href={`/contratos/${c.id}`}
-            className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-muted/50"
-          >
-            <div>
-              <span className="text-sm font-medium tabular-nums">
-                {formatMoney(c.monto, c.moneda)}
-              </span>
-              <span className="ml-2 text-xs text-muted-foreground">
-                {c.tenant.nombre}
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                {formatDate(c.fechaInicio)} → {formatDate(c.fechaTermino)}
-              </span>
-            </div>
-            <Badge variant={contractStatusVariant(c.estado)}>
-              {contractStatusLabels[c.estado]}
-            </Badge>
-          </Link>
-        ))}
+        {contracts.map((c) => {
+          const estado = estadoContrato(c, hoy);
+          // Fin del período que corresponde: la salida, o el término del período
+          // en curso si ya se renovó solo.
+          const fin = terminoVigente(c, hoy);
+          const renovado =
+            !c.fechaSalida && fin.getTime() !== c.fechaTermino.getTime();
+          return (
+            <Link
+              key={c.id}
+              href={`/contratos/${c.id}`}
+              className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-muted/50"
+            >
+              <div>
+                <span className="text-sm font-medium tabular-nums">
+                  {formatMoney(c.monto, c.moneda)}
+                </span>
+                <span className="ml-2 text-xs text-muted-foreground">
+                  {c.tenant.nombre}
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  {formatDate(c.fechaInicio)} → {formatDate(fin)}
+                  {renovado && " · se renueva sola"}
+                </span>
+              </div>
+              <Badge variant={estadoContratoVariant(estado)}>
+                {estadoContratoLabels[estado]}
+              </Badge>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

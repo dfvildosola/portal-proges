@@ -40,7 +40,7 @@ export type ContratoSpec = {
   fechaInicio: Date;
   fechaTermino: Date;
   diaPago: number;
-  estado: "VIGENTE" | "TERMINADO";
+  terminado: boolean; // true: ya terminó (lleva fechaSalida)
   cobros: CobroSpec[];
 };
 
@@ -366,7 +366,7 @@ function periodoDe(mi: number): string {
 // Cobros de 2025-11 a 2026-10, solo los meses dentro del contrato. Hasta
 // septiembre: pagados, salvo los últimos `atrasados` meses, que quedan
 // ATRASADO. Octubre: pendiente, con vencimiento posterior a «hoy» para que la
-// app (alerts.ts) no lo cuente como atrasado.
+// app (agenda.ts) no lo cuente como atrasado.
 function armarCobros(monto: number, moneda: Moneda, diaPago: number, m: Meses, atrasados: number): CobroSpec[] {
   const cobros: CobroSpec[] = [];
   for (let mi = Math.max(m.inicioMi, MES_PRIMER_COBRO); mi <= Math.min(m.terminoMi, MES_HOY); mi++) {
@@ -620,7 +620,7 @@ export function armarPropiedades(): PropiedadSpec[] {
         fechaInicio: primerDia(meses.inicioMi),
         fechaTermino: ultimoDia(meses.terminoMi),
         diaPago,
-        estado: vigente ? "VIGENTE" : "TERMINADO",
+        terminado: !vigente,
         // Vigentes y terminados: cobros pagados mes a mes dentro del contrato (los terminados, hasta que se fueron).
         cobros: armarCobros(monto, moneda, diaPago, meses, kAtraso < 0 ? 0 : mesesAtraso[kAtraso]),
       };

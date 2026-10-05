@@ -20,10 +20,14 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 const segmentLabels: Record<string, string> = {
   pendientes: "Pendientes",
   cobranza: "Cobranza",
+  cuentas: "Cuentas",
+  resumen: "Resumen",
   propiedades: "Propiedades",
   contratos: "Contratos",
+  duenos: "Dueños",
   contactos: "Contactos",
   nueva: "Nueva",
+  nuevo: "Nuevo",
   editar: "Editar",
 };
 

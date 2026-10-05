@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { hoyChile } from "@/lib/fechas";
 import type { PropertyBill } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { billTypeLabels, billStatusLabels, billStatusVariant } from "@/lib/domain";
-import { formatMoney, formatDate } from "@/lib/format";
+import { formatMoney, formatDate, toDateInputValue } from "@/lib/format";
 import { AddBillForm } from "./economic-forms";
 import { markBillPaid, removeBill } from "../../cuentas/actions";
 
@@ -23,7 +24,7 @@ export function BillsTab({
   propertyId: string;
   bills: PropertyBill[];
 }) {
-  const hoy = new Date();
+  const hoy = hoyChile();
   return (
     <Card>
       <CardHeader>
@@ -73,11 +74,11 @@ export function BillsTab({
                     {b.estado === "PENDIENTE" && (
                       <form action={markBillPaid} className="flex items-center gap-1">
                         <input type="hidden" name="billId" value={b.id} />
-                        <input type="hidden" name="propertyId" value={propertyId} />
                         <Input
                           name="fechaPago"
                           type="date"
                           required
+                          defaultValue={toDateInputValue(hoy)}
                           className="h-7 w-36 text-xs"
                         />
                         <Button
@@ -92,7 +93,6 @@ export function BillsTab({
                     )}
                     <form action={removeBill}>
                       <input type="hidden" name="billId" value={b.id} />
-                      <input type="hidden" name="propertyId" value={propertyId} />
                       <button
                         type="submit"
                         aria-label="Quitar cuenta"

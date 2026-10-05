@@ -1,17 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { ColumnDef, HeaderContext } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { X } from "lucide-react";
 
-import type { Currency, ChargeStatus } from "@/generated/prisma/enums";
+import type { BillType, Currency } from "@/generated/prisma/enums";
 import {
-  chargeStatusLabels,
-  chargeStatusVariant,
+  billStatusLabels,
+  billStatusVariant,
+  billTypeLabels,
   enumOptions,
 } from "@/lib/domain";
-import { formatMoney, formatDate } from "@/lib/format";
-import { esParcial } from "@/lib/cobros";
+import { formatMoney, formatDate, formatPeriodo } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,50 +19,52 @@ import { DataTable } from "@/components/ui/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 import { DataTableViewOptions } from "@/components/ui/data-table-view-options";
+import { inArray, sortHeader } from "@/components/ui/data-table-helpers";
 
-export type ChargeRow = {
+// Estado a la vista: «Vencida» es una pendiente cuyo vencimiento ya pasó
+// (se calcula en la página con la fecha de hoy en Chile).
+export type EstadoCuenta = "PENDIENTE" | "VENCIDA" | "PAGADA";
+
+const estadoLabels: Record<EstadoCuenta, string> = {
+  PENDIENTE: billStatusLabels.PENDIENTE,
+  VENCIDA: "Vencida",
+  PAGADA: billStatusLabels.PAGADA,
+};
+
+const estadoVariant = (e: EstadoCuenta) =>
+  e === "VENCIDA" ? "destructive" : billStatusVariant(e);
+
+export type BillRow = {
   id: string;
-  contractId: string;
+  tipo: BillType;
   periodo: string;
-  montoEsperado: number;
+  monto: number | null;
   moneda: Currency;
   fechaVencimiento: string;
-  estado: ChargeStatus;
   fechaPago: string | null;
-  montoPagado: number | null;
-  interesMora: number | null;
-  notas: string | null;
+  estado: EstadoCuenta;
   propertyId: string;
   propertyRol: string;
   propertyDireccion: string;
-  tenantNombre: string;
 };
-
-const inArray: ColumnDef<ChargeRow>["filterFn"] = (row, id, value) =>
-  (value as string[]).includes(row.getValue(id));
 
 const columnLabels: Record<string, string> = {
-  propertyRol: "Propiedad",
-  tenantNombre: "Arrendatario",
-  montoEsperado: "Monto esperado",
-  fechaVencimiento: "Vencimiento",
+  propiedad: "Propiedad",
+  tipo: "Tipo",
+  periodo: "Período",
+  monto: "Monto",
+  fechaVencimiento: "Vence",
   estado: "Estado",
-  montoPagado: "Monto pagado",
+  fechaPago: "Pagada el",
 };
 
-function sortHeader(title: string) {
-  const Header = ({ column }: HeaderContext<ChargeRow, unknown>) => (
-    <DataTableColumnHeader column={column} title={title} />
-  );
-  Header.displayName = `SortHeader(${title})`;
-  return Header;
-}
-
-const columns: ColumnDef<ChargeRow>[] = [
+const columns: ColumnDef<BillRow>[] = [
   {
-    accessorKey: "propertyRol",
+    // ROL y dirección juntos, para que el buscador encuentre por cualquiera.
+    id: "propiedad",
+    accessorFn: (b) => `${b.propertyRol} ${b.propertyDireccion}`,
     header: sortHeader("Propiedad"),
-    size: 200,
+    size: 220,
     cell: ({ row }) => (
       <div>
         <span className="font-medium">{row.original.propertyRol}</span>
@@ -73,71 +75,74 @@ const columns: ColumnDef<ChargeRow>[] = [
     ),
   },
   {
-    accessorKey: "tenantNombre",
-    header: sortHeader("Arrendatario"),
-    size: 160,
+    accessorKey: "tipo",
+    header: sortHeader("Tipo"),
+    size: 130,
+    cell: ({ row }) => billTypeLabels[row.original.tipo],
+    filterFn: inArray,
   },
   {
-    accessorKey: "montoEsperado",
-    size: 150,
+    accessorKey: "periodo",
+    header: sortHeader("Período"),
+    size: 140,
+    cell: ({ row }) => formatPeriodo(row.original.periodo),
+  },
+  {
+    accessorKey: "monto",
+    size: 130,
     header: ({ column }) => (
       <div className="text-right">
-        <DataTableColumnHeader column={column} title="Monto esperado" />
+        <DataTableColumnHeader column={column} title="Monto" />
       </div>
     ),
     cell: ({ row }) => (
       <div className="text-right tabular-nums">
-        {formatMoney(row.original.montoEsperado, row.original.moneda)}
+        {row.original.monto !== null
+          ? formatMoney(row.original.monto, row.original.moneda)
+          : "—"}
       </div>
     ),
   },
   {
     accessorKey: "fechaVencimiento",
-    header: sortHeader("Vencimiento"),
-    size: 120,
+    header: sortHeader("Vence"),
+    size: 110,
     cell: ({ row }) => formatDate(new Date(row.original.fechaVencimiento)),
   },
   {
     accessorKey: "estado",
     header: sortHeader("Estado"),
-    size: 150,
+    size: 110,
     cell: ({ row }) => (
-      <div className="flex flex-wrap items-center gap-1">
-        <Badge variant={chargeStatusVariant(row.original.estado)}>
-          {chargeStatusLabels[row.original.estado]}
-        </Badge>
-        {esParcial(row.original) && <Badge variant="warning">Parcial</Badge>}
-      </div>
+      <Badge variant={estadoVariant(row.original.estado)}>
+        {estadoLabels[row.original.estado]}
+      </Badge>
     ),
     filterFn: inArray,
   },
   {
-    accessorKey: "montoPagado",
-    size: 150,
-    header: ({ column }) => (
-      <div className="text-right">
-        <DataTableColumnHeader column={column} title="Monto pagado" />
-      </div>
-    ),
+    accessorKey: "fechaPago",
+    header: sortHeader("Pagada el"),
+    size: 110,
     cell: ({ row }) => (
-      <div className="text-right tabular-nums text-muted-foreground">
-        {row.original.montoPagado !== null
-          ? formatMoney(row.original.montoPagado, row.original.moneda)
+      <span className="text-muted-foreground">
+        {row.original.fechaPago
+          ? formatDate(new Date(row.original.fechaPago))
           : "—"}
-      </div>
+      </span>
     ),
   },
 ];
 
-export function ChargesTable({ data }: { data: ChargeRow[] }) {
+// Las cuentas se marcan pagadas en la ficha de su propiedad: la fila lleva ahí.
+export function BillsTable({ data }: { data: BillRow[] }) {
   const router = useRouter();
 
   return (
     <DataTable
       columns={columns}
       data={data}
-      onRowClick={(c) => router.push(`/cobranza/${c.id}`)}
-      initialSorting={[{ id: "estado", desc: false }]}
+      onRowClick={(b) => router.push(`/propiedades/${b.propertyId}`)}
       toolbar={(table) => {
         const filtered =
           table.getState().columnFilters.length > 0 ||
@@ -145,15 +150,20 @@ export function ChargesTable({ data }: { data: ChargeRow[] }) {
         return (
           <div className="flex flex-wrap items-center gap-2">
             <Input
-              placeholder="Buscar propiedad o arrendatario…"
+              placeholder="Buscar propiedad…"
               value={table.getState().globalFilter ?? ""}
               onChange={(e) => table.setGlobalFilter(e.target.value)}
               className="h-8 w-full max-w-xs"
             />
             <DataTableFacetedFilter
+              column={table.getColumn("tipo")}
+              title="Tipo"
+              options={enumOptions(billTypeLabels)}
+            />
+            <DataTableFacetedFilter
               column={table.getColumn("estado")}
               title="Estado"
-              options={enumOptions(chargeStatusLabels)}
+              options={enumOptions(estadoLabels)}
             />
             {filtered && (
               <Button

@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
+import { hoyChile } from "@/lib/fechas";
+import { estaVigente } from "@/lib/contratos";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
-import { syncAlerts } from "@/lib/alerts";
+import { agenda } from "@/lib/agenda";
 import { getLatestUf, toCLP } from "@/lib/currency";
 import {
   costoAnual,
@@ -45,10 +47,7 @@ export default async function PropiedadDetallePage({
   const { id } = await params;
   const orgId = await getOrgId();
 
-  // Se recalculan las alertas antes de leerlas, igual que /pendientes.
-  await syncAlerts(orgId);
-
-  const [p, uf, entidades] = await Promise.all([
+  const [p, uf, entidades, items] = await Promise.all([
     db.property.findFirst({
       where: { id, organizationId: orgId },
       include: {
@@ -69,7 +68,6 @@ export default async function PropiedadDetallePage({
         movements: { orderBy: { fecha: "desc" } },
         taxes: { orderBy: [{ anio: "desc" }, { cuota: "asc" }] },
         bills: { orderBy: { fechaVencimiento: "asc" } },
-        alerts: { where: { estado: "ACTIVA" }, orderBy: { createdAt: "desc" } },
       },
     }),
     getLatestUf(),
@@ -78,8 +76,10 @@ export default async function PropiedadDetallePage({
       select: { id: true, nombre: true, tipo: true },
       orderBy: { nombre: "asc" },
     }),
+    agenda(orgId),
   ]);
   if (!p) notFound();
+  const pendientes = items.filter((i) => i.propiedad?.id === id);
 
   // Entidades existentes (para reutilizar en vez de duplicar), sin las que ya
   // figuran como dueñas de esta propiedad.
@@ -87,7 +87,7 @@ export default async function PropiedadDetallePage({
   const entidadesDisponibles = entidades.filter((o) => !yaDueños.has(o.id));
 
   // Cifras. Los cálculos viven en src/lib/property-metrics.ts.
-  const now = new Date();
+  const now = hoyChile();
   const valorComercial =
     p.valorComercial === null
       ? null
@@ -102,7 +102,7 @@ export default async function PropiedadDetallePage({
     now,
   });
   const rentab = rentabilidad({
-    rentaAnualCLP: rentaAnualCLP(p.contracts, uf),
+    rentaAnualCLP: rentaAnualCLP(p.contracts, uf, now),
     costoAnualCLP: costo.total,
     valorCLP,
   });
@@ -117,32 +117,26 @@ export default async function PropiedadDetallePage({
 
   // Situación: contrato vigente, tira de pagos y, si está libre, desde cuándo y
   // cuánto costó desde entonces.
-  const ultimoTermino =
-    p.contracts.length > 0
-      ? new Date(Math.max(...p.contracts.map((c) => c.fechaTermino.getTime())))
-      : null;
-  const diasLibre = diasSinContrato(p.contracts, now);
-  const libre =
-    diasLibre !== null && ultimoTermino
-      ? {
-          dias: diasLibre,
-          desde: ultimoTermino,
-          costo: costoEnPeriodo({
-            taxes: p.taxes,
-            movements: p.movements,
-            uf,
-            desde: ultimoTermino,
-            hasta: now,
-          }),
-        }
-      : null;
+  const sinContrato = diasSinContrato(p.contracts, now);
+  const libre = sinContrato
+    ? {
+        ...sinContrato,
+        costo: costoEnPeriodo({
+          taxes: p.taxes,
+          movements: p.movements,
+          uf,
+          desde: sinContrato.desde,
+          hasta: now,
+        }),
+      }
+    : null;
 
   return (
     <>
       <BackLink href="/propiedades">Propiedades</BackLink>
 
       <PropertyHeader property={p} />
-      <AttentionStrip alerts={p.alerts} />
+      <AttentionStrip items={pendientes} />
 
       <Tabs defaultValue="resumen">
         <TabsList className="flex-wrap">
@@ -158,7 +152,7 @@ export default async function PropiedadDetallePage({
             valorComercial={valorComercial}
             valorFecha={p.valorComercialFecha}
             valorFuente={p.valorComercialFuente}
-            renta={rentaMensual(p.contracts)}
+            renta={rentaMensual(p.contracts, now)}
             rentabilidad={rentab}
             costo={costo}
             now={now}
@@ -169,7 +163,7 @@ export default async function PropiedadDetallePage({
                 estado={p.estado}
                 now={now}
                 valorComercial={valorComercial}
-                contratoVigente={p.contracts.find((c) => c.estado === "VIGENTE")}
+                contratoVigente={p.contracts.find((c) => estaVigente(c, now))}
                 tieneContratos={p.contracts.length > 0}
                 tira={tiraDePagos(
                   p.contracts.flatMap((c) => c.charges),
@@ -215,7 +209,7 @@ export default async function PropiedadDetallePage({
         </TabsContent>
 
         <TabsContent value="arriendo" className="mt-6">
-          <LeaseTab propertyId={p.id} contracts={p.contracts} />
+          <LeaseTab propertyId={p.id} contracts={p.contracts} hoy={now} />
         </TabsContent>
 
         <TabsContent value="finanzas" className="mt-6">

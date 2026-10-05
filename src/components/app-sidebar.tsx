@@ -16,7 +16,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 
-export function AppSidebar({ alertCount = 0 }: { alertCount?: number }) {
+export function AppSidebar({ pendientes = 0 }: { pendientes?: number }) {
   const pathname = usePathname();
 
   // "/" solo activo exacto; el resto activo si la ruta empieza con el href.
@@ -68,9 +68,9 @@ export function AppSidebar({ alertCount = 0 }: { alertCount?: number }) {
                     >
                       <Icon />
                       <span>{item.label}</span>
-                      {item.badge && alertCount > 0 && (
+                      {item.badge && pendientes > 0 && (
                         <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground tabular-nums">
-                          {alertCount > 99 ? "99+" : alertCount}
+                          {pendientes > 99 ? "99+" : pendientes}
                         </span>
                       )}
                     </SidebarMenuButton>

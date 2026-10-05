@@ -4,14 +4,11 @@ import { useRouter } from "next/navigation";
 import type { ColumnDef, HeaderContext } from "@tanstack/react-table";
 import { X } from "lucide-react";
 
-import type {
-  Currency,
-  AdjustmentType,
-  ContractStatus,
-} from "@/generated/prisma/enums";
+import type { Currency, AdjustmentType } from "@/generated/prisma/enums";
+import type { EstadoContrato } from "@/lib/contratos";
 import {
-  contractStatusLabels,
-  contractStatusVariant,
+  estadoContratoLabels,
+  estadoContratoVariant,
   adjustmentTypeLabels,
   enumOptions,
 } from "@/lib/domain";
@@ -37,7 +34,7 @@ export type ContractRow = {
   reajusteFrecuenciaMeses: number | null;
   fechaInicio: string;
   fechaTermino: string;
-  estado: ContractStatus;
+  estado: EstadoContrato;
 };
 
 const inArray: ColumnDef<ContractRow>["filterFn"] = (row, id, value) =>
@@ -119,8 +116,8 @@ const columns: ColumnDef<ContractRow>[] = [
     header: sortHeader("Estado"),
     size: 120,
     cell: ({ row }) => (
-      <Badge variant={contractStatusVariant(row.original.estado)}>
-        {contractStatusLabels[row.original.estado]}
+      <Badge variant={estadoContratoVariant(row.original.estado)}>
+        {estadoContratoLabels[row.original.estado]}
       </Badge>
     ),
     filterFn: inArray,
@@ -152,7 +149,7 @@ export function ContractsTable({ data }: { data: ContractRow[] }) {
             <DataTableFacetedFilter
               column={table.getColumn("estado")}
               title="Estado"
-              options={enumOptions(contractStatusLabels)}
+              options={enumOptions(estadoContratoLabels)}
             />
             <DataTableFacetedFilter
               column={table.getColumn("reajusteTipo")}

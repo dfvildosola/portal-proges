@@ -11,6 +11,9 @@ import {
   Home as HomeIcon,
   Tag,
 } from "lucide-react";
+import { hoyChile } from "@/lib/fechas";
+import { whereVigenteEn } from "@/lib/contratos";
+import { saldoCobro } from "@/lib/cobros";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import { getLatestUf, toCLP } from "@/lib/currency";
@@ -42,7 +45,7 @@ export default async function ResumenPage({
   const selOwnerId = sel?.startsWith("owner:") ? sel.slice(6) : null;
 
   const orgId = await getOrgId();
-  const now = new Date();
+  const now = hoyChile();
   const year = now.getUTCFullYear();
   const yearStart = new Date(Date.UTC(year, 0, 1));
   const yearEnd = new Date(Date.UTC(year, 11, 31, 23, 59, 59));
@@ -81,7 +84,7 @@ export default async function ResumenPage({
           },
         },
         contracts: {
-          where: { estado: "VIGENTE" },
+          where: whereVigenteEn(now),
           select: { monto: true, moneda: true },
         },
         assessments: {
@@ -297,11 +300,11 @@ export default async function ResumenPage({
     if (frac === undefined) continue;
     if (ch.estado === "ATRASADO") {
       atrasadoCount++;
-      const clp = toCLP(ch.montoEsperado, ch.moneda, uf);
+      const clp = toCLP(saldoCobro(ch), ch.moneda, uf);
       if (clp !== null) atrasadoMonto += clp * frac;
     }
     if (
-      ch.estado === "PAGADO" &&
+      (ch.montoPagado !== null || ch.estado === "PAGADO") &&
       ch.fechaPago &&
       ch.fechaPago >= yearStart &&
       ch.fechaPago <= yearEnd

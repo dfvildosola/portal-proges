@@ -13,6 +13,7 @@ import type {
   RentCharge,
 } from "@/generated/prisma/client";
 import { toCLP } from "@/lib/currency";
+import { estaVigente, type ContratoFechas } from "@/lib/contratos";
 
 const MS_DIA = 24 * 60 * 60 * 1000;
 
@@ -34,9 +35,10 @@ export type RentaMensual = { monto: number; moneda: Currency };
 // Monto y moneda del contrato VIGENTE; null si no hay. Si hubiera más de uno
 // vigente (no debería), toma el primero.
 export function rentaMensual(
-  contratos: Pick<LeaseContract, "estado" | "monto" | "moneda">[],
+  contratos: (ContratoFechas & Pick<LeaseContract, "monto" | "moneda">)[],
+  now: Date,
 ): RentaMensual | null {
-  const vigente = contratos.find((c) => c.estado === "VIGENTE");
+  const vigente = contratos.find((c) => estaVigente(c, now));
   if (!vigente) return null;
   return { monto: Number(vigente.monto), moneda: vigente.moneda };
 }
@@ -46,10 +48,11 @@ export function rentaMensual(
 // valor): /resumen lo descarta en silencio; aquí se devuelve null para no mostrar
 // una rentabilidad calculada con la renta incompleta.
 export function rentaAnualCLP(
-  contratos: Pick<LeaseContract, "estado" | "monto" | "moneda">[],
+  contratos: (ContratoFechas & Pick<LeaseContract, "monto" | "moneda">)[],
   uf: number | null,
+  now: Date,
 ): number | null {
-  const vigentes = contratos.filter((c) => c.estado === "VIGENTE");
+  const vigentes = contratos.filter((c) => estaVigente(c, now));
   if (vigentes.length === 0) return null;
   let anual = 0;
   for (const c of vigentes) {
@@ -175,20 +178,22 @@ export function rentabilidad({
 // Días sin contrato
 // ---------------------------------------------------------------------------
 
-// Días corridos desde la fechaTermino del contrato que terminó más tarde. null
-// si nunca tuvo contrato o si hay uno VIGENTE. Nunca negativo (un contrato
-// terminado antes de tiempo, con fecha de término futura, cuenta 0).
+// Días corridos desde que terminó el último contrato, y esa fecha (`desde`): su
+// fechaSalida o, si no tiene, su fechaTermino (un contrato que no se renueva solo
+// y venció). null si nunca tuvo un contrato ya empezado o si hay uno VIGENTE.
+// Un contrato que aún no empieza no cuenta: su término está en el futuro.
 export function diasSinContrato(
-  contratos: Pick<LeaseContract, "estado" | "fechaTermino">[],
+  contratos: ContratoFechas[],
   now: Date,
-): number | null {
-  if (contratos.length === 0) return null;
-  if (contratos.some((c) => c.estado === "VIGENTE")) return null;
+): { dias: number; desde: Date } | null {
+  if (contratos.some((c) => estaVigente(c, now))) return null;
+  const empezados = contratos.filter((c) => c.fechaInicio <= now);
+  if (empezados.length === 0) return null;
   const ultimoTermino = Math.max(
-    ...contratos.map((c) => inicioDelDiaUTC(c.fechaTermino)),
+    ...empezados.map((c) => inicioDelDiaUTC(c.fechaSalida ?? c.fechaTermino)),
   );
   const dias = Math.floor((inicioDelDiaUTC(now) - ultimoTermino) / MS_DIA);
-  return Math.max(0, dias);
+  return { dias: Math.max(0, dias), desde: new Date(ultimoTermino) };
 }
 
 // ---------------------------------------------------------------------------

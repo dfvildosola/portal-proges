@@ -61,14 +61,6 @@ enum PropertyUnitType {
   BODEGA
 }
 
-enum ContractStatus {
-  VIGENTE
-  POR_VENCER
-  VENCIDO
-  RENOVADO
-  TERMINADO
-}
-
 enum AdjustmentType {
   NINGUNO
   IPC
@@ -144,28 +136,6 @@ enum Papel {
   CONTRATO_ARRIENDO
 }
 
-enum AlertType {
-  ARRENDADA_SIN_CONTRATO
-  CONTRATO_POR_VENCER
-  ARRIENDO_ATRASADO
-  CONTRIBUCION_IMPAGA
-  CONTRIBUCION_POR_VENCER
-  DESOCUPADA_PROLONGADA
-  CUENTA_VENCIDA
-  CUENTA_POR_VENCER
-}
-
-enum AlertSeverity {
-  INFO
-  MEDIA
-  ALTA
-}
-
-enum AlertStatus {
-  ACTIVA
-  RESUELTA
-}
-
 enum RateType {
   UF
   IPC
@@ -228,7 +198,6 @@ model Property {
   movements Movement[]
   taxes     PropertyTax[]
   bills     PropertyBill[]
-  alerts    Alert[]
 
   @@index([organizationId])
 }
@@ -355,14 +324,18 @@ model LeaseContract {
   fechaInicio             DateTime
   fechaTermino            DateTime
   diaPago                 Int
-  estado                  ContractStatus @default(VIGENTE)
+  renovacionAutomatica    Boolean        @default(true) // se renueva sola por el mismo plazo salvo aviso
+  diasAviso               Int            @default(60) // días antes del término para avisar que no se renueva
+  plazoMeses              Int // duración de cada período (y de cada renovación), en meses
+  fechaSalida             DateTime? // si hay, el contrato termina ese día y no se renueva
+  garantia                Decimal?       @db.Decimal(14, 2) // garantía, en la moneda del arriendo
+  ultimoReajuste          DateTime? // fecha del último reajuste aplicado
   createdAt               DateTime       @default(now())
   updatedAt               DateTime       @updatedAt
 
   property Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   charges  RentCharge[]
-  alerts   Alert[]
 
   @@index([organizationId])
   @@index([propertyId])
@@ -486,27 +459,8 @@ model Document {
 }
 
 // ----------------------------------------------------------------------------
-// Alertas (autocontrol) y soporte
+// Soporte
 // ----------------------------------------------------------------------------
-
-model Alert {
-  id             String        @id @default(cuid())
-  organizationId String
-  tipo           AlertType
-  severidad      AlertSeverity @default(MEDIA)
-  mensaje        String
-  propertyId     String?
-  contractId     String?
-  estado         AlertStatus   @default(ACTIVA)
-  createdAt      DateTime      @default(now())
-  resolvedAt     DateTime?
-
-  property Property?      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  contract LeaseContract? @relation(fields: [contractId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId])
-  @@index([estado])
-}
 
 // Valores UF/IPC para convertir entre CLP y UF en informes. Global (sin organizationId).
 model CurrencyValue {

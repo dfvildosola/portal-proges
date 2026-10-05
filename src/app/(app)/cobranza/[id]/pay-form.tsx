@@ -30,9 +30,11 @@ function Field({
 export function PayForm({
   chargeId,
   defaultAmount,
+  defaultDate,
 }: {
   chargeId: string;
   defaultAmount: string;
+  defaultDate: string;
 }) {
   const [state, formAction, pending] = useActionState(
     registerPayment,
@@ -45,15 +47,20 @@ export function PayForm({
       <input type="hidden" name="chargeId" value={chargeId} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Fecha de pago" htmlFor="fechaPago" error={err("fechaPago")}>
-          <Input id="fechaPago" name="fechaPago" type="date" />
+          <Input
+            id="fechaPago"
+            name="fechaPago"
+            type="date"
+            defaultValue={defaultDate}
+          />
         </Field>
-        <Field label="Monto pagado" htmlFor="montoPagado" error={err("montoPagado")}>
+        <Field label="Monto de este pago" htmlFor="montoPagado" error={err("montoPagado")}>
           <Input
             id="montoPagado"
             name="montoPagado"
             type="number"
             step="0.01"
-            min="0"
+            min="0.01"
             defaultValue={defaultAmount}
           />
         </Field>
