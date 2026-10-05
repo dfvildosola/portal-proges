@@ -21,21 +21,16 @@ Desarrollar y mejorar los paneles `/contratos`, `/cobranza` y `/cuentas`: resolv
 4. `/code-review` sobre la branch, hallazgos arreglados o anotados en `PENDIENTES.md`; las líneas resueltas salen de `PENDIENTES.md` en el mismo commit.
 
 ## Paso siguiente
-**Etapa 3, pieza 3a** (la agenda calculada) → un subagente Sonnet, sin `isolation`, en la carpeta del espacio. Va sola: 3b y 3c dependen de ella. Encargo (además de lo que dice el plan para 3a):
+**Etapa 3, pieza 3b** (página Pendientes + línea de agenda compartida) → un subagente Sonnet, sin `isolation`, en la carpeta del espacio. **Después, 3c** (sacar la tabla `Alert`), en serie: 3c usa el componente de línea que crea 3b en Inicio y en la ficha (cambio respecto del plan, que decía 3b ∥ 3c).
 
-- **Archivo nuevo `src/lib/agenda.ts`** con `agenda(orgId, hoy)` envuelta en `cache()` de React. Cada ítem lleva: clave estable (tipo + id), tipo, **cuándo** (`ATRASADO` si la fecha ya pasó; `SEMANA` ≤7 días; `MES` ≤30; `TRIMESTRE` ≤90), fecha de la acción, monto en pesos si aplica (UF con `getLatestUf` + `toCLP`), propiedad, contrato, texto y acción (texto + enlace). No toca pantallas: 3b y 3c la consumen.
-- **Pasar todas las reglas de `src/lib/alerts.ts`** a ítems, con el mismo criterio que hoy (las cuatro de contratos de la pieza 2c: aviso de no renovación a 30 días de su fecha límite, por vencer a 120 solo si no se renueva, vencido, reajuste a 30; arriendo atrasado, ahora un ítem por cobro con su monto y saldo si es parcial; contribuciones impagas y a 30 días; cuentas vencidas y a 7 días; cobros sin generar; arrendada sin contrato).
-- **Reglas nuevas:** papeles y pólizas que vencen dentro de 45 días (reutilizar la regla de vigencia de `src/lib/papeles.ts`); «N arriendos vencen esta semana · $X» (cobros sin pagar con vencimiento en los próximos 7 días, sumados).
-- **«Desocupada»** se mide con `diasSinContrato` de `property-metrics.ts` (desde la salida del último contrato, como la ficha), no con `updatedAt`.
-- **ADR `docs/decisiones/0008-pendientes-calculados.md`** (decisión D del plan), escrito para Diego.
-- **Para darlo por hecho:** un script `npx tsx` (con `import "dotenv/config"`, fuera del repo) imprime cuántos ítems hay por sección y por tipo, y cada tipo se contrasta con lo que hoy da `syncAlerts` (abrir `/pendientes` o correr `syncAlerts`, y contar con `psql` los avisos abiertos por tipo); pasan `npx tsc --noEmit` y `npm run lint`.
-
-Después de 3a: lanzar 3b (página Pendientes) y 3c (sacar la tabla `Alert`: `layout.tsx`, Inicio, `attention-strip.tsx`, ficha, schema + migración, `domain.ts`; borrar `alerts.ts`, `pendientes/actions.ts`, `alert-group.tsx`) en paralelo. **Los subagentes en paralelo no corren `npm run build`**. La migración de 3c: nombre con la hora UTC real (`date -u +%Y%m%d%H%M%S`), nunca inventada.
+- **3b — archivos:** nuevo `src/components/agenda-linea.tsx` (una línea de `ItemAgenda`: etiqueta del tipo, texto, propiedad con enlace —ocultable con una prop para la ficha—, arrendatario, monto en pesos, y botón de acción; para `CUENTA`, «Marcar pagada» ahí mismo con la fecha de hoy usando `markBillPaid`), y un componente cliente chico para el estado «guardando» del botón; `pendientes/page.tsx` rehecho con `agenda(orgId)` y `resumenAgenda`: secciones Atrasado (con total en $ y «+ N sin monto»), Esta semana, Este mes, Próximos meses; sin «Resolver»; borrar `pendientes/actions.ts` y `pendientes/alert-group.tsx`; en `cuentas/actions.ts`, `markBillPaid` suma `revalidatePath("/", "layout")` para que bajen la lista y el contador del menú. No toca `layout.tsx`, Inicio, la ficha, `alerts.ts`, `domain.ts` ni el schema (eso es 3c): sus errores de `tsc` en esos archivos son esperables mientras 3c no pase.
+- **3c — archivos:** `layout.tsx` (contador = `resumenAgenda(...).urgentes`), Inicio (KPI «Pendientes» y lista de urgentes con `AgendaLinea`), `attention-strip.tsx` y la ficha (`agenda` filtrada por propiedad, con `AgendaLinea` sin propiedad; se quita `syncAlerts`), `schema.prisma` + migración que borra `Alert` y sus enums (nombre con la hora UTC real, `date -u +%Y%m%d%H%M%S`; SQL a mano si `migrate dev` no corre sin terminal), `domain.ts` (sacar etiquetas de alertas), `prisma/seed.ts` (línea 105, `tx.alert.deleteMany`), y borrar `src/lib/alerts.ts`. Verificación: `npm run lint`, `npm run build`, y que `grep -rn "db.alert\|syncAlerts\|alertTypeLabels" src prisma` no encuentre nada.
+- Al final: navegador (Pendientes con sus 4 secciones; marcar pagada una cuenta desde Pendientes y ver bajar el contador; ficha solo con lo suyo; Inicio), commit, cierre de etapa.
 
 ## Etapas
 ✅ Etapa 1 — La plata que se escapa (1a → 1b ∥ 1c). Commits `b01bc74` y siguiente.
 ✅ Etapa 2 — Contratos que se renuevan solos (2a → 2b ∥ 2c ∥ 2d). Commits `c010ef2` y siguiente.
-⏳ Etapa 3 — Pendientes: anticiparse (3a → 3b ∥ 3c)
+⏳ Etapa 3 — Pendientes: anticiparse (3a ✅ → 3b → 3c)
 
 ## Bitácora
 - 2026-10-04: espacio abierto; Diego confirmó que los pendientes entran en la tarea.
@@ -53,6 +48,11 @@ Después de 3a: lanzar 3b (página Pendientes) y 3c (sacar la tabla `Alert`: `la
   - Probado en el navegador: contrato nuevo que termina en 75 días → aviso «avisar antes del 19-10-2026 (quedan 15 días)»; Renovar → término 18-12-2027 y el aviso se resuelve. Terminar Av. Ricardo Lyon 4476 con salida 30-09-2026 → el diálogo anuncia 1 cobro, se borra octubre y septiembre (atrasado) queda; desocupada → «Sin contrato hace 4 días · Desde 30-09-2026». Reajustar La Cumbre 427 4% con fecha 01-10-2026 → $540.800 en el contrato y en el cobro de octubre sin pagar, septiembre (pagado) igual, aviso resuelto. Datos restaurados con el seed.
   - Aprendido: los subagentes pueden dejar procesos colgados (un `prettier` y una espera en bucle); revisar con `ps` al cerrar cada pieza. En `/pendientes` los avisos de severidad media vienen plegados.
   - Nuevo en `PENDIENTES.md`: al terminar un contrato, la propiedad sigue «Arrendada» (pregunta para Diego).
+
+- 2026-10-04: **pieza 3a hecha.** `src/lib/agenda.ts`: `calcularAgenda(orgId, hoy)` y `agenda = cache(orgId => …)` (`cache` compara por identidad: un `Date` nuevo nunca acierta, por eso `hoy` se calcula adentro); `cuandoLabels`, `tipoItemLabels`, `resumenAgenda` (`urgentes` = atrasado + esta semana). ADR 0008. Contrastado con `syncAlerts` tipo por tipo: calzan (arriendo atrasado, contribuciones y cuentas, agrupando los ítems por propiedad o contrato); las 4 desocupadas son las mismas, ahora medidas desde la salida del último contrato. En los datos de ejemplo: 46 ítems (40 atrasados, 3 esta semana, 3 este mes), $11.880.968 atrasado; «41 arriendos vencen esta semana · $38.714.388» calza con `psql`. Papeles probados con documentos de prueba (póliza a 20 días sale; dominio vencido sale; póliza reemplazada por una nueva no sale), ya borrados.
+  - Decisiones: arriendos atrasados, cuotas y cuentas van un ítem por cosa (cada línea con su monto y su botón); los arriendos de la semana, un solo ítem de cartera. Solo cuentan los papeles requeridos para la propiedad; los documentos sin papel no entran. «Contrato por vencer» (120 días) cae en «Próximos meses».
+  - Aprendido: `mesActual(hoy)` se equivoca el día 1 (lee la medianoche UTC en hora de Chile); el mes de `hoy` sale de `hoy.toISOString().slice(0, 7)`.
+  - Quedó: la tabla `Alert` de la base del espacio tiene 41 filas activas del contraste; se va con 3c.
 
 ## Plan aprobado (2026-10-04)
 
