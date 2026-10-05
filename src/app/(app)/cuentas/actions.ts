@@ -108,6 +108,8 @@ export async function markBillPaid(formData: FormData): Promise<void> {
   });
   revalidatePath(`/propiedades/${bill.propertyId}`);
   revalidatePath("/cuentas");
+  // También Pendientes, Inicio y el contador del menú (se marca pagada desde Pendientes).
+  revalidatePath("/", "layout");
 }
 
 export async function removeBill(formData: FormData): Promise<void> {

@@ -21,7 +21,7 @@ Desarrollar y mejorar los paneles `/contratos`, `/cobranza` y `/cuentas`: resolv
 4. `/code-review` sobre la branch, hallazgos arreglados o anotados en `PENDIENTES.md`; las líneas resueltas salen de `PENDIENTES.md` en el mismo commit.
 
 ## Paso siguiente
-**Etapa 3, pieza 3b** (página Pendientes + línea de agenda compartida) → un subagente Sonnet, sin `isolation`, en la carpeta del espacio. **Después, 3c** (sacar la tabla `Alert`), en serie: 3c usa el componente de línea que crea 3b en Inicio y en la ficha (cambio respecto del plan, que decía 3b ∥ 3c).
+**Etapa 3, pieza 3c** (sacar la tabla `Alert`) → un subagente Sonnet, sin `isolation`. 3b ya está hecha (commit siguiente a `407204e`). Orden: 3a → 3b → 3c (sacar la tabla `Alert`), en serie: 3c usa el componente de línea que crea 3b en Inicio y en la ficha (cambio respecto del plan, que decía 3b ∥ 3c).
 
 - **3b — archivos:** nuevo `src/components/agenda-linea.tsx` (una línea de `ItemAgenda`: etiqueta del tipo, texto, propiedad con enlace —ocultable con una prop para la ficha—, arrendatario, monto en pesos, y botón de acción; para `CUENTA`, «Marcar pagada» ahí mismo con la fecha de hoy usando `markBillPaid`), y un componente cliente chico para el estado «guardando» del botón; `pendientes/page.tsx` rehecho con `agenda(orgId)` y `resumenAgenda`: secciones Atrasado (con total en $ y «+ N sin monto»), Esta semana, Este mes, Próximos meses; sin «Resolver»; borrar `pendientes/actions.ts` y `pendientes/alert-group.tsx`; en `cuentas/actions.ts`, `markBillPaid` suma `revalidatePath("/", "layout")` para que bajen la lista y el contador del menú. No toca `layout.tsx`, Inicio, la ficha, `alerts.ts`, `domain.ts` ni el schema (eso es 3c): sus errores de `tsc` en esos archivos son esperables mientras 3c no pase.
 - **3c — archivos:** `layout.tsx` (contador = `resumenAgenda(...).urgentes`), Inicio (KPI «Pendientes» y lista de urgentes con `AgendaLinea`), `attention-strip.tsx` y la ficha (`agenda` filtrada por propiedad, con `AgendaLinea` sin propiedad; se quita `syncAlerts`), `schema.prisma` + migración que borra `Alert` y sus enums (nombre con la hora UTC real, `date -u +%Y%m%d%H%M%S`; SQL a mano si `migrate dev` no corre sin terminal), `domain.ts` (sacar etiquetas de alertas), `prisma/seed.ts` (línea 105, `tx.alert.deleteMany`), y borrar `src/lib/alerts.ts`. Verificación: `npm run lint`, `npm run build`, y que `grep -rn "db.alert\|syncAlerts\|alertTypeLabels" src prisma` no encuentre nada.
@@ -30,7 +30,7 @@ Desarrollar y mejorar los paneles `/contratos`, `/cobranza` y `/cuentas`: resolv
 ## Etapas
 ✅ Etapa 1 — La plata que se escapa (1a → 1b ∥ 1c). Commits `b01bc74` y siguiente.
 ✅ Etapa 2 — Contratos que se renuevan solos (2a → 2b ∥ 2c ∥ 2d). Commits `c010ef2` y siguiente.
-⏳ Etapa 3 — Pendientes: anticiparse (3a ✅ → 3b → 3c)
+⏳ Etapa 3 — Pendientes: anticiparse (3a ✅ → 3b ✅ → 3c)
 
 ## Bitácora
 - 2026-10-04: espacio abierto; Diego confirmó que los pendientes entran en la tarea.
@@ -53,6 +53,8 @@ Desarrollar y mejorar los paneles `/contratos`, `/cobranza` y `/cuentas`: resolv
   - Decisiones: arriendos atrasados, cuotas y cuentas van un ítem por cosa (cada línea con su monto y su botón); los arriendos de la semana, un solo ítem de cartera. Solo cuentan los papeles requeridos para la propiedad; los documentos sin papel no entran. «Contrato por vencer» (120 días) cae en «Próximos meses».
   - Aprendido: `mesActual(hoy)` se equivoca el día 1 (lee la medianoche UTC en hora de Chile); el mes de `hoy` sale de `hoy.toISOString().slice(0, 7)`.
   - Quedó: la tabla `Alert` de la base del espacio tiene 41 filas activas del contraste; se va con 3c.
+- 2026-10-04: **pieza 3b hecha.** `src/components/agenda-linea.tsx` (`AgendaLinea`, con `conPropiedad` para la ficha; las cuentas se marcan pagadas ahí mismo con la fecha de hoy) y `src/components/boton-enviar.tsx` («Guardando…» con `useFormStatus`). `/pendientes` rehecha con 4 secciones (las vacías no salen; Atrasado con su total en $). Borrados `pendientes/actions.ts` y `alert-group.tsx`. `markBillPaid` suma `revalidatePath("/", "layout")`. `curl /pendientes`: 200, Atrasado 40 · $11.880.968, Esta semana 3, Este mes 3. Falta probarla en el navegador (al cerrar la etapa).
+  - Aprendido: `Button` de este repo es de base-ui, sin `asChild`: los botones-enlace son `Link` con `buttonVariants(...)`.
 
 ## Plan aprobado (2026-10-04)
 
