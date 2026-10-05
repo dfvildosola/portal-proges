@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil, Building2, User } from "lucide-react";
 import { db } from "@/lib/db";
+import { hoyChile } from "@/lib/fechas";
+import { estadoContrato } from "@/lib/contratos";
 import { getOrgId } from "@/lib/org";
 import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
@@ -13,8 +15,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  contractStatusLabels,
-  contractStatusVariant,
+  estadoContratoLabels,
+  estadoContratoVariant,
   adjustmentTypeLabels,
 } from "@/lib/domain";
 import { formatMoney, formatDate } from "@/lib/format";
@@ -36,6 +38,7 @@ export default async function ContratoDetallePage({
 }: PageProps<"/contratos/[id]">) {
   const { id } = await params;
   const orgId = await getOrgId();
+  const hoy = hoyChile();
   const c = await db.leaseContract.findFirst({
     where: { id, organizationId: orgId },
     include: {
@@ -46,6 +49,7 @@ export default async function ContratoDetallePage({
     },
   });
   if (!c) notFound();
+  const estado = estadoContrato(c, hoy);
 
   const reajuste = c.aplicaReajuste
     ? `${adjustmentTypeLabels[c.reajusteTipo]}${
@@ -63,8 +67,8 @@ export default async function ContratoDetallePage({
             <h1 className="text-2xl font-semibold tracking-tight">
               {formatMoney(c.monto, c.moneda)}
             </h1>
-            <Badge variant={contractStatusVariant(c.estado)}>
-              {contractStatusLabels[c.estado]}
+            <Badge variant={estadoContratoVariant(estado)}>
+              {estadoContratoLabels[estado]}
             </Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -96,7 +100,7 @@ export default async function ContratoDetallePage({
               <DataItem label="Inicio" value={formatDate(c.fechaInicio)} />
               <DataItem label="Término" value={formatDate(c.fechaTermino)} />
               <DataItem label="Día de pago" value={`Día ${c.diaPago} de cada mes`} />
-              <DataItem label="Estado" value={contractStatusLabels[c.estado]} />
+              <DataItem label="Estado" value={estadoContratoLabels[estado]} />
             </div>
           </CardContent>
         </Card>

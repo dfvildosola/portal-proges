@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { hoyChile } from "@/lib/fechas";
+import { estaVigente } from "@/lib/contratos";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import { syncAlerts } from "@/lib/alerts";
@@ -103,7 +104,7 @@ export default async function PropiedadDetallePage({
     now,
   });
   const rentab = rentabilidad({
-    rentaAnualCLP: rentaAnualCLP(p.contracts, uf),
+    rentaAnualCLP: rentaAnualCLP(p.contracts, uf, now),
     costoAnualCLP: costo.total,
     valorCLP,
   });
@@ -159,7 +160,7 @@ export default async function PropiedadDetallePage({
             valorComercial={valorComercial}
             valorFecha={p.valorComercialFecha}
             valorFuente={p.valorComercialFuente}
-            renta={rentaMensual(p.contracts)}
+            renta={rentaMensual(p.contracts, now)}
             rentabilidad={rentab}
             costo={costo}
             now={now}
@@ -170,7 +171,7 @@ export default async function PropiedadDetallePage({
                 estado={p.estado}
                 now={now}
                 valorComercial={valorComercial}
-                contratoVigente={p.contracts.find((c) => c.estado === "VIGENTE")}
+                contratoVigente={p.contracts.find((c) => estaVigente(c, now))}
                 tieneContratos={p.contracts.length > 0}
                 tira={tiraDePagos(
                   p.contracts.flatMap((c) => c.charges),
@@ -216,7 +217,7 @@ export default async function PropiedadDetallePage({
         </TabsContent>
 
         <TabsContent value="arriendo" className="mt-6">
-          <LeaseTab propertyId={p.id} contracts={p.contracts} />
+          <LeaseTab propertyId={p.id} contracts={p.contracts} hoy={now} />
         </TabsContent>
 
         <TabsContent value="finanzas" className="mt-6">

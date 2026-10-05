@@ -2,7 +2,7 @@ import { db } from "./db";
 import { AlertType, AlertSeverity } from "@/generated/prisma/enums";
 import { formatDate, formatPeriodo } from "./format";
 import { hoyChile, mesActual, sumarDias, sumarMeses } from "./fechas";
-import { whereCubreMes } from "./contratos";
+import { whereCubreMes, whereVigenteEn } from "./contratos";
 
 type AlertSpec = {
   tipo: AlertType;
@@ -33,7 +33,7 @@ export async function syncAlerts(
   // Regla 1: Propiedad ARRENDADA sin contrato VIGENTE
   const arrendadas = await db.property.findMany({
     where: { organizationId: orgId, estado: "ARRENDADA" },
-    include: { contracts: { where: { estado: "VIGENTE" }, select: { id: true } } },
+    include: { contracts: { where: whereVigenteEn(now), select: { id: true } } },
   });
   for (const p of arrendadas) {
     if (p.contracts.length === 0) {
@@ -51,7 +51,7 @@ export async function syncAlerts(
   const porVencer = await db.leaseContract.findMany({
     where: {
       organizationId: orgId,
-      estado: "VIGENTE",
+      AND: [whereVigenteEn(now)],
       fechaTermino: { lte: in60Days, gte: now },
     },
   });

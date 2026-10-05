@@ -7,7 +7,6 @@ import {
   Currency,
   OwnerType,
   PropertyUnitType,
-  ContractStatus,
   AdjustmentType,
   ChargeStatus,
   MovementType,
@@ -21,6 +20,7 @@ import {
   Papel,
   ValorFuente,
 } from "@/generated/prisma/enums";
+import type { EstadoContrato } from "./contratos";
 
 export const propertyTypeLabels: Record<PropertyType, string> = {
   DEPARTAMENTO: "Departamento",
@@ -69,12 +69,12 @@ export const propertyUnitTypeLabels: Record<PropertyUnitType, string> = {
   BODEGA: "Bodega",
 };
 
-export const contractStatusLabels: Record<ContractStatus, string> = {
+export const estadoContratoLabels: Record<EstadoContrato, string> = {
+  POR_EMPEZAR: "Por empezar",
   VIGENTE: "Vigente",
-  POR_VENCER: "Por vencer",
-  VENCIDO: "Vencido",
-  RENOVADO: "Renovado",
+  TERMINA: "Termina",
   TERMINADO: "Terminado",
+  VENCIDO: "Vencido",
 };
 
 export const adjustmentTypeLabels: Record<AdjustmentType, string> = {
@@ -162,6 +162,9 @@ export const alertTypeLabels: Record<AlertType, string> = {
   CUENTA_VENCIDA: "Cuenta vencida",
   CUENTA_POR_VENCER: "Cuenta por vencer",
   COBROS_SIN_GENERAR: "Cobros sin generar",
+  AVISO_NO_RENOVACION: "Aviso de no renovación",
+  REAJUSTE_PENDIENTE: "Reajuste pendiente",
+  CONTRATO_VENCIDO: "Contrato vencido",
 };
 
 export type AlertCategory = "cobranza" | "contribuciones" | "propiedad" | "cuentas";
@@ -176,6 +179,9 @@ export const alertTypeCategory: Record<AlertType, AlertCategory> = {
   CUENTA_VENCIDA: "cuentas",
   CUENTA_POR_VENCER: "cuentas",
   COBROS_SIN_GENERAR: "cobranza",
+  AVISO_NO_RENOVACION: "cobranza",
+  REAJUSTE_PENDIENTE: "cobranza",
+  CONTRATO_VENCIDO: "cobranza",
 };
 
 export const alertCategoryLabels: Record<AlertCategory, string> = {
@@ -256,13 +262,13 @@ export function propertyStatusVariant(
 }
 
 // Variante de color del badge según el estado del contrato.
-export function contractStatusVariant(
-  estado: ContractStatus,
+export function estadoContratoVariant(
+  estado: EstadoContrato,
 ): "success" | "warning" | "outline" | "destructive" {
   switch (estado) {
     case "VIGENTE":
       return "success";
-    case "POR_VENCER":
+    case "TERMINA":
       return "warning";
     case "VENCIDO":
       return "destructive";

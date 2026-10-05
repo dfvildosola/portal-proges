@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { FileText, Plus } from "lucide-react";
 import { db } from "@/lib/db";
+import { hoyChile } from "@/lib/fechas";
+import { estadoContrato } from "@/lib/contratos";
 import { getOrgId } from "@/lib/org";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
@@ -9,6 +11,7 @@ import { ContractsTable, type ContractRow } from "./contracts-table";
 
 export default async function ContratosPage() {
   const orgId = await getOrgId();
+  const hoy = hoyChile();
   const contracts = await db.leaseContract.findMany({
     where: { organizationId: orgId },
     orderBy: { fechaInicio: "desc" },
@@ -31,7 +34,7 @@ export default async function ContratosPage() {
     reajusteFrecuenciaMeses: c.reajusteFrecuenciaMeses,
     fechaInicio: c.fechaInicio.toISOString(),
     fechaTermino: c.fechaTermino.toISOString(),
-    estado: c.estado,
+    estado: estadoContrato(c, hoy),
   }));
 
   return (

@@ -46,7 +46,6 @@ export default async function EditarContratoPage({
           fechaInicio: toDateInputValue(c.fechaInicio),
           fechaTermino: toDateInputValue(c.fechaTermino),
           diaPago: c.diaPago.toString(),
-          estado: c.estado,
         }}
         properties={properties.map((p) => ({
           value: p.id,

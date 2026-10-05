@@ -3,7 +3,8 @@ import { Plus } from "lucide-react";
 import type { LeaseContract, Tenant } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { contractStatusLabels, contractStatusVariant } from "@/lib/domain";
+import { estadoContratoLabels, estadoContratoVariant } from "@/lib/domain";
+import { estadoContrato } from "@/lib/contratos";
 import { formatMoney, formatDate } from "@/lib/format";
 
 // Contrato con el arrendatario que lo firmó (lo que carga la ficha).
@@ -15,9 +16,11 @@ export type LeaseContractRow = LeaseContract & {
 export function LeaseTab({
   propertyId,
   contracts,
+  hoy,
 }: {
   propertyId: string;
   contracts: LeaseContractRow[];
+  hoy: Date;
 }) {
   if (contracts.length === 0) {
     return (
@@ -73,8 +76,8 @@ export function LeaseTab({
                 {formatDate(c.fechaInicio)} → {formatDate(c.fechaTermino)}
               </span>
             </div>
-            <Badge variant={contractStatusVariant(c.estado)}>
-              {contractStatusLabels[c.estado]}
+            <Badge variant={estadoContratoVariant(estadoContrato(c, hoy))}>
+              {estadoContratoLabels[estadoContrato(c, hoy)]}
             </Badge>
           </Link>
         ))}

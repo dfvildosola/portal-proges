@@ -40,7 +40,7 @@ export type ContratoSpec = {
   fechaInicio: Date;
   fechaTermino: Date;
   diaPago: number;
-  estado: "VIGENTE" | "TERMINADO";
+  terminado: boolean; // true: ya terminó (lleva fechaSalida)
   cobros: CobroSpec[];
 };
 
@@ -620,7 +620,7 @@ export function armarPropiedades(): PropiedadSpec[] {
         fechaInicio: primerDia(meses.inicioMi),
         fechaTermino: ultimoDia(meses.terminoMi),
         diaPago,
-        estado: vigente ? "VIGENTE" : "TERMINADO",
+        terminado: !vigente,
         // Vigentes y terminados: cobros pagados mes a mes dentro del contrato (los terminados, hasta que se fueron).
         cobros: armarCobros(monto, moneda, diaPago, meses, kAtraso < 0 ? 0 : mesesAtraso[kAtraso]),
       };

@@ -27,6 +27,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { GRUPOS, OWNERS, TENANTS, ETIQUETAS, ORG, UF_HOY, date } from "./seed-datos";
 import { armarPropiedades } from "./seed-propiedades";
+import { plazoEnMeses } from "../src/lib/contratos";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const db = new PrismaClient({ adapter });
@@ -256,7 +257,8 @@ async function main() {
               fechaInicio: c.fechaInicio,
               fechaTermino: c.fechaTermino,
               diaPago: c.diaPago,
-              estado: c.estado,
+              plazoMeses: plazoEnMeses(c.fechaInicio, c.fechaTermino),
+              fechaSalida: c.terminado ? c.fechaTermino : null,
             },
           ];
         }),

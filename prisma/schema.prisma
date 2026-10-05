@@ -61,14 +61,6 @@ enum PropertyUnitType {
   BODEGA
 }
 
-enum ContractStatus {
-  VIGENTE
-  POR_VENCER
-  VENCIDO
-  RENOVADO
-  TERMINADO
-}
-
 enum AdjustmentType {
   NINGUNO
   IPC
@@ -154,6 +146,9 @@ enum AlertType {
   CUENTA_VENCIDA
   CUENTA_POR_VENCER
   COBROS_SIN_GENERAR
+  AVISO_NO_RENOVACION
+  REAJUSTE_PENDIENTE
+  CONTRATO_VENCIDO
 }
 
 enum AlertSeverity {
@@ -356,7 +351,12 @@ model LeaseContract {
   fechaInicio             DateTime
   fechaTermino            DateTime
   diaPago                 Int
-  estado                  ContractStatus @default(VIGENTE)
+  renovacionAutomatica    Boolean        @default(true) // se renueva sola por el mismo plazo salvo aviso
+  diasAviso               Int            @default(60) // días antes del término para avisar que no se renueva
+  plazoMeses              Int // duración de cada período (y de cada renovación), en meses
+  fechaSalida             DateTime? // si hay, el contrato termina ese día y no se renueva
+  garantia                Decimal?       @db.Decimal(14, 2) // garantía, en la moneda del arriendo
+  ultimoReajuste          DateTime? // fecha del último reajuste aplicado
   createdAt               DateTime       @default(now())
   updatedAt               DateTime       @updatedAt
 

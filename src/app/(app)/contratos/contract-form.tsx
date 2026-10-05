@@ -23,7 +23,6 @@ import { Combobox } from "@/components/ui/combobox";
 import {
   currencyLabels,
   adjustmentTypeLabels,
-  contractStatusLabels,
   enumOptions,
 } from "@/lib/domain";
 import type { ContractFormState } from "./actions";
@@ -39,7 +38,6 @@ export type ContractValues = {
   fechaInicio?: string;
   fechaTermino?: string;
   diaPago?: string;
-  estado?: string;
 };
 
 type Option = { value: string; label: string };
@@ -227,20 +225,6 @@ export function ContractForm({
               />
             </Field>
 
-            <Field label="Estado" error={err("estado")}>
-              <Select name="estado" defaultValue={initial?.estado ?? "VIGENTE"}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {enumOptions(contractStatusLabels).map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
           </div>
 
           {state?.error && (

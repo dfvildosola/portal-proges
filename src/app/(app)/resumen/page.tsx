@@ -12,6 +12,7 @@ import {
   Tag,
 } from "lucide-react";
 import { hoyChile } from "@/lib/fechas";
+import { whereVigenteEn } from "@/lib/contratos";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import { getLatestUf, toCLP } from "@/lib/currency";
@@ -82,7 +83,7 @@ export default async function ResumenPage({
           },
         },
         contracts: {
-          where: { estado: "VIGENTE" },
+          where: whereVigenteEn(now),
           select: { monto: true, moneda: true },
         },
         assessments: {
