@@ -20,7 +20,9 @@ Cada contrato guardaba un «estado» que alguien elegía a mano (Vigente, Por ve
 
 También se agregaron al contrato la fecha de salida, la garantía (en la moneda del arriendo) y la fecha del último reajuste.
 
-**Qué hizo la migración con los contratos que ya existían:** los Terminados y Renovados pasaron a tener fecha de salida igual a su término; los Vencidos quedaron como «no se renueva solo»; el plazo se sacó de las fechas de inicio y término; y los que tenían reajuste sin frecuencia pasaron a reajustarse cada 12 meses.
+**Fin de mes.** Al avanzar un término de a meses, un contrato que termina el último día de un mes sigue terminando el último día del mes: 31-08 → 28-02 → 31-08, y no 31-08 → 28-02 → 28-08. Si no termina a fin de mes, se conserva el día (y se recorta solo si el mes de destino es más corto).
+
+**Qué hizo la migración con los contratos que ya existían:** los Terminados y Renovados pasaron a tener fecha de salida igual a su término o, si se marcaron terminados antes de que llegara (terminado antes de plazo), igual al día de su última edición, que es la mejor pista de cuándo se fueron; los Vencidos quedaron como «no se renueva solo»; el plazo se sacó de las fechas de inicio y término; y los que tenían reajuste sin frecuencia pasaron a reajustarse cada 12 meses.
 
 ## Alternativa descartada
 
@@ -31,4 +33,5 @@ Seguir guardando el estado y actualizarlo con una tarea programada que corre cad
 - El botón «Renovar» solo adelantará una renovación; no es necesario apretarlo para que el contrato siga vigente.
 - Un contrato que no se renueva solo y pasa su término queda «Vencido» a la vista, en vez de aparecer como vigente.
 - Ya no se elige el estado en el formulario: cambia solo al cambiar las fechas.
+- **Un reajuste se aplica cuando llega su mes, no antes.** «Reajustar» cambia el monto del contrato en el momento, y los cobros que todavía no se generan copian ese monto. Si se aplicara en octubre un reajuste que corre en diciembre, el cobro de noviembre saldría con el monto nuevo. Por eso la fecha efectiva puede ser futura solo dentro del mes en curso. El aviso de la agenda, 30 días antes, sirve para prepararse (por ejemplo, avisarle al arrendatario el monto nuevo), y el reajuste se aplica cuando llega el mes. Salió al probar los arreglos del `/code-review`, el 2026-10-05.
 - El plazo en meses es una aproximación (días entre inicio y término ÷ 30,4375, redondeado); para contratos de duración rara puede no ser exacto.

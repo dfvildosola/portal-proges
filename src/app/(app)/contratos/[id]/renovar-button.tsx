@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +13,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { renovarContrato } from "../ciclo-actions";
+import { renovarContrato, type CicloFormState } from "../ciclo-actions";
 
 export function RenovarButton({
   id,
@@ -25,7 +25,15 @@ export function RenovarButton({
   terminoNuevo: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
+  const [state, formAction, pending] = useActionState(
+    async () => {
+      const r = await renovarContrato(id);
+      if (r.ok) setOpen(false);
+      return r;
+    },
+    {} as CicloFormState,
+  );
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -40,16 +48,12 @@ export function RenovarButton({
             El término pasa del {terminoActual} al {terminoNuevo}.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {state.error && <p className="text-sm text-destructive">{state.error}</p>}
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
           <Button
             disabled={pending}
-            onClick={() =>
-              startTransition(async () => {
-                await renovarContrato(id);
-                setOpen(false);
-              })
-            }
+            onClick={() => startTransition(formAction)}
           >
             {pending ? "Renovando…" : "Renovar"}
           </Button>

@@ -30,11 +30,24 @@ export function sumarDias(fecha: Date, n: number): Date {
 }
 
 // Conserva el día; si el mes de destino es más corto, usa su último día.
+// Si `fecha` es el último día de su mes, el resultado es el último día del mes
+// de destino (31-08 + 6 meses = 28-02, y 28-02 + 6 meses = 31-08).
 export function sumarMeses(fecha: Date, n: number): Date {
   const y = fecha.getUTCFullYear();
-  const m = fecha.getUTCMonth() + n;
+  const mes = fecha.getUTCMonth();
+  const m = mes + n;
+  const ultimoDiaOrigen = new Date(Date.UTC(y, mes + 1, 0)).getUTCDate();
   const ultimoDia = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
-  return new Date(Date.UTC(y, m, Math.min(fecha.getUTCDate(), ultimoDia)));
+  const dia =
+    fecha.getUTCDate() === ultimoDiaOrigen
+      ? ultimoDia
+      : Math.min(fecha.getUTCDate(), ultimoDia);
+  return new Date(Date.UTC(y, m, dia));
+}
+
+// Días calendario de `hoy` a `fecha` (negativo si ya pasó).
+export function diasHasta(fecha: Date, hoy: Date): number {
+  return Math.round((fecha.getTime() - hoy.getTime()) / 86_400_000);
 }
 
 // Primer y último día del mes ("AAAA-MM"), a medianoche UTC.

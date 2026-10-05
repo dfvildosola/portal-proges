@@ -70,39 +70,48 @@ export function proximoReajuste(c: ContratoReajuste): Date | null {
   return sumarMeses(c.ultimoReajuste ?? c.fechaInicio, c.reajusteFrecuenciaMeses);
 }
 
-// Contratos vigentes en una fecha. Lleva un `AND` propio: quien lo combine con
-// otro `AND`/`OR` debe anidarlo (`AND: [whereVigenteEn(hoy), ...]`) y no
-// hacer spread, para no pisarlo.
+// Contratos vigentes en una fecha; dice lo mismo que `estadoContrato`: una
+// salida fijada manda sobre el término. Lleva un `OR` propio: quien lo combine
+// con otro `OR` debe anidarlo (`AND: [whereVigenteEn(hoy), ...]`) y no hacer
+// spread, para no pisarlo.
 export function whereVigenteEn(fecha: Date): Prisma.LeaseContractWhereInput {
   return {
     fechaInicio: { lte: fecha },
-    AND: [
-      { OR: [{ fechaSalida: null }, { fechaSalida: { gte: fecha } }] },
-      { OR: [{ renovacionAutomatica: true }, { fechaTermino: { gte: fecha } }] },
+    OR: [
+      { fechaSalida: { gte: fecha } },
+      {
+        fechaSalida: null,
+        OR: [{ renovacionAutomatica: true }, { fechaTermino: { gte: fecha } }],
+      },
     ],
   };
 }
 
-// Contratos que deben tener cobro en ese mes. Mismo cuidado con `AND` que arriba.
+// Contratos que deben tener cobro en ese mes. Mismo cuidado con `OR` que arriba.
 export function whereCubreMes(mes: string): Prisma.LeaseContractWhereInput {
   const { inicio, fin } = rangoDelMes(mes);
   return {
     fechaInicio: { lte: fin },
-    AND: [
-      { OR: [{ fechaSalida: null }, { fechaSalida: { gte: inicio } }] },
-      { OR: [{ renovacionAutomatica: true }, { fechaTermino: { gte: inicio } }] },
+    OR: [
+      { fechaSalida: { gte: inicio } },
+      {
+        fechaSalida: null,
+        OR: [{ renovacionAutomatica: true }, { fechaTermino: { gte: inicio } }],
+      },
     ],
   };
 }
 
 // Nuevo término al renovar: un plazo más allá del término vigente; si aun así
-// queda antes de hoy (contrato vencido hace mucho), sigue de a plazo (k·plazo
-// desde la base, sin acumular recortes de fin de mes) hasta llegar a hoy.
+// queda antes de hoy (contrato vencido hace mucho), sigue de a plazo. Siempre
+// se calcula como k·plazo desde `fechaTermino` (sin acumular recortes de fin de
+// mes): el primer resultado con k ≥ 1 que sea mayor que el término vigente y
+// no anterior a hoy.
 export function terminoRenovado(c: ContratoFechas, hoy: Date): Date {
-  const base = terminoVigente(c, hoy);
+  const vigente = terminoVigente(c, hoy);
   for (let k = 1; ; k++) {
-    const t = sumarMeses(base, k * c.plazoMeses);
-    if (t >= hoy) return t;
+    const t = sumarMeses(c.fechaTermino, k * c.plazoMeses);
+    if (t > vigente && t >= hoy) return t;
   }
 }
 

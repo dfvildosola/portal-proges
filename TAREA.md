@@ -28,6 +28,8 @@ Desarrollar y mejorar los paneles `/contratos`, `/cobranza` y `/cuentas`: resolv
 3. **Último commit: borrar `TAREA.md`** (regla 10).
 4. Decirle a Diego que el espacio está listo para mezclar: «Mezcla contratos-cobranza» se pide **desde la sesión de control**, no desde este espacio. Recordarle que **al subir** hay que aplicar en Neon, antes del push, las tres migraciones de esta tarea: `20261005002925_cobros_sin_generar`, `20261005004449_contratos_renovacion` y `20261005010944_sacar_alertas` (esta última borra la tabla `Alert`; ver `AGENTS.md`).
 
+**Avance del cierre (2026-10-05):** `/code-review` hecho (15 hallazgos). Paso 2 hecho («Lo que queda fuera» ya está en `PENDIENTES.md`). Arreglos repartidos en tres encargos Sonnet: A (fechas y contratos) ✅, B (acciones del contrato) ✅, C (cobros, agenda y ficha) en curso. Cuando termine C: revisar su diff, `npm run lint` + `npm run build`, probar en el navegador (ver «Qué probar» en la bitácora del 2026-10-05), commit, y seguir con los pasos 3 y 4.
+
 ## Etapas
 ✅ Etapa 1 — La plata que se escapa (1a → 1b ∥ 1c). Commits `b01bc74` y siguiente.
 ✅ Etapa 2 — Contratos que se renuevan solos (2a → 2b ∥ 2c ∥ 2d). Commits `c010ef2` y siguiente.
@@ -61,6 +63,14 @@ Desarrollar y mejorar los paneles `/contratos`, `/cobranza` y `/cuentas`: resolv
   - Arreglado al probar: el monto ya no se repite en el texto (cuentas en UF sí lo dicen en UF); en la ficha no hay botón «Ver propiedad» que lleve a la misma ficha.
   - Probado en el navegador: Pendientes con Atrasado (40 · $11.880.968), Esta semana (3) y Este mes (3). «Marcar pagada» del gas de Mariluan 2240 desde Pendientes: la línea se va y el contador baja de 43 a 42 sin recargar (`fechaPago` = 04-10-2026). Registrar el pago de un cobro de $538.000 en `/cobranza/<id>`: el contador baja a 42 ahí mismo y Pendientes muestra 39 · $11.342.968. Ficha de Diego de Rosales: solo sus 2 ítems. Consola sin errores. Datos restaurados con `psql`.
   - `PENDIENTES.md`: salen el botón dentro de otro botón, alertas que se actualizan solo al abrir Pendientes, «Resolver» que no sirve, desocupada medida desde la última edición y `syncAlerts` antes de comprobar la propiedad; entra «Posponer».
+
+- 2026-10-05: **`/code-review` de la branch: 15 hallazgos.** Qué se hizo con cada uno:
+  - Arreglados (encargo A, `fechas.ts`, `contratos.ts`, migración): la migración de renovación dejaba un contrato terminado antes de plazo con salida futura (contaba como vigente) → ahora la salida es `LEAST(término, día de la última edición)`; checksum actualizado en `_prisma_migrations` del espacio. `whereVigenteEn`/`whereCubreMes` no decían lo mismo que `estadoContrato` cuando hay salida después del término → una sola definición (la salida manda). `sumarMeses` con regla de fin de mes (31-08 → 28-02 → 31-08) y `terminoRenovado` calculado desde `fechaTermino`. `diasHasta` en `fechas.ts`. ADR 0007 al día.
+  - Arreglados (encargo B, `ciclo-actions.ts`, `renovar-button.tsx`, `contratos/actions.ts`): las acciones del ciclo ya no tiran (la página caía en «Application error»), devuelven el error al diálogo; `ultimoReajuste` puede ser futura (Reajustar guarda la fecha efectiva); Reajustar exige contrato vigente y fecha ≥ inicio.
+  - En curso (encargo C): saldo en UF con decimales de más (`5.300000000000001` bloqueaba el formulario) y `src/lib/cobros.ts` con `saldoCobro`/`esParcial` (regla de tres); `registerPayment` con bloqueo de fila; «Revertir a pendiente» conserva las notas; «Arrendada sin contrato» no se duplica con «Contrato vencido»; `diasHasta` compartida; tarjeta de situación sin ramas muertas y con los mismos umbrales que la agenda.
+  - Anotados: abonos que cruzan de mes se cuentan dos veces en el ingreso (ADR 0006 + `PENDIENTES.md`); la agenda se calcula entera en cada página (`PENDIENTES.md`).
+  - Sin cambio: `TAREA.md` (se borra al final, como manda la regla 10); los valores de `AlertType` que se agregan y después se borran en migraciones posteriores (no se aplicaron en producción, pero `migrate deploy` las corre todas de una vez y cada una se probó con datos; juntarlas obligaría a volver a probar el traspaso).
+  - **Qué probar en el navegador** al terminar C: un pago parcial en UF propone el saldo con 2 decimales y deja enviar; Renovar un contrato (que muestre el término nuevo); Reajustar con fecha futura y después Editar el contrato sin error; Revertir un cobro parcial conserva las notas; Pendientes sin el doble aviso; ficha de una arrendada con el color del término.
 
 ## Plan aprobado (2026-10-04)
 

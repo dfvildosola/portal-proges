@@ -9,17 +9,12 @@ import { adjustmentTypeLabels, movementCategoryLabels } from "@/lib/domain";
 import { formatDate, formatMoney, formatPeriodo } from "@/lib/format";
 import type { Costo, EstadoPago, PuntoDePago } from "@/lib/property-metrics";
 import { fechaLimiteAviso, terminoVigente } from "@/lib/contratos";
+import { diasHasta } from "@/lib/fechas";
+import {
+  AVISO_NO_RENOVACION_DIAS,
+  CONTRATO_POR_VENCER_DIAS,
+} from "@/lib/agenda";
 import type { LeaseContractRow } from "./lease-tab";
-
-const MS_DIA = 24 * 60 * 60 * 1000;
-
-// Días corridos de `now` a `fecha`, comparando medianoches UTC (las fechas del
-// dominio se guardan a medianoche UTC). Negativo si la fecha ya pasó.
-function diasHasta(fecha: Date, now: Date): number {
-  const dia = (f: Date) =>
-    Date.UTC(f.getUTCFullYear(), f.getUTCMonth(), f.getUTCDate());
-  return Math.round((dia(fecha) - dia(now)) / MS_DIA);
-}
 
 function plural(n: number, uno: string, varios: string): string {
   return `${n} ${n === 1 ? uno : varios}`;
@@ -104,7 +99,8 @@ function Arrendada({
       </>
     );
   }
-  // Se va (hay fechaSalida), se renueva sola, o termina en la fecha guardada.
+  // El contrato que llega siempre está vigente (VIGENTE o TERMINA): su término
+  // no ha pasado, así que `dias` nunca es negativo.
   const fin = terminoVigente(contrato, now);
   const dias = diasHasta(fin, now);
   const seVa = contrato.fechaSalida !== null;
@@ -112,24 +108,21 @@ function Arrendada({
   const fecha = formatDate(fin);
   let termino: string;
   if (seVa) {
-    termino =
-      dias > 0
-        ? `Se va en ${plural(dias, "día", "días")} (${fecha})`
-        : dias === 0
-          ? "Se va hoy"
-          : `Se fue hace ${plural(-dias, "día", "días")} (${fecha})`;
+    termino = dias > 0 ? `Se va en ${plural(dias, "día", "días")} (${fecha})` : "Se va hoy";
   } else if (seRenueva) {
     termino = `Se renueva el ${fecha}`;
   } else {
-    termino =
-      dias > 0
-        ? `En ${plural(dias, "día", "días")} (${fecha})`
-        : dias === 0
-          ? `Hoy (${fecha})`
-          : `Venció hace ${plural(-dias, "día", "días")} (${fecha})`;
+    termino = dias > 0 ? `En ${plural(dias, "día", "días")} (${fecha})` : `Hoy (${fecha})`;
   }
-  // Una renovación automática no es un problema: solo avisa si ya venció sin renovar.
-  const advertir = seRenueva ? false : dias <= 60;
+  // Se pinta de aviso justo cuando la agenda tiene un aviso para este contrato
+  // (src/lib/agenda.ts): renovación automática → aviso de no renovación;
+  // sin renovación ni salida → contrato por vencer. Con salida fijada, 60 días.
+  const diasAviso = diasHasta(fechaLimiteAviso(contrato, now), now);
+  const advertir = seVa
+    ? dias <= 60
+    : seRenueva
+      ? diasAviso >= 0 && diasAviso <= AVISO_NO_RENOVACION_DIAS
+      : dias <= CONTRATO_POR_VENCER_DIAS;
   const reajuste =
     contrato.aplicaReajuste && contrato.reajusteTipo !== "NINGUNO"
       ? `${adjustmentTypeLabels[contrato.reajusteTipo]}${

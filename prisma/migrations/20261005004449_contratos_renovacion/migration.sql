@@ -8,7 +8,8 @@ ALTER TABLE "LeaseContract"
   ADD COLUMN "ultimoReajuste" TIMESTAMP(3);
 
 -- 2) Traspaso de datos desde el estado guardado.
-UPDATE "LeaseContract" SET "fechaSalida" = "fechaTermino" WHERE "estado" IN ('TERMINADO', 'RENOVADO');
+-- Un TERMINADO antes de plazo tiene término futuro: la salida es la última edición (cuando se marcó), nunca después del término.
+UPDATE "LeaseContract" SET "fechaSalida" = LEAST("fechaTermino", date_trunc('day', "updatedAt")) WHERE "estado" IN ('TERMINADO', 'RENOVADO');
 UPDATE "LeaseContract" SET "renovacionAutomatica" = false WHERE "estado" = 'VENCIDO';
 UPDATE "LeaseContract"
   SET "plazoMeses" = GREATEST(1, ROUND(("fechaTermino"::date - "fechaInicio"::date) / 30.4375)::int);

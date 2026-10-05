@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Pencil, Building2, User } from "lucide-react";
 import { db } from "@/lib/db";
 import { hoyChile } from "@/lib/fechas";
+import { esParcial } from "@/lib/cobros";
 import {
   estadoContrato,
   fechaLimiteAviso,
@@ -225,10 +226,7 @@ export default async function ContratoDetallePage({
                           <Badge variant={chargeStatusVariant(r.estado)}>
                             {chargeStatusLabels[r.estado]}
                           </Badge>
-                          {r.estado !== "PAGADO" &&
-                            Number(r.montoPagado ?? 0) > 0 && (
-                              <Badge variant="warning">Parcial</Badge>
-                            )}
+                          {esParcial(r) && <Badge variant="warning">Parcial</Badge>}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">

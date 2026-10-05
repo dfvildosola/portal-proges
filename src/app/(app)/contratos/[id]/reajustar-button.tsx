@@ -14,7 +14,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { formatMoney } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
+import { mesActual } from "@/lib/fechas";
 import { montoReajustado } from "@/lib/contratos";
 import { reajustarContrato, type CicloFormState } from "../ciclo-actions";
 
@@ -43,6 +44,11 @@ export function ReajustarButton({
   const pct = Number(porcentaje.replace(",", "."));
   const valido = porcentaje.trim() !== "" && Number.isFinite(pct) && pct > 0 && pct <= 100;
   const err = (f: string) => state.fieldErrors?.[f];
+  const mesSugerido = fechaSugerida.slice(0, 7);
+  const avisoFuturo =
+    mesSugerido > mesActual()
+      ? `Se puede aplicar desde el ${formatDate(new Date(`${mesSugerido}-01T00:00:00.000Z`))}: antes, los cobros que aún no se generan saldrían con el monto nuevo.`
+      : null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -94,6 +100,9 @@ export function ReajustarButton({
               ? `${formatMoney(monto, moneda)} → ${formatMoney(montoReajustado(monto, pct, moneda), moneda)}`
               : "Ingresa el porcentaje para ver el monto nuevo."}
           </p>
+          {avisoFuturo && (
+            <p className="text-sm text-muted-foreground">{avisoFuturo}</p>
+          )}
           {state.error && <p className="text-sm text-destructive">{state.error}</p>}
           <DialogFooter>
             <Button type="submit" disabled={pending}>

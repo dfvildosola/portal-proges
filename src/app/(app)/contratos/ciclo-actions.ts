@@ -4,9 +4,11 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
-import { hoyChile } from "@/lib/fechas";
+import { hoyChile, mesActual } from "@/lib/fechas";
+import { formatDate } from "@/lib/format";
 import {
   estadoContrato,
+  estaVigente,
   montoReajustado,
   terminoRenovado,
 } from "@/lib/contratos";
@@ -26,9 +28,13 @@ async function cargarContrato(id: string) {
   const c = await db.leaseContract.findFirst({
     where: { id, organizationId: orgId },
   });
-  if (!c) throw new Error("Contrato no encontrado en esta organización.");
+  if (!c) return null;
   return { c, orgId };
 }
+
+const NO_ENCONTRADO: CicloFormState = {
+  error: "Contrato no encontrado en esta organización.",
+};
 
 function revalidar(id: string, propertyId: string) {
   revalidatePath("/contratos");
@@ -39,19 +45,24 @@ function revalidar(id: string, propertyId: string) {
   revalidatePath("/");
 }
 
-export async function renovarContrato(id: string): Promise<void> {
-  const { c, orgId } = await cargarContrato(id);
+export async function renovarContrato(id: string): Promise<CicloFormState> {
+  const cargado = await cargarContrato(id);
+  if (!cargado) return NO_ENCONTRADO;
+  const { c, orgId } = cargado;
   const hoy = hoyChile();
   const estado = estadoContrato(c, hoy);
   if (c.fechaSalida || estado === "POR_EMPEZAR") {
-    throw new Error("Este contrato no se puede renovar (tiene salida o aún no empieza).");
+    return { error: "Este contrato no se puede renovar (tiene salida o aún no empieza)." };
   }
   const res = await db.leaseContract.updateMany({
     where: { id, organizationId: orgId },
     data: { fechaTermino: terminoRenovado(c, hoy) },
   });
-  if (res.count === 0) throw new Error("No se pudo renovar: el contrato ya no existe.");
+  if (res.count === 0) {
+    return { error: "No se pudo renovar: el contrato ya no existe." };
+  }
   revalidar(id, c.propertyId);
+  return { ok: true };
 }
 
 const terminarSchema = z.object({
@@ -71,7 +82,9 @@ export async function terminarContrato(
   }
   const { fechaSalida } = parsed.data;
 
-  const { c, orgId } = await cargarContrato(id);
+  const cargado = await cargarContrato(id);
+  if (!cargado) return NO_ENCONTRADO;
+  const { c, orgId } = cargado;
   if (c.fechaSalida) {
     return { error: "El contrato ya tiene fecha de salida; corrígela desde Editar." };
   }
@@ -124,12 +137,30 @@ export async function reajustarContrato(
   }
   const { porcentaje, fechaEfectiva } = parsed.data;
 
-  const { c, orgId } = await cargarContrato(id);
+  const cargado = await cargarContrato(id);
+  if (!cargado) return NO_ENCONTRADO;
+  const { c, orgId } = cargado;
   if (!c.aplicaReajuste) {
     return { error: "Este contrato no tiene reajuste." };
   }
-  const nuevo = montoReajustado(Number(c.monto), porcentaje, c.moneda);
+  if (!estaVigente(c, hoyChile())) {
+    return { error: "Solo se puede reajustar un contrato vigente." };
+  }
+  if (fechaEfectiva < c.fechaInicio) {
+    return {
+      fieldErrors: { fechaEfectiva: "La fecha no puede ser anterior al inicio del contrato" },
+    };
+  }
   const mes = fechaEfectiva.toISOString().slice(0, 7);
+  if (mes > mesActual()) {
+    const desde = new Date(`${mes}-01T00:00:00.000Z`);
+    return {
+      fieldErrors: {
+        fechaEfectiva: `Se puede aplicar desde el ${formatDate(desde)}: antes, los cobros que aún no se generan saldrían con el monto nuevo.`,
+      },
+    };
+  }
+  const nuevo = montoReajustado(Number(c.monto), porcentaje, c.moneda);
 
   await db.$transaction([
     db.leaseContract.update({

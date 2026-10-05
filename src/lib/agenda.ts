@@ -6,7 +6,8 @@ import { db } from "./db";
 import { getLatestUf, toCLP } from "./currency";
 import { adjustmentTypeLabels, billTypeLabels, papelLabels } from "./domain";
 import { formatDate, formatMoney, formatPeriodo } from "./format";
-import { hoyChile, sumarDias } from "./fechas";
+import { diasHasta, hoyChile, sumarDias } from "./fechas";
+import { esParcial, saldoCobro } from "./cobros";
 import {
   estaVigente,
   estadoContrato,
@@ -112,20 +113,15 @@ export function resumenAgenda(items: ItemAgenda[]): {
   };
 }
 
-const MS_DIA = 86_400_000;
-
 // Días de anticipación de cada regla (ADR 0008).
-const AVISO_NO_RENOVACION_DIAS = 30;
-const CONTRATO_POR_VENCER_DIAS = 120;
+export const AVISO_NO_RENOVACION_DIAS = 30;
+export const CONTRATO_POR_VENCER_DIAS = 120;
 const REAJUSTE_DIAS = 30;
 const PAPELES_DIAS = 45;
 const CONTRIBUCIONES_DIAS = 30;
 const CUENTAS_DIAS = 7;
 const ARRIENDOS_SEMANA_DIAS = 7;
 const DESOCUPADA_DIAS = 90;
-
-const diasHasta = (f: Date, hoy: Date) =>
-  Math.round((f.getTime() - hoy.getTime()) / MS_DIA);
 
 // Cuándo toca actuar según la fecha: antes de hoy, esta semana, este mes o después.
 function cuandoDe(fecha: Date, hoy: Date): Cuando {
@@ -264,7 +260,12 @@ export async function calcularAgenda(
 
   // Arrendada sin contrato vigente cargado.
   for (const p of propiedades) {
-    if (p.estado === "ARRENDADA" && !p.contracts.some((c) => estaVigente(c, hoy))) {
+    // Si su contrato ya venció, lo cubre «Contrato vencido»: no se pide cargar otro.
+    if (
+      p.estado === "ARRENDADA" &&
+      !p.contracts.some((c) => estaVigente(c, hoy)) &&
+      !p.contracts.some((c) => estadoContrato(c, hoy) === "VENCIDO")
+    ) {
       items.push({
         clave: `ARRENDADA_SIN_CONTRATO:${p.id}`,
         tipo: "ARRENDADA_SIN_CONTRATO",
@@ -364,9 +365,8 @@ export async function calcularAgenda(
   for (const ch of cobrosAtrasados) {
     atrasados.add(ch.id);
     const esperado = Number(ch.montoEsperado);
-    const pagado = Number(ch.montoPagado ?? 0);
-    const saldo = Math.max(0, esperado - pagado);
-    const parcial = pagado > 0;
+    const saldo = saldoCobro(ch);
+    const parcial = esParcial(ch);
     items.push({
       clave: `ARRIENDO_ATRASADO:${ch.id}`,
       tipo: "ARRIENDO_ATRASADO",
@@ -389,7 +389,7 @@ export async function calcularAgenda(
     let total = 0;
     let sinUf = false;
     for (const ch of semana) {
-      const saldo = Math.max(0, Number(ch.montoEsperado) - Number(ch.montoPagado ?? 0));
+      const saldo = saldoCobro(ch);
       const clp = toCLP(saldo, ch.moneda, uf);
       if (clp === null) sinUf = true;
       else total += clp;

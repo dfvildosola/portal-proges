@@ -11,6 +11,7 @@ import {
   enumOptions,
 } from "@/lib/domain";
 import { formatMoney, formatDate } from "@/lib/format";
+import { esParcial } from "@/lib/cobros";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,10 +106,7 @@ const columns: ColumnDef<ChargeRow>[] = [
         <Badge variant={chargeStatusVariant(row.original.estado)}>
           {chargeStatusLabels[row.original.estado]}
         </Badge>
-        {row.original.estado !== "PAGADO" &&
-          (row.original.montoPagado ?? 0) > 0 && (
-            <Badge variant="warning">Parcial</Badge>
-          )}
+        {esParcial(row.original) && <Badge variant="warning">Parcial</Badge>}
       </div>
     ),
     filterFn: inArray,

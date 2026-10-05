@@ -63,7 +63,8 @@ const contractSchema = z
       ),
     garantia: moneyField,
     fechaSalida: optionalDateField(),
-    ultimoReajuste: optionalDateField({ noFutura: true }),
+    // Puede ser futura: «Reajustar» guarda la fecha efectiva, que suele ser la del próximo reajuste.
+    ultimoReajuste: optionalDateField(),
     diaPago: z
       .string()
       .trim()

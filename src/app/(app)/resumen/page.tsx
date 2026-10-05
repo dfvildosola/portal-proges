@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { hoyChile } from "@/lib/fechas";
 import { whereVigenteEn } from "@/lib/contratos";
+import { saldoCobro } from "@/lib/cobros";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import { getLatestUf, toCLP } from "@/lib/currency";
@@ -299,8 +300,7 @@ export default async function ResumenPage({
     if (frac === undefined) continue;
     if (ch.estado === "ATRASADO") {
       atrasadoCount++;
-      const saldo = Number(ch.montoEsperado) - Number(ch.montoPagado ?? 0);
-      const clp = toCLP(Math.max(saldo, 0), ch.moneda, uf);
+      const clp = toCLP(saldoCobro(ch), ch.moneda, uf);
       if (clp !== null) atrasadoMonto += clp * frac;
     }
     if (

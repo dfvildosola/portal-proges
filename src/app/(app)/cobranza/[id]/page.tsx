@@ -20,6 +20,7 @@ import {
   toDateInputValue,
 } from "@/lib/format";
 import { hoyChile } from "@/lib/fechas";
+import { esParcial, saldoCobro } from "@/lib/cobros";
 import { updateChargeStatus } from "../actions";
 import { DeleteChargeButton } from "./delete-charge-button";
 import { PayForm } from "./pay-form";
@@ -65,10 +66,8 @@ export default async function CobroDetallePage({
 
   const c = charge.contract;
   const isPaid = charge.estado === "PAGADO";
-  const esperado = Number(charge.montoEsperado);
-  const pagado = charge.montoPagado !== null ? Number(charge.montoPagado) : 0;
-  const isPartial = !isPaid && pagado > 0;
-  const saldo = Math.max(esperado - pagado, 0);
+  const isPartial = esParcial(charge);
+  const saldo = saldoCobro(charge);
 
   return (
     <>
@@ -136,7 +135,7 @@ export default async function CobroDetallePage({
               {isPartial && (
                 <DataItem
                   label="Pagado hasta ahora"
-                  value={`Pagado ${formatMoney(pagado, charge.moneda)} de ${formatMoney(esperado, charge.moneda)} · falta ${formatMoney(saldo, charge.moneda)}`}
+                  value={`Pagado ${formatMoney(charge.montoPagado, charge.moneda)} de ${formatMoney(charge.montoEsperado, charge.moneda)} · falta ${formatMoney(saldo, charge.moneda)}`}
                 />
               )}
               {(isPaid || isPartial) && charge.fechaPago && (
@@ -173,7 +172,9 @@ export default async function CobroDetallePage({
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {/* key: se vuelve a armar cuando cambia el saldo (p. ej. tras «Revertir»), para que proponga el monto nuevo. */}
               <PayForm
+                key={saldo}
                 chargeId={charge.id}
                 defaultAmount={String(saldo)}
                 defaultDate={toDateInputValue(hoyChile())}

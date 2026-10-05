@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import { vencimientoDelMes } from "@/lib/fechas";
+import { saldoCobro } from "@/lib/cobros";
 import { whereCubreMes } from "@/lib/contratos";
 import { ChargeStatus } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
@@ -90,41 +91,51 @@ export async function registerPayment(
   }
 
   const orgId = await getOrgId();
-  const charge = await db.rentCharge.findFirst({
-    where: { id: chargeId, organizationId: orgId },
-    select: {
-      estado: true,
-      montoEsperado: true,
-      montoPagado: true,
-      notas: true,
-    },
-  });
-  if (!charge) return { error: "Cobro no encontrado." };
-  if (charge.estado === ChargeStatus.PAGADO) {
-    return { error: "Este cobro ya está pagado." };
-  }
-
-  // Cada pago se suma a lo ya pagado (ADR 0006). Decimal, no Number: la UF tiene decimales.
-  const totalPagado = (charge.montoPagado ?? new Prisma.Decimal(0)).plus(
-    new Prisma.Decimal(parsed.data.montoPagado),
-  );
-  const cubierto = totalPagado.gte(charge.montoEsperado);
   const { notas } = parsed.data;
 
-  await db.rentCharge.update({
-    where: { id: chargeId },
-    data: {
-      estado: cubierto ? ChargeStatus.PAGADO : charge.estado,
-      fechaPago: parsed.data.fechaPago,
-      montoPagado: totalPagado,
-      ...(parsed.data.interesMora !== null && {
-        interesMora: parsed.data.interesMora,
-      }),
-      ...(notas !== null && {
-        notas: charge.notas ? `${charge.notas} · ${notas}` : notas,
-      }),
-    },
+  // Dos abonos a la vez (o un reintento) no se pueden pisar: la transacción
+  // bloquea la fila del cobro hasta terminar, y el segundo lee el total ya sumado.
+  const resultado = await db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "RentCharge" WHERE id = ${chargeId} AND "organizationId" = ${orgId} FOR UPDATE`;
+    const charge = await tx.rentCharge.findFirst({
+      where: { id: chargeId, organizationId: orgId },
+      select: {
+        estado: true,
+        moneda: true,
+        montoEsperado: true,
+        montoPagado: true,
+        notas: true,
+      },
+    });
+    if (!charge) return { error: "Cobro no encontrado." };
+    if (charge.estado === ChargeStatus.PAGADO) {
+      return { error: "Este cobro ya está pagado." };
+    }
+
+    // Cada pago se suma a lo ya pagado (ADR 0006). Decimal, no Number: la UF tiene decimales.
+    const totalPagado = (charge.montoPagado ?? new Prisma.Decimal(0)).plus(
+      new Prisma.Decimal(parsed.data.montoPagado),
+    );
+    const cubierto =
+      saldoCobro({ ...charge, montoPagado: totalPagado }) === 0;
+
+    await tx.rentCharge.update({
+      where: { id: chargeId },
+      data: {
+        estado: cubierto ? ChargeStatus.PAGADO : charge.estado,
+        fechaPago: parsed.data.fechaPago,
+        montoPagado: totalPagado,
+        ...(parsed.data.interesMora !== null && {
+          interesMora: parsed.data.interesMora,
+        }),
+        ...(notas !== null && {
+          notas: charge.notas ? `${charge.notas} · ${notas}` : notas,
+        }),
+      },
+    });
+    return null;
   });
+  if (resultado) return resultado;
 
   revalidatePath("/cobranza");
   revalidatePath(`/cobranza/${chargeId}`);
@@ -146,7 +157,6 @@ export async function updateChargeStatus(formData: FormData): Promise<void> {
             fechaPago: null,
             montoPagado: null,
             interesMora: null,
-            notas: null,
           }
         : { estado: ChargeStatus.ATRASADO },
   });
