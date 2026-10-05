@@ -27,6 +27,12 @@
 - **Selectores que muestran el valor interno** (`PERSONA`, `GASTO_COMUN`…) en vez de la etiqueta: les falta `items={…Labels}` en el `<Select>`, como ya se hizo en la ficha. Quedan `propiedades/[id]/economic-forms.tsx` y `duenos/forms.tsx`. 2026-10-01.
 - **Contribuciones: «Marcar pagada» no propone la fecha de hoy** (pestaña Finanzas de la ficha), como ya hacen cuentas y cobros. 2026-10-04.
 - **Al terminar un contrato, la propiedad sigue «Arrendada».** «Terminar» guarda la fecha de salida, pero no cambia el estado de la propiedad: la ficha avisa «Arrendada sin contrato» hasta que se cambie a mano. Preguntarle a Diego si «Terminar» debería ofrecer marcarla desocupada (o en venta, o uso propio) en el mismo paso. 2026-10-04.
+- **Pendientes: que cada uno lo organice a su conveniencia.** Pedido de Diego al revisar la página en local (2026-10-05). Tarea mediana: plan y aprobación antes de construir. Hacerla en el original, en una branch nueva, después de mezclar `contratos-cobranza`. Ya decidido:
+  - **Buscador** por texto: propiedad, arrendatario, tipo y descripción. Las secciones sin coincidencias se esconden.
+  - **Ordenar las líneas** por monto (lo de hoy, «la plata primero»), fecha, propiedad o tipo. Un solo criterio para todas las secciones.
+  - **Secciones** (Atrasado, Esta semana, Este mes, Próximos meses) que se pueden **colapsar** (todas parten abiertas) y **reordenar arrastrándolas**, con la librería **dnd-kit**: funciona con mouse, en el celular y con teclado. Diego la aprobó el 2026-10-05 (regla de código 3).
+  - Lo organizado se **recuerda en el navegador** (`localStorage`): cada equipo tiene su orden. No va en la base, porque sin login sería un solo orden compartido por todos.
+  2026-10-05.
 - **Pendientes: «Posponer» un ítem** («recuérdamelo en una semana»). La agenda se calcula al momento y no guarda nada (ADR 0008), así que posponer necesita guardar algo: qué ítem (su `clave`) y hasta cuándo. Hacerlo si en el uso aparecen pendientes que no se pueden resolver todavía y estorban. 2026-10-04.
 
 ## Datos automáticos y fuentes externas
