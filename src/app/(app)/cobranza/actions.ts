@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
+import { vencimientoDelMes } from "@/lib/fechas";
+import { whereCubreMes } from "@/lib/contratos";
 import { ChargeStatus } from "@/generated/prisma/enums";
 
 export type ChargeFormState = {
@@ -54,30 +56,15 @@ function toFieldErrors(error: z.ZodError): Record<string, string> {
   return out;
 }
 
-// La fechaVencimiento se clipa al último día del mes si diaPago > últimoDía.
-function calcVencimiento(year: number, month: number, diaPago: number): Date {
-  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  return new Date(Date.UTC(year, month - 1, Math.min(diaPago, lastDay)));
-}
-
 // Genera un RentCharge por cada contrato VIGENTE que cubra el período dado.
 // Usa upsert para no sobrescribir cobros ya existentes.
 export async function generateMonthCharges(formData: FormData): Promise<void> {
   const mes = String(formData.get("mes") ?? "");
   if (!/^\d{4}-\d{2}$/.test(mes)) return;
 
-  const [year, month] = mes.split("-").map(Number);
-  const periodStart = new Date(Date.UTC(year, month - 1, 1));
-  const periodEnd = new Date(Date.UTC(year, month, 0));
-
   const orgId = await getOrgId();
   const contracts = await db.leaseContract.findMany({
-    where: {
-      organizationId: orgId,
-      estado: "VIGENTE",
-      fechaInicio: { lte: periodEnd },
-      fechaTermino: { gte: periodStart },
-    },
+    where: { organizationId: orgId, ...whereCubreMes(mes) },
     select: { id: true, monto: true, moneda: true, diaPago: true },
   });
 
@@ -90,7 +77,7 @@ export async function generateMonthCharges(formData: FormData): Promise<void> {
         periodo: mes,
         montoEsperado: c.monto,
         moneda: c.moneda,
-        fechaVencimiento: calcVencimiento(year, month, c.diaPago),
+        fechaVencimiento: vencimientoDelMes(mes, c.diaPago),
         estado: ChargeStatus.PENDIENTE,
       },
       update: {},

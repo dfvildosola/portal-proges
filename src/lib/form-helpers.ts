@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { hoyChile } from "@/lib/fechas";
 
 export function toFieldErrors(error: z.ZodError): Record<string, string> {
   const out: Record<string, string> = {};
@@ -94,13 +95,7 @@ export const optionalDateField = ({ noFutura = false } = {}) =>
     .refine(
       (d) => {
         if (!noFutura || d === null) return true;
-        const ahora = new Date();
-        const hoyUTC = Date.UTC(
-          ahora.getUTCFullYear(),
-          ahora.getUTCMonth(),
-          ahora.getUTCDate(),
-        );
-        return d.getTime() <= hoyUTC;
+        return d.getTime() <= hoyChile().getTime();
       },
       { message: "La fecha no puede ser futura" },
     );

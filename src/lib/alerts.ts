@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { AlertType, AlertSeverity } from "@/generated/prisma/enums";
 import { formatDate } from "./format";
+import { hoyChile, sumarDias, sumarMeses } from "./fechas";
 
 type AlertSpec = {
   tipo: AlertType;
@@ -21,11 +22,10 @@ function specKey(
 export async function syncAlerts(
   orgId: string,
 ): Promise<{ created: number; resolved: number }> {
-  const now = new Date();
-  const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-  const in60Days = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
-  const threeMonthsAgo = new Date(now);
-  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+  const now = hoyChile();
+  const in30Days = sumarDias(now, 30);
+  const in60Days = sumarDias(now, 60);
+  const threeMonthsAgo = sumarMeses(now, -3);
 
   const specs: AlertSpec[] = [];
 
@@ -172,7 +172,7 @@ export async function syncAlerts(
   }
 
   // Regla 6b: Cuentas por pagar que vencen en los próximos 7 días (un alert por propiedad)
-  const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const in7Days = sumarDias(now, 7);
   const cuentasPorVencer = await db.propertyBill.findMany({
     where: {
       organizationId: orgId,
@@ -257,7 +257,7 @@ export async function syncAlerts(
     if (!specKeys.has(specKey(alert.tipo, alert.propertyId, alert.contractId))) {
       await db.alert.update({
         where: { id: alert.id },
-        data: { estado: "RESUELTA", resolvedAt: now },
+        data: { estado: "RESUELTA", resolvedAt: new Date() },
       });
       resolved++;
     }

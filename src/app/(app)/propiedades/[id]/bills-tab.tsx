@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { hoyChile } from "@/lib/fechas";
 import type { PropertyBill } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,7 @@ export function BillsTab({
   propertyId: string;
   bills: PropertyBill[];
 }) {
-  const hoy = new Date();
+  const hoy = hoyChile();
   return (
     <Card>
       <CardHeader>

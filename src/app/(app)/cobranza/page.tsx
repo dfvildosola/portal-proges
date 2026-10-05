@@ -6,15 +6,11 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { formatPeriodo } from "@/lib/format";
+import { mesActual } from "@/lib/fechas";
 import { MonthPicker } from "./month-picker";
 import { ChargesTable } from "./charges-table";
 import type { ChargeRow } from "./charges-table";
 import { generateMonthCharges } from "./actions";
-
-function currentMonth(): string {
-  const now = new Date();
-  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-}
 
 function addMonths(mes: string, delta: number): string {
   const [y, m] = mes.split("-").map(Number);
@@ -30,7 +26,7 @@ export default async function CobranzaPage({
   const mes =
     typeof rawMes === "string" && /^\d{4}-\d{2}$/.test(rawMes)
       ? rawMes
-      : currentMonth();
+      : mesActual();
 
   const orgId = await getOrgId();
   const charges = await db.rentCharge.findMany({

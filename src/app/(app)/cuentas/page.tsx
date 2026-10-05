@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { hoyChile } from "@/lib/fechas";
 import { Receipt } from "lucide-react";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
@@ -68,7 +69,7 @@ export default async function CuentasPage({
     orderBy: [{ estado: "asc" }, { fechaVencimiento: "asc" }],
   });
 
-  const hoy = new Date();
+  const hoy = hoyChile();
   const href = (t?: string, e?: string) => {
     const q = new URLSearchParams();
     if (t) q.set("tipo", t);

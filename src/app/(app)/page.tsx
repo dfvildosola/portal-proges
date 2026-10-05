@@ -16,18 +16,13 @@ import {
   alertSeverityVariant,
 } from "@/lib/domain";
 import { formatMoney } from "@/lib/format";
+import { mesActual, rangoDelMes } from "@/lib/fechas";
 
 const SEVERITY_ORDER = { ALTA: 0, MEDIA: 1, INFO: 2 } as const;
 
 export default async function InicioPage() {
   const orgId = await getOrgId();
-  const now = new Date();
-  const startOfMonth = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
-  );
-  const endOfMonth = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59),
-  );
+  const { inicio: startOfMonth, fin: endOfMonth } = rangoDelMes(mesActual());
 
   const [total, arrendadas, alertasActivas, ingresosMes] = await Promise.all([
     db.property.count({ where: { organizationId: orgId } }),

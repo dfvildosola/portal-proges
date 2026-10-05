@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { hoyChile } from "@/lib/fechas";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import { syncAlerts } from "@/lib/alerts";
@@ -87,7 +88,7 @@ export default async function PropiedadDetallePage({
   const entidadesDisponibles = entidades.filter((o) => !yaDueños.has(o.id));
 
   // Cifras. Los cálculos viven en src/lib/property-metrics.ts.
-  const now = new Date();
+  const now = hoyChile();
   const valorComercial =
     p.valorComercial === null
       ? null

@@ -11,6 +11,7 @@ import {
   Home as HomeIcon,
   Tag,
 } from "lucide-react";
+import { hoyChile } from "@/lib/fechas";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
 import { getLatestUf, toCLP } from "@/lib/currency";
@@ -42,7 +43,7 @@ export default async function ResumenPage({
   const selOwnerId = sel?.startsWith("owner:") ? sel.slice(6) : null;
 
   const orgId = await getOrgId();
-  const now = new Date();
+  const now = hoyChile();
   const year = now.getUTCFullYear();
   const yearStart = new Date(Date.UTC(year, 0, 1));
   const yearEnd = new Date(Date.UTC(year, 11, 31, 23, 59, 59));
