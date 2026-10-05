@@ -21,17 +21,36 @@ Desarrollar y mejorar los paneles `/contratos`, `/cobranza` y `/cuentas`: resolv
 4. `/code-review` sobre la branch, hallazgos arreglados o anotados en `PENDIENTES.md`; las líneas resueltas salen de `PENDIENTES.md` en el mismo commit.
 
 ## Paso siguiente
-Etapa 1, pieza 1a (fechas en hora de Chile) → subagente Sonnet con el encargo de la pieza 1a del plan. Después 1b y 1c en paralelo.
+**Etapa 2, pieza 2a** (el modelo nuevo del contrato) → un subagente Sonnet, sin `isolation`, en la carpeta del espacio. Va sola: toca muchos archivos que 2b, 2c y 2d vuelven a tocar. Encargo (además de lo que dice el plan para 2a):
+
+- **Migración** (`npx prisma migrate dev --create-only --name contratos_renovacion`, editar el SQL y `npx prisma migrate deploy` + `npx prisma generate`; nunca resetear la base). Orden del SQL: agregar columnas → traspasar datos → quitar `estado` → borrar el enum `ContractStatus` → agregar a `AlertType` los valores `AVISO_NO_RENOVACION`, `REAJUSTE_PENDIENTE` y `CONTRATO_VENCIDO`.
+  - Columnas nuevas en `LeaseContract`: `renovacionAutomatica Boolean @default(true)`, `diasAviso Int @default(60)`, `plazoMeses Int` (sin default en el schema; la migración lo llena), `fechaSalida DateTime?`, `garantia Decimal? @db.Decimal(14, 2)` (en la moneda del arriendo) y `ultimoReajuste DateTime?`.
+  - Traspaso: TERMINADO y RENOVADO → `fechaSalida = fechaTermino`; VENCIDO → `renovacionAutomatica = false`; `plazoMeses = GREATEST(1, ROUND(días entre inicio y término / 30.4375))`; `reajusteFrecuenciaMeses = 12` donde `aplicaReajuste` y es nulo.
+- **`src/lib/contratos.ts`** (funciones puras, con fechas de `src/lib/fechas.ts`):
+  - `terminoVigente(c, hoy)`: si hay `fechaSalida`, esa; si no se renueva solo, `fechaTermino`; si se renueva solo, avanzar `fechaTermino` de a `plazoMeses` (`sumarMeses`) hasta que sea ≥ hoy.
+  - `fechaLimiteAviso(c, hoy) = terminoVigente − diasAviso` (`sumarDias`).
+  - `estadoContrato(c, hoy)` → `"POR_EMPEZAR" | "VIGENTE" | "TERMINA" | "TERMINADO" | "VENCIDO"`: inicio > hoy → POR_EMPEZAR; salida < hoy → TERMINADO; salida ≥ hoy → TERMINA; no se renueva solo y término < hoy → VENCIDO; si no → VIGENTE. Etiquetas y variante de badge en `domain.ts` (reemplazan `contractStatusLabels` y `contractStatusVariant`).
+  - `proximoReajuste(c)`: si `aplicaReajuste`, `sumarMeses(ultimoReajuste ?? fechaInicio, reajusteFrecuenciaMeses)`; si no, null.
+  - `whereVigenteEn(fecha)`: `fechaInicio ≤ fecha` y (`fechaSalida` nula o ≥ fecha) y (`renovacionAutomatica` o `fechaTermino ≥ fecha`).
+  - `whereCubreMes(mes)`: lo mismo, contra el rango del mes (inicio ≤ fin del mes; salida nula o ≥ inicio del mes; se renueva o término ≥ inicio del mes).
+- **Cambiar cada uso de `estado` del contrato** (lista en el plan). Donde hoy dice «vigente» (`estado: "VIGENTE"` o `c.estado === "VIGENTE"`) va `whereVigenteEn(hoy)` o `estadoContrato(c, hoy)` ∈ {VIGENTE, TERMINA}. En el formulario y en `contratos/actions.ts`, solo **quitar** el selector y el campo `estado` (los campos nuevos y las acciones son de 2b); de paso, `contratos/actions.ts` usa `dateField` y `enumField` de `form-helpers`. En la tabla de contratos, la columna y el filtro usan el estado calculado. En el seed, los contratos TERMINADO van con `fechaSalida`.
+- **ADR `docs/decisiones/0007-contratos-renovacion.md`** con las decisiones B y C del plan, escrito para Diego, con la analogía del evento repetido del calendario.
+- **Para darlo por hecho:** la migración quedó aplicada en `proges_dev_contratos_cobranza` y sigue habiendo **69 contratos** (56 vigentes y 13 terminados antes); los 13 tienen `fechaSalida`; `grep -rn "ContractStatus\|estado: \"VIGENTE\"" src prisma` no encuentra contratos; pasan `npx tsc --noEmit`, `npm run lint` y `npm run build`; las rentas siguen iguales en `/resumen` (renta anual) y en la ficha (renta mensual).
+
+Después de 2a: recargar los datos de ejemplo (`npm run db:seed` contra la base del espacio) y lanzar 2b, 2c y 2d en paralelo, que no comparten archivos. **Los subagentes en paralelo no corren `npm run build`** (comparten la carpeta `.next`): solo `npx tsc --noEmit` y `npm run lint`; el build lo corre el coordinador al final.
 
 ## Etapas
-⏳ Etapa 1 — La plata que se escapa (1a → 1b ∥ 1c)
-◻️ Etapa 2 — Contratos que se renuevan solos (2a → 2b ∥ 2c ∥ 2d)
+✅ Etapa 1 — La plata que se escapa (1a → 1b ∥ 1c). Commits `b01bc74` y siguiente.
+⏳ Etapa 2 — Contratos que se renuevan solos (2a → 2b ∥ 2c ∥ 2d)
 ◻️ Etapa 3 — Pendientes: anticiparse (3a → 3b ∥ 3c)
 
 ## Bitácora
 - 2026-10-04: espacio abierto; Diego confirmó que los pendientes entran en la tarea.
 - 2026-10-04: conversación de revisión (mirada de inversionista con objetivos distintos). Ver «Lo conversado».
 - 2026-10-04: Diego aprobó el plan (abajo). Renovación por el mismo plazo del contrato original.
+- 2026-10-04: **etapa 1 cerrada.** Lo hecho: `src/lib/fechas.ts` (`hoyChile` y compañía) y `src/lib/contratos.ts` (`whereCubreMes`); pagos parciales que se suman (ADR 0006); Inicio y `/resumen` cuentan lo cobrado en UF (convertido con la última UF) y los parciales; aviso `COBROS_SIN_GENERAR` (migración `20261005002925`); cuentas: `revalidatePath` con la propiedad de la cuenta y fecha de hoy al marcar pagada; `toFieldErrors` y `dateField` desde `form-helpers`. Probado en el navegador a las ~21:30 de Chile: pago parcial 40.000 + 15.000 sobre 55.000 (Parcial → Pagado); Inicio = 443.090 (55.000 + 9,85 UF × 39.400); aviso de cobros sin generar aparece y se va al generar; la luz que vence hoy figura «Pendiente», no «Vencida». Datos de prueba restaurados.
+  - Aprendido: en Chrome, el clic por `ref` a veces no llega al botón de enviar; hacer clic por coordenadas después de una captura. Un script suelto de `npx tsx` no lee el `.env`: agregar `import "dotenv/config"`.
+  - Visto y no tocado (se va con la etapa 3): `/pendientes` tira en consola el error de botón dentro de botón (ya en pendientes); la fecha de creación de las alertas sale en UTC (una alerta creada de noche aparece con fecha de mañana).
 
 ## Plan aprobado (2026-10-04)
 

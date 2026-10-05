@@ -1,7 +1,8 @@
 import { db } from "./db";
 import { AlertType, AlertSeverity } from "@/generated/prisma/enums";
-import { formatDate } from "./format";
-import { hoyChile, sumarDias, sumarMeses } from "./fechas";
+import { formatDate, formatPeriodo } from "./format";
+import { hoyChile, mesActual, sumarDias, sumarMeses } from "./fechas";
+import { whereCubreMes } from "./contratos";
 
 type AlertSpec = {
   tipo: AlertType;
@@ -190,6 +191,24 @@ export async function syncAlerts(
       severidad: AlertSeverity.MEDIA,
       mensaje: `${count} cuenta${count === 1 ? "" : "s"} por vencer en los próximos 7 días.`,
       propertyId,
+    });
+  }
+
+  // Regla 7: Contratos que deben tener cobro este mes y aún no lo tienen
+  // (nadie apretó «Generar cobros del mes»). Una sola alerta para toda la cartera.
+  const mes = mesActual();
+  const sinCobro = await db.leaseContract.count({
+    where: {
+      ...whereCubreMes(mes),
+      organizationId: orgId,
+      charges: { none: { periodo: mes } },
+    },
+  });
+  if (sinCobro > 0) {
+    specs.push({
+      tipo: AlertType.COBROS_SIN_GENERAR,
+      severidad: AlertSeverity.ALTA,
+      mensaje: `${formatPeriodo(mes)}: ${sinCobro} contrato${sinCobro === 1 ? "" : "s"} sin cobro generado. Genéralos en Cobranza.`,
     });
   }
 

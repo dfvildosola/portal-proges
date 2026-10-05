@@ -90,7 +90,6 @@ export async function addBill(
 
 export async function markBillPaid(formData: FormData): Promise<void> {
   const billId = String(formData.get("billId") ?? "");
-  const propertyId = String(formData.get("propertyId") ?? "");
   const fechaPagoStr = String(formData.get("fechaPago") ?? "");
   if (!billId || !fechaPagoStr) return;
 
@@ -98,23 +97,32 @@ export async function markBillPaid(formData: FormData): Promise<void> {
   if (Number.isNaN(fechaPago.getTime())) return;
 
   const orgId = await getOrgId();
+  const bill = await db.propertyBill.findFirst({
+    where: { id: billId, organizationId: orgId },
+    select: { propertyId: true },
+  });
+  if (!bill) return;
   await db.propertyBill.updateMany({
     where: { id: billId, organizationId: orgId, estado: BillStatus.PENDIENTE },
     data: { estado: BillStatus.PAGADA, fechaPago },
   });
-  revalidatePath(`/propiedades/${propertyId}`);
+  revalidatePath(`/propiedades/${bill.propertyId}`);
   revalidatePath("/cuentas");
 }
 
 export async function removeBill(formData: FormData): Promise<void> {
   const billId = String(formData.get("billId") ?? "");
-  const propertyId = String(formData.get("propertyId") ?? "");
   if (!billId) return;
 
   const orgId = await getOrgId();
+  const bill = await db.propertyBill.findFirst({
+    where: { id: billId, organizationId: orgId },
+    select: { propertyId: true },
+  });
+  if (!bill) return;
   await db.propertyBill.deleteMany({
     where: { id: billId, organizationId: orgId },
   });
-  revalidatePath(`/propiedades/${propertyId}`);
+  revalidatePath(`/propiedades/${bill.propertyId}`);
   revalidatePath("/cuentas");
 }

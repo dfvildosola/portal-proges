@@ -17,6 +17,7 @@ import {
 } from "@/lib/domain";
 import { formatMoney } from "@/lib/format";
 import { mesActual, rangoDelMes } from "@/lib/fechas";
+import { getLatestUf, toCLP } from "@/lib/currency";
 
 const SEVERITY_ORDER = { ALTA: 0, MEDIA: 1, INFO: 2 } as const;
 
@@ -24,20 +25,39 @@ export default async function InicioPage() {
   const orgId = await getOrgId();
   const { inicio: startOfMonth, fin: endOfMonth } = rangoDelMes(mesActual());
 
-  const [total, arrendadas, alertasActivas, ingresosMes] = await Promise.all([
+  const [total, arrendadas, alertasActivas, cobrosMes, uf] = await Promise.all([
     db.property.count({ where: { organizationId: orgId } }),
     db.property.count({ where: { organizationId: orgId, estado: "ARRENDADA" } }),
     db.alert.count({ where: { organizationId: orgId, estado: "ACTIVA" } }),
-    db.rentCharge.aggregate({
+    // Cualquier cobro con pago dentro del mes, también los parciales.
+    db.rentCharge.findMany({
       where: {
         organizationId: orgId,
-        estado: "PAGADO",
-        moneda: "CLP",
+        montoPagado: { not: null },
         fechaPago: { gte: startOfMonth, lte: endOfMonth },
       },
-      _sum: { montoPagado: true },
+      select: { montoPagado: true, moneda: true },
     }),
+    getLatestUf(),
   ]);
+
+  // Lo cobrado en UF se convierte con la última UF registrada (ADR 0006).
+  let ingresoMes = 0;
+  let pagosUf = 0;
+  let pagosUfSinConvertir = 0;
+  for (const c of cobrosMes) {
+    if (c.moneda === "UF") {
+      pagosUf++;
+      if (uf === null) pagosUfSinConvertir++;
+    }
+    ingresoMes += toCLP(c.montoPagado, c.moneda, uf) ?? 0;
+  }
+  const subIngreso =
+    pagosUfSinConvertir > 0
+      ? `${pagosUfSinConvertir} ${pagosUfSinConvertir === 1 ? "pago en UF sin convertir" : "pagos en UF sin convertir"}: falta el valor UF`
+      : pagosUf > 0 && uf !== null
+        ? `arriendos cobrados · UF a $${formatMoney(Math.round(uf))}`
+        : "arriendos cobrados";
 
   const pct = total > 0 ? Math.round((arrendadas / total) * 100) : 0;
 
@@ -51,8 +71,8 @@ export default async function InicioPage() {
     },
     {
       label: "Ingreso del mes",
-      value: formatMoney(ingresosMes._sum.montoPagado),
-      sub: "arriendos CLP cobrados",
+      value: formatMoney(ingresoMes),
+      sub: subIngreso,
       icon: Wallet,
     },
     {

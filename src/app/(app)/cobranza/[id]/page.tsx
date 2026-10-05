@@ -13,7 +13,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { chargeStatusLabels, chargeStatusVariant } from "@/lib/domain";
-import { formatMoney, formatDate, formatPeriodo } from "@/lib/format";
+import {
+  formatMoney,
+  formatDate,
+  formatPeriodo,
+  toDateInputValue,
+} from "@/lib/format";
+import { hoyChile } from "@/lib/fechas";
 import { updateChargeStatus } from "../actions";
 import { DeleteChargeButton } from "./delete-charge-button";
 import { PayForm } from "./pay-form";
@@ -59,6 +65,10 @@ export default async function CobroDetallePage({
 
   const c = charge.contract;
   const isPaid = charge.estado === "PAGADO";
+  const esperado = Number(charge.montoEsperado);
+  const pagado = charge.montoPagado !== null ? Number(charge.montoPagado) : 0;
+  const isPartial = !isPaid && pagado > 0;
+  const saldo = Math.max(esperado - pagado, 0);
 
   return (
     <>
@@ -73,6 +83,7 @@ export default async function CobroDetallePage({
             <Badge variant={chargeStatusVariant(charge.estado)}>
               {chargeStatusLabels[charge.estado]}
             </Badge>
+            {isPartial && <Badge variant="warning">Parcial</Badge>}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {c.property.rolSII} · {c.tenant.nombre}
@@ -88,7 +99,7 @@ export default async function CobroDetallePage({
               </Button>
             </form>
           )}
-          {charge.estado !== "PENDIENTE" && (
+          {(charge.estado !== "PENDIENTE" || isPartial) && (
             <form action={updateChargeStatus}>
               <input type="hidden" name="id" value={charge.id} />
               <input type="hidden" name="estado" value="PENDIENTE" />
@@ -122,9 +133,15 @@ export default async function CobroDetallePage({
                 label="Estado"
                 value={chargeStatusLabels[charge.estado]}
               />
-              {isPaid && charge.fechaPago && (
+              {isPartial && (
                 <DataItem
-                  label="Fecha de pago"
+                  label="Pagado hasta ahora"
+                  value={`Pagado ${formatMoney(pagado, charge.moneda)} de ${formatMoney(esperado, charge.moneda)} · falta ${formatMoney(saldo, charge.moneda)}`}
+                />
+              )}
+              {(isPaid || isPartial) && charge.fechaPago && (
+                <DataItem
+                  label={isPartial ? "Fecha del último pago" : "Fecha de pago"}
                   value={formatDate(charge.fechaPago)}
                 />
               )}
@@ -151,12 +168,15 @@ export default async function CobroDetallePage({
         {!isPaid && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Registrar pago</CardTitle>
+              <CardTitle className="text-base">
+                {isPartial ? "Registrar otro pago" : "Registrar pago"}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <PayForm
                 chargeId={charge.id}
-                defaultAmount={String(Number(charge.montoEsperado))}
+                defaultAmount={String(saldo)}
+                defaultDate={toDateInputValue(hoyChile())}
               />
             </CardContent>
           </Card>

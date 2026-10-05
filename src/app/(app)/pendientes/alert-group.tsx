@@ -120,6 +120,14 @@ export function AlertGroup({
                     Ver contrato →
                   </Link>
                 )}
+                {alert.tipo === "COBROS_SIN_GENERAR" && (
+                  <Link
+                    href="/cobranza"
+                    className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                  >
+                    Ir a Cobranza →
+                  </Link>
+                )}
                 <p className="text-xs text-muted-foreground">
                   {formatDate(alert.createdAt)}
                 </p>

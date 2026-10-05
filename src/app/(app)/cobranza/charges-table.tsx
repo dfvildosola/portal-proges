@@ -99,11 +99,17 @@ const columns: ColumnDef<ChargeRow>[] = [
   {
     accessorKey: "estado",
     header: sortHeader("Estado"),
-    size: 110,
+    size: 150,
     cell: ({ row }) => (
-      <Badge variant={chargeStatusVariant(row.original.estado)}>
-        {chargeStatusLabels[row.original.estado]}
-      </Badge>
+      <div className="flex flex-wrap items-center gap-1">
+        <Badge variant={chargeStatusVariant(row.original.estado)}>
+          {chargeStatusLabels[row.original.estado]}
+        </Badge>
+        {row.original.estado !== "PAGADO" &&
+          (row.original.montoPagado ?? 0) > 0 && (
+            <Badge variant="warning">Parcial</Badge>
+          )}
+      </div>
     ),
     filterFn: inArray,
   },

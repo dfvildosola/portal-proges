@@ -8,29 +8,22 @@ import { getOrgId } from "@/lib/org";
 import { vencimientoDelMes } from "@/lib/fechas";
 import { whereCubreMes } from "@/lib/contratos";
 import { ChargeStatus } from "@/generated/prisma/enums";
+import { Prisma } from "@/generated/prisma/client";
+import { dateField, toFieldErrors } from "@/lib/form-helpers";
 
 export type ChargeFormState = {
   error?: string;
   fieldErrors?: Record<string, string>;
 };
 
-const dateField = z
-  .string()
-  .trim()
-  .min(1, "La fecha es obligatoria")
-  .refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)), {
-    message: "Fecha inválida",
-  })
-  .transform((v) => new Date(`${v}T00:00:00Z`));
-
 const paymentSchema = z.object({
-  fechaPago: dateField,
+  fechaPago: dateField(),
   montoPagado: z
     .string()
     .trim()
     .min(1, "El monto pagado es obligatorio")
-    .refine((v) => !Number.isNaN(Number(v)) && Number(v) >= 0, {
-      message: "Debe ser un número válido",
+    .refine((v) => !Number.isNaN(Number(v)) && Number(v) > 0, {
+      message: "El monto debe ser mayor que cero",
     }),
   interesMora: z
     .string()
@@ -46,15 +39,6 @@ const paymentSchema = z.object({
     .optional()
     .transform((v) => (v === undefined || v === "" ? null : v)),
 });
-
-function toFieldErrors(error: z.ZodError): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? "");
-    if (key && !out[key]) out[key] = issue.message;
-  }
-  return out;
-}
 
 // Genera un RentCharge por cada contrato VIGENTE que cubra el período dado.
 // Usa upsert para no sobrescribir cobros ya existentes.
@@ -106,17 +90,41 @@ export async function registerPayment(
   }
 
   const orgId = await getOrgId();
-  const res = await db.rentCharge.updateMany({
+  const charge = await db.rentCharge.findFirst({
     where: { id: chargeId, organizationId: orgId },
-    data: {
-      estado: ChargeStatus.PAGADO,
-      fechaPago: parsed.data.fechaPago,
-      montoPagado: parsed.data.montoPagado,
-      interesMora: parsed.data.interesMora,
-      notas: parsed.data.notas,
+    select: {
+      estado: true,
+      montoEsperado: true,
+      montoPagado: true,
+      notas: true,
     },
   });
-  if (res.count === 0) return { error: "Cobro no encontrado." };
+  if (!charge) return { error: "Cobro no encontrado." };
+  if (charge.estado === ChargeStatus.PAGADO) {
+    return { error: "Este cobro ya está pagado." };
+  }
+
+  // Cada pago se suma a lo ya pagado (ADR 0006). Decimal, no Number: la UF tiene decimales.
+  const totalPagado = (charge.montoPagado ?? new Prisma.Decimal(0)).plus(
+    new Prisma.Decimal(parsed.data.montoPagado),
+  );
+  const cubierto = totalPagado.gte(charge.montoEsperado);
+  const { notas } = parsed.data;
+
+  await db.rentCharge.update({
+    where: { id: chargeId },
+    data: {
+      estado: cubierto ? ChargeStatus.PAGADO : charge.estado,
+      fechaPago: parsed.data.fechaPago,
+      montoPagado: totalPagado,
+      ...(parsed.data.interesMora !== null && {
+        interesMora: parsed.data.interesMora,
+      }),
+      ...(notas !== null && {
+        notas: charge.notas ? `${charge.notas} · ${notas}` : notas,
+      }),
+    },
+  });
 
   revalidatePath("/cobranza");
   revalidatePath(`/cobranza/${chargeId}`);

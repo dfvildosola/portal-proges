@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
+import { toFieldErrors } from "@/lib/form-helpers";
 import {
   Currency,
   AdjustmentType,
@@ -83,15 +84,6 @@ function parse(formData: FormData) {
     diaPago: formData.get("diaPago"),
     estado: formData.get("estado"),
   });
-}
-
-function toFieldErrors(error: z.ZodError): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? "");
-    if (key && !out[key]) out[key] = issue.message;
-  }
-  return out;
 }
 
 // Construye el objeto de datos para Prisma a partir de lo validado.

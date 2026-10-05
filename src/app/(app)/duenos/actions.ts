@@ -4,21 +4,13 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
+import { toFieldErrors } from "@/lib/form-helpers";
 import { OwnerType } from "@/generated/prisma/enums";
 
 export type DuenosState = {
   error?: string;
   fieldErrors?: Record<string, string>;
 };
-
-function toFieldErrors(error: z.ZodError): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? "");
-    if (key && !out[key]) out[key] = issue.message;
-  }
-  return out;
-}
 
 const grupoSchema = z.object({
   nombre: z.string().trim().min(1, "El nombre es obligatorio"),

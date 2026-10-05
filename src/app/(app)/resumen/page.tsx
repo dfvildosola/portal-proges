@@ -298,11 +298,12 @@ export default async function ResumenPage({
     if (frac === undefined) continue;
     if (ch.estado === "ATRASADO") {
       atrasadoCount++;
-      const clp = toCLP(ch.montoEsperado, ch.moneda, uf);
+      const saldo = Number(ch.montoEsperado) - Number(ch.montoPagado ?? 0);
+      const clp = toCLP(Math.max(saldo, 0), ch.moneda, uf);
       if (clp !== null) atrasadoMonto += clp * frac;
     }
     if (
-      ch.estado === "PAGADO" &&
+      (ch.montoPagado !== null || ch.estado === "PAGADO") &&
       ch.fechaPago &&
       ch.fechaPago >= yearStart &&
       ch.fechaPago <= yearEnd

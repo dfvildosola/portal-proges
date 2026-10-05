@@ -161,6 +161,7 @@ export const alertTypeLabels: Record<AlertType, string> = {
   DESOCUPADA_PROLONGADA: "Desocupada prolongada",
   CUENTA_VENCIDA: "Cuenta vencida",
   CUENTA_POR_VENCER: "Cuenta por vencer",
+  COBROS_SIN_GENERAR: "Cobros sin generar",
 };
 
 export type AlertCategory = "cobranza" | "contribuciones" | "propiedad" | "cuentas";
@@ -174,6 +175,7 @@ export const alertTypeCategory: Record<AlertType, AlertCategory> = {
   DESOCUPADA_PROLONGADA: "propiedad",
   CUENTA_VENCIDA: "cuentas",
   CUENTA_POR_VENCER: "cuentas",
+  COBROS_SIN_GENERAR: "cobranza",
 };
 
 export const alertCategoryLabels: Record<AlertCategory, string> = {
