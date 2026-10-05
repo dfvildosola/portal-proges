@@ -3,7 +3,13 @@ import { notFound } from "next/navigation";
 import { Pencil, Building2, User } from "lucide-react";
 import { db } from "@/lib/db";
 import { hoyChile } from "@/lib/fechas";
-import { estadoContrato } from "@/lib/contratos";
+import {
+  estadoContrato,
+  fechaLimiteAviso,
+  proximoReajuste,
+  terminoRenovado,
+  terminoVigente,
+} from "@/lib/contratos";
 import { getOrgId } from "@/lib/org";
 import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
@@ -15,12 +21,30 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  chargeStatusLabels,
+  chargeStatusVariant,
   estadoContratoLabels,
   estadoContratoVariant,
   adjustmentTypeLabels,
 } from "@/lib/domain";
-import { formatMoney, formatDate } from "@/lib/format";
+import {
+  formatMoney,
+  formatDate,
+  formatPeriodo,
+  toDateInputValue,
+} from "@/lib/format";
 import { DeleteContractButton } from "./delete-button";
+import { RenovarButton } from "./renovar-button";
+import { TerminarButton } from "./terminar-button";
+import { ReajustarButton } from "./reajustar-button";
 
 function DataItem({ label, value }: { label: string; value: string }) {
   return (
@@ -46,10 +70,27 @@ export default async function ContratoDetallePage({
       tenant: {
         select: { id: true, nombre: true, rut: true, email: true, telefono: true },
       },
+      charges: { orderBy: { periodo: "desc" } },
     },
   });
   if (!c) notFound();
   const estado = estadoContrato(c, hoy);
+
+  const vigente = terminoVigente(c, hoy);
+  const proxReajuste = proximoReajuste(c);
+  const enCurso = estado === "VIGENTE" || estado === "TERMINA";
+  const puedeRenovar = !c.fechaSalida && estado !== "POR_EMPEZAR";
+  const puedeTerminar = !c.fechaSalida;
+  const puedeReajustar = c.aplicaReajuste && enCurso;
+  const periodosSinPago = c.charges
+    .filter((r) => r.montoPagado === null && r.estado !== "PAGADO")
+    .map((r) => r.periodo);
+
+  const renovacion = c.fechaSalida
+    ? `${c.fechaSalida < hoy ? "Terminó" : "Termina"} el ${formatDate(c.fechaSalida)}`
+    : c.renovacionAutomatica
+      ? `Se renueva sola cada ${c.plazoMeses} meses · avisar antes del ${formatDate(fechaLimiteAviso(c, hoy))}`
+      : "No se renueva sola";
 
   const reajuste = c.aplicaReajuste
     ? `${adjustmentTypeLabels[c.reajusteTipo]}${
@@ -75,7 +116,7 @@ export default async function ContratoDetallePage({
             {c.property.rolSII} · {c.tenant.nombre}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             nativeButton={false} render={<Link href={`/contratos/${c.id}/editar`} />}
@@ -83,6 +124,29 @@ export default async function ContratoDetallePage({
             <Pencil className="size-4" />
             Editar
           </Button>
+          {puedeRenovar && (
+            <RenovarButton
+              id={c.id}
+              terminoActual={formatDate(vigente)}
+              terminoNuevo={formatDate(terminoRenovado(c, hoy))}
+            />
+          )}
+          {puedeReajustar && (
+            <ReajustarButton
+              id={c.id}
+              monto={Number(c.monto)}
+              moneda={c.moneda}
+              fechaSugerida={toDateInputValue(proxReajuste ?? hoy)}
+            />
+          )}
+          {puedeTerminar && (
+            <TerminarButton
+              id={c.id}
+              fechaInicio={toDateInputValue(c.fechaInicio)}
+              hoy={toDateInputValue(hoy)}
+              periodosSinPago={periodosSinPago}
+            />
+          )}
           <DeleteContractButton id={c.id} />
         </div>
       </div>
@@ -98,10 +162,83 @@ export default async function ContratoDetallePage({
               <DataItem label="Arriendo" value={formatMoney(c.monto, c.moneda)} />
               <DataItem label="Reajuste" value={reajuste} />
               <DataItem label="Inicio" value={formatDate(c.fechaInicio)} />
-              <DataItem label="Término" value={formatDate(c.fechaTermino)} />
+              {vigente.getTime() !== c.fechaTermino.getTime() && (
+                <DataItem
+                  label="Término original"
+                  value={formatDate(c.fechaTermino)}
+                />
+              )}
+              <DataItem label="Término vigente" value={formatDate(vigente)} />
+              <DataItem label="Renovación" value={renovacion} />
+              <DataItem
+                label="Garantía"
+                value={c.garantia ? formatMoney(c.garantia, c.moneda) : "Sin garantía"}
+              />
+              <DataItem
+                label="Próximo reajuste"
+                value={`${proxReajuste ? formatDate(proxReajuste) : "—"}${
+                  c.ultimoReajuste ? ` · último: ${formatDate(c.ultimoReajuste)}` : ""
+                }`}
+              />
               <DataItem label="Día de pago" value={`Día ${c.diaPago} de cada mes`} />
               <DataItem label="Estado" value={estadoContratoLabels[estado]} />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Cobros */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Cobros</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {c.charges.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Este contrato aún no tiene cobros.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Período</TableHead>
+                    <TableHead className="text-right">Esperado</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="text-right">Pagado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {c.charges.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>
+                        <Link
+                          href={`/cobranza/${r.id}`}
+                          className="font-medium hover:underline"
+                        >
+                          {formatPeriodo(r.periodo)}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatMoney(r.montoEsperado, r.moneda)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Badge variant={chargeStatusVariant(r.estado)}>
+                            {chargeStatusLabels[r.estado]}
+                          </Badge>
+                          {r.estado !== "PAGADO" &&
+                            Number(r.montoPagado ?? 0) > 0 && (
+                              <Badge variant="warning">Parcial</Badge>
+                            )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatMoney(r.montoPagado, r.moneda)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 

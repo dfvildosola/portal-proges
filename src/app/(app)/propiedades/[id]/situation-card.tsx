@@ -8,6 +8,7 @@ import {
 import { adjustmentTypeLabels, movementCategoryLabels } from "@/lib/domain";
 import { formatDate, formatMoney, formatPeriodo } from "@/lib/format";
 import type { Costo, EstadoPago, PuntoDePago } from "@/lib/property-metrics";
+import { fechaLimiteAviso, terminoVigente } from "@/lib/contratos";
 import type { LeaseContractRow } from "./lease-tab";
 
 const MS_DIA = 24 * 60 * 60 * 1000;
@@ -103,13 +104,32 @@ function Arrendada({
       </>
     );
   }
-  const dias = diasHasta(contrato.fechaTermino, now);
-  const termino =
-    dias > 0
-      ? `En ${plural(dias, "día", "días")} (${formatDate(contrato.fechaTermino)})`
-      : dias === 0
-        ? `Hoy (${formatDate(contrato.fechaTermino)})`
-        : `Venció hace ${plural(-dias, "día", "días")} (${formatDate(contrato.fechaTermino)})`;
+  // Se va (hay fechaSalida), se renueva sola, o termina en la fecha guardada.
+  const fin = terminoVigente(contrato, now);
+  const dias = diasHasta(fin, now);
+  const seVa = contrato.fechaSalida !== null;
+  const seRenueva = !seVa && contrato.renovacionAutomatica;
+  const fecha = formatDate(fin);
+  let termino: string;
+  if (seVa) {
+    termino =
+      dias > 0
+        ? `Se va en ${plural(dias, "día", "días")} (${fecha})`
+        : dias === 0
+          ? "Se va hoy"
+          : `Se fue hace ${plural(-dias, "día", "días")} (${fecha})`;
+  } else if (seRenueva) {
+    termino = `Se renueva el ${fecha}`;
+  } else {
+    termino =
+      dias > 0
+        ? `En ${plural(dias, "día", "días")} (${fecha})`
+        : dias === 0
+          ? `Hoy (${fecha})`
+          : `Venció hace ${plural(-dias, "día", "días")} (${fecha})`;
+  }
+  // Una renovación automática no es un problema: solo avisa si ya venció sin renovar.
+  const advertir = seRenueva ? false : dias <= 60;
   const reajuste =
     contrato.aplicaReajuste && contrato.reajusteTipo !== "NINGUNO"
       ? `${adjustmentTypeLabels[contrato.reajusteTipo]}${
@@ -124,7 +144,12 @@ function Arrendada({
       <div className="divide-y">
         <Dato label="Arrendatario">{contrato.tenant.nombre}</Dato>
         <Dato label="Término del contrato">
-          <span className={dias <= 60 ? "text-warning" : ""}>{termino}</span>
+          <span className={advertir ? "text-warning" : ""}>{termino}</span>
+          {seRenueva && (
+            <span className="block text-xs font-normal text-muted-foreground">
+              avisar antes del {formatDate(fechaLimiteAviso(contrato, now))}
+            </span>
+          )}
         </Dato>
         <Dato label="Reajuste">{reajuste}</Dato>
       </div>

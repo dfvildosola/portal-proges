@@ -178,20 +178,22 @@ export function rentabilidad({
 // Días sin contrato
 // ---------------------------------------------------------------------------
 
-// Días corridos desde la fechaTermino del contrato que terminó más tarde. null
-// si nunca tuvo contrato o si hay uno VIGENTE. Nunca negativo (un contrato
-// terminado antes de tiempo, con fecha de término futura, cuenta 0).
+// Días corridos desde que terminó el último contrato, y esa fecha (`desde`): su
+// fechaSalida o, si no tiene, su fechaTermino (un contrato que no se renueva solo
+// y venció). null si nunca tuvo un contrato ya empezado o si hay uno VIGENTE.
+// Un contrato que aún no empieza no cuenta: su término está en el futuro.
 export function diasSinContrato(
   contratos: ContratoFechas[],
   now: Date,
-): number | null {
-  if (contratos.length === 0) return null;
+): { dias: number; desde: Date } | null {
   if (contratos.some((c) => estaVigente(c, now))) return null;
+  const empezados = contratos.filter((c) => c.fechaInicio <= now);
+  if (empezados.length === 0) return null;
   const ultimoTermino = Math.max(
-    ...contratos.map((c) => inicioDelDiaUTC(c.fechaSalida ?? c.fechaTermino)),
+    ...empezados.map((c) => inicioDelDiaUTC(c.fechaSalida ?? c.fechaTermino)),
   );
   const dias = Math.floor((inicioDelDiaUTC(now) - ultimoTermino) / MS_DIA);
-  return Math.max(0, dias);
+  return { dias: Math.max(0, dias), desde: new Date(ultimoTermino) };
 }
 
 // ---------------------------------------------------------------------------

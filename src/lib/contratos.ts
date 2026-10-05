@@ -94,3 +94,26 @@ export function whereCubreMes(mes: string): Prisma.LeaseContractWhereInput {
     ],
   };
 }
+
+// Nuevo término al renovar: un plazo más allá del término vigente; si aun así
+// queda antes de hoy (contrato vencido hace mucho), sigue de a plazo (k·plazo
+// desde la base, sin acumular recortes de fin de mes) hasta llegar a hoy.
+export function terminoRenovado(c: ContratoFechas, hoy: Date): Date {
+  const base = terminoVigente(c, hoy);
+  for (let k = 1; ; k++) {
+    const t = sumarMeses(base, k * c.plazoMeses);
+    if (t >= hoy) return t;
+  }
+}
+
+// Monto tras un reajuste: entero en CLP, 2 decimales en UF.
+export function montoReajustado(
+  monto: number,
+  porcentaje: number,
+  moneda: "CLP" | "UF",
+): number {
+  const nuevo = monto * (1 + porcentaje / 100);
+  return moneda === "UF"
+    ? Math.round((nuevo + Number.EPSILON) * 100) / 100
+    : Math.round(nuevo);
+}

@@ -2,7 +2,16 @@ import { db } from "./db";
 import { AlertType, AlertSeverity } from "@/generated/prisma/enums";
 import { formatDate, formatPeriodo } from "./format";
 import { hoyChile, mesActual, sumarDias, sumarMeses } from "./fechas";
-import { whereCubreMes, whereVigenteEn } from "./contratos";
+import {
+  estadoContrato,
+  estaVigente,
+  fechaLimiteAviso,
+  proximoReajuste,
+  terminoVigente,
+  whereCubreMes,
+  whereVigenteEn,
+} from "./contratos";
+import { adjustmentTypeLabels } from "./domain";
 
 type AlertSpec = {
   tipo: AlertType;
@@ -25,7 +34,6 @@ export async function syncAlerts(
 ): Promise<{ created: number; resolved: number }> {
   const now = hoyChile();
   const in30Days = sumarDias(now, 30);
-  const in60Days = sumarDias(now, 60);
   const threeMonthsAgo = sumarMeses(now, -3);
 
   const specs: AlertSpec[] = [];
@@ -47,25 +55,68 @@ export async function syncAlerts(
     }
   }
 
-  // Regla 2: Contrato VIGENTE por vencer (≤60 días)
-  const porVencer = await db.leaseContract.findMany({
+  // Regla 2: Contratos — aviso de no renovación, por vencer, vencido y reajuste.
+  const contratos = await db.leaseContract.findMany({
     where: {
       organizationId: orgId,
-      AND: [whereVigenteEn(now)],
-      fechaTermino: { lte: in60Days, gte: now },
+      OR: [{ fechaSalida: null }, { fechaSalida: { gte: now } }],
     },
   });
-  for (const c of porVencer) {
-    const dias = Math.ceil(
-      (c.fechaTermino.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-    );
-    specs.push({
-      tipo: AlertType.CONTRATO_POR_VENCER,
-      severidad: dias <= 30 ? AlertSeverity.ALTA : AlertSeverity.MEDIA,
-      mensaje: `El contrato vence en ${dias} día${dias === 1 ? "" : "s"} (${formatDate(c.fechaTermino)}).`,
-      propertyId: c.propertyId,
-      contractId: c.id,
-    });
+  const diasHasta = (f: Date) => Math.round((f.getTime() - now.getTime()) / 86_400_000);
+  const enDias = (n: number) => (n === 0 ? "es hoy" : `quedan ${n} día${n === 1 ? "" : "s"}`);
+  for (const c of contratos) {
+    const base = { propertyId: c.propertyId, contractId: c.id };
+    const vigente = estaVigente(c, now);
+
+    if (vigente && c.renovacionAutomatica && !c.fechaSalida) {
+      const limite = fechaLimiteAviso(c, now);
+      const dias = diasHasta(limite);
+      if (dias >= 0 && dias <= 30) {
+        specs.push({
+          ...base,
+          tipo: AlertType.AVISO_NO_RENOVACION,
+          severidad: dias <= 7 ? AlertSeverity.ALTA : AlertSeverity.MEDIA,
+          mensaje: `Se renueva solo el ${formatDate(terminoVigente(c, now))}. Si no se quiere renovar, hay que avisar antes del ${formatDate(limite)} (${enDias(dias)}).`,
+        });
+      }
+    }
+
+    if (!c.renovacionAutomatica && !c.fechaSalida) {
+      const dias = diasHasta(c.fechaTermino);
+      if (dias >= 0 && dias <= 120) {
+        specs.push({
+          ...base,
+          tipo: AlertType.CONTRATO_POR_VENCER,
+          severidad: dias <= 30 ? AlertSeverity.ALTA : AlertSeverity.MEDIA,
+          mensaje: `El contrato vence en ${dias} día${dias === 1 ? "" : "s"} (${formatDate(c.fechaTermino)}) y no se renueva solo.`,
+        });
+      }
+    }
+
+    if (estadoContrato(c, now) === "VENCIDO") {
+      specs.push({
+        ...base,
+        tipo: AlertType.CONTRATO_VENCIDO,
+        severidad: AlertSeverity.ALTA,
+        mensaje: `El contrato venció el ${formatDate(c.fechaTermino)} y no se renueva solo. Renuévalo o termínalo.`,
+      });
+    }
+
+    const reajuste = vigente ? proximoReajuste(c) : null;
+    if (reajuste && reajuste <= in30Days) {
+      const dias = diasHasta(reajuste);
+      const tipo =
+        c.reajusteTipo === "NINGUNO" ? "" : ` ${adjustmentTypeLabels[c.reajusteTipo]}`;
+      specs.push({
+        ...base,
+        tipo: AlertType.REAJUSTE_PENDIENTE,
+        severidad: dias < 0 ? AlertSeverity.ALTA : AlertSeverity.MEDIA,
+        mensaje:
+          dias < 0
+            ? `Reajuste${tipo} pendiente desde el ${formatDate(reajuste)}.`
+            : `Toca reajustar${tipo} el ${formatDate(reajuste)} (${dias === 0 ? "es hoy" : `en ${dias} día${dias === 1 ? "" : "s"}`}).`,
+      });
+    }
   }
 
   // Regla 3: Cobros de arriendo atrasados (un alert por contrato)

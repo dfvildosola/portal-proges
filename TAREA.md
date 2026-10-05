@@ -21,17 +21,21 @@ Desarrollar y mejorar los paneles `/contratos`, `/cobranza` y `/cuentas`: resolv
 4. `/code-review` sobre la branch, hallazgos arreglados o anotados en `PENDIENTES.md`; las líneas resueltas salen de `PENDIENTES.md` en el mismo commit.
 
 ## Paso siguiente
-**Etapa 2: 2b, 2c y 2d corriendo en paralelo** (subagentes Sonnet, sin `isolation`; no corren `npm run build` porque comparten `.next`). Archivos de cada uno:
-- **2b** (acciones del contrato): `contratos/actions.ts`, nuevo `contratos/ciclo-actions.ts`, `contratos/[id]/page.tsx` + componentes nuevos, `contract-form.tsx`, páginas `nuevo` y `editar`; puede agregar funciones puras a `src/lib/contratos.ts`. Extra acordado: al editar un contrato con `fechaSalida`, el formulario muestra «Fecha de salida» para corregirla o borrarla (si no, un término mal ingresado no tendría arreglo).
-- **2c** (avisos): solo `src/lib/alerts.ts` (y, si hace falta, las etiquetas de los 3 avisos nuevos en `domain.ts`).
-- **2d** (ficha): `lease-tab.tsx`, `situation-card.tsx`, `propiedades/[id]/page.tsx`, `property-metrics.ts` (`diasSinContrato` devuelve `{ dias, desde }`).
+**Etapa 3, pieza 3a** (la agenda calculada) → un subagente Sonnet, sin `isolation`, en la carpeta del espacio. Va sola: 3b y 3c dependen de ella. Encargo (además de lo que dice el plan para 3a):
 
-Si la conversación se cortó con los subagentes a medias: revisar `git status` / `git diff --stat` y relanzar solo la pieza que falte, con su lista de archivos. Cuando vuelvan los tres: leer el diff, `npx tsc --noEmit`, `npm run lint`, `npm run build`, y probar en el navegador lo de «Verificación → Etapa 2» del plan. Después, commit, cerrar la etapa aquí y pausar con «Etapa 2 lista. Escribe `/clear` y después `sigue`».
+- **Archivo nuevo `src/lib/agenda.ts`** con `agenda(orgId, hoy)` envuelta en `cache()` de React. Cada ítem lleva: clave estable (tipo + id), tipo, **cuándo** (`ATRASADO` si la fecha ya pasó; `SEMANA` ≤7 días; `MES` ≤30; `TRIMESTRE` ≤90), fecha de la acción, monto en pesos si aplica (UF con `getLatestUf` + `toCLP`), propiedad, contrato, texto y acción (texto + enlace). No toca pantallas: 3b y 3c la consumen.
+- **Pasar todas las reglas de `src/lib/alerts.ts`** a ítems, con el mismo criterio que hoy (las cuatro de contratos de la pieza 2c: aviso de no renovación a 30 días de su fecha límite, por vencer a 120 solo si no se renueva, vencido, reajuste a 30; arriendo atrasado, ahora un ítem por cobro con su monto y saldo si es parcial; contribuciones impagas y a 30 días; cuentas vencidas y a 7 días; cobros sin generar; arrendada sin contrato).
+- **Reglas nuevas:** papeles y pólizas que vencen dentro de 45 días (reutilizar la regla de vigencia de `src/lib/papeles.ts`); «N arriendos vencen esta semana · $X» (cobros sin pagar con vencimiento en los próximos 7 días, sumados).
+- **«Desocupada»** se mide con `diasSinContrato` de `property-metrics.ts` (desde la salida del último contrato, como la ficha), no con `updatedAt`.
+- **ADR `docs/decisiones/0008-pendientes-calculados.md`** (decisión D del plan), escrito para Diego.
+- **Para darlo por hecho:** un script `npx tsx` (con `import "dotenv/config"`, fuera del repo) imprime cuántos ítems hay por sección y por tipo, y cada tipo se contrasta con lo que hoy da `syncAlerts` (abrir `/pendientes` o correr `syncAlerts`, y contar con `psql` los avisos abiertos por tipo); pasan `npx tsc --noEmit` y `npm run lint`.
+
+Después de 3a: lanzar 3b (página Pendientes) y 3c (sacar la tabla `Alert`: `layout.tsx`, Inicio, `attention-strip.tsx`, ficha, schema + migración, `domain.ts`; borrar `alerts.ts`, `pendientes/actions.ts`, `alert-group.tsx`) en paralelo. **Los subagentes en paralelo no corren `npm run build`**. La migración de 3c: nombre con la hora UTC real (`date -u +%Y%m%d%H%M%S`), nunca inventada.
 
 ## Etapas
 ✅ Etapa 1 — La plata que se escapa (1a → 1b ∥ 1c). Commits `b01bc74` y siguiente.
-⏳ Etapa 2 — Contratos que se renuevan solos (2a → 2b ∥ 2c ∥ 2d)
-◻️ Etapa 3 — Pendientes: anticiparse (3a → 3b ∥ 3c)
+✅ Etapa 2 — Contratos que se renuevan solos (2a → 2b ∥ 2c ∥ 2d). Commits `c010ef2` y siguiente.
+⏳ Etapa 3 — Pendientes: anticiparse (3a → 3b ∥ 3c)
 
 ## Bitácora
 - 2026-10-04: espacio abierto; Diego confirmó que los pendientes entran en la tarea.
@@ -44,6 +48,11 @@ Si la conversación se cortó con los subagentes a medias: revisar `git status` 
 - 2026-10-04: **pieza 2a hecha** (commit `c010ef2`). Migración `20261005004449_contratos_renovacion`: 69 contratos antes y después; los 13 terminados con `fechaSalida`; los 56 vigentes suman igual ($19.365.000 + 912,12 UF). `src/lib/contratos.ts` con `terminoVigente`, `fechaLimiteAviso`, `estadoContrato`, `estaVigente`, `proximoReajuste`, `plazoEnMeses`, `whereVigenteEn`, `whereCubreMes`. ADR 0007. Probado en el navegador: `/resumen` (yield 4,6% = $663,6 M ÷ valor), filtro de estados en `/contratos` (13 terminados), ficha de Placer 656 (33,07 UF, «Vigente»), detalle y formulario sin selector de estado.
   - Aprendido: `prisma migrate dev --create-only` se niega sin terminal interactiva cuando la migración bota datos; el SQL se escribe a mano. El subagente le puso una hora inventada (mediodía de mañana); se renombró a la hora UTC real (`date -u +%Y%m%d%H%M%S`) y se corrigió `_prisma_migrations.migration_name`, para que la migración de la etapa 3 quede ordenada después.
   - Aprendido: el seed toma 45 propiedades de `prisma/datos-reales.json` (fuera de git, solo en la carpeta original). Sin ese archivo inventa las 80 y los números cambian. Se copió al espacio (también ignorado por git) antes de recargar.
+
+- 2026-10-04: **etapa 2 cerrada.** 2b: formulario con «Se renueva solo», «Días de aviso», «Se renueva por (meses)», «Garantía», «Último reajuste» (si el monto cargado ya viene reajustado; sin esto, el aviso de reajuste lo marcaría atrasado desde el primer aniversario) y «Fecha de salida» (solo al editar uno que ya la tiene, para corregir un término mal ingresado); selectores con etiqueta; acciones Renovar / Terminar / Reajustar (`contratos/ciclo-actions.ts`, funciones puras `terminoRenovado` y `montoReajustado`); detalle con renovación, término vigente, próximo reajuste e historial de cobros. 2c: cuatro reglas de avisos de contratos (en los datos de ejemplo: 3 avisos de no renovación y 14 reajustes pendientes, calzan con SQL). 2d: pestaña Arriendo y tarjeta de situación con el término vigente o la salida; `diasSinContrato` devuelve `{ dias, desde }` e ignora contratos que aún no empiezan.
+  - Probado en el navegador: contrato nuevo que termina en 75 días → aviso «avisar antes del 19-10-2026 (quedan 15 días)»; Renovar → término 18-12-2027 y el aviso se resuelve. Terminar Av. Ricardo Lyon 4476 con salida 30-09-2026 → el diálogo anuncia 1 cobro, se borra octubre y septiembre (atrasado) queda; desocupada → «Sin contrato hace 4 días · Desde 30-09-2026». Reajustar La Cumbre 427 4% con fecha 01-10-2026 → $540.800 en el contrato y en el cobro de octubre sin pagar, septiembre (pagado) igual, aviso resuelto. Datos restaurados con el seed.
+  - Aprendido: los subagentes pueden dejar procesos colgados (un `prettier` y una espera en bucle); revisar con `ps` al cerrar cada pieza. En `/pendientes` los avisos de severidad media vienen plegados.
+  - Nuevo en `PENDIENTES.md`: al terminar un contrato, la propiedad sigue «Arrendada» (pregunta para Diego).
 
 ## Plan aprobado (2026-10-04)
 

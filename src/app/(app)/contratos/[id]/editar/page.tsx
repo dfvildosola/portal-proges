@@ -46,6 +46,15 @@ export default async function EditarContratoPage({
           fechaInicio: toDateInputValue(c.fechaInicio),
           fechaTermino: toDateInputValue(c.fechaTermino),
           diaPago: c.diaPago.toString(),
+          renovacionAutomatica: c.renovacionAutomatica,
+          diasAviso: c.diasAviso.toString(),
+          plazoMeses: c.plazoMeses.toString(),
+          garantia: c.garantia?.toString(),
+          // Solo si ya tiene salida: el formulario muestra el campo para corregirla.
+          fechaSalida: c.fechaSalida ? toDateInputValue(c.fechaSalida) : undefined,
+          ultimoReajuste: c.ultimoReajuste
+            ? toDateInputValue(c.ultimoReajuste)
+            : undefined,
         }}
         properties={properties.map((p) => ({
           value: p.id,

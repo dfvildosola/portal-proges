@@ -119,25 +119,19 @@ export default async function PropiedadDetallePage({
 
   // Situación: contrato vigente, tira de pagos y, si está libre, desde cuándo y
   // cuánto costó desde entonces.
-  const ultimoTermino =
-    p.contracts.length > 0
-      ? new Date(Math.max(...p.contracts.map((c) => c.fechaTermino.getTime())))
-      : null;
-  const diasLibre = diasSinContrato(p.contracts, now);
-  const libre =
-    diasLibre !== null && ultimoTermino
-      ? {
-          dias: diasLibre,
-          desde: ultimoTermino,
-          costo: costoEnPeriodo({
-            taxes: p.taxes,
-            movements: p.movements,
-            uf,
-            desde: ultimoTermino,
-            hasta: now,
-          }),
-        }
-      : null;
+  const sinContrato = diasSinContrato(p.contracts, now);
+  const libre = sinContrato
+    ? {
+        ...sinContrato,
+        costo: costoEnPeriodo({
+          taxes: p.taxes,
+          movements: p.movements,
+          uf,
+          desde: sinContrato.desde,
+          hasta: now,
+        }),
+      }
+    : null;
 
   return (
     <>
