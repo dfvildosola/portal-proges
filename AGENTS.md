@@ -14,4 +14,8 @@ La base de desarrollo es `proges_dev`, en el Postgres del Mac (el mismo que usa 
 
 # Producción
 
-Subir a `main` publica solo en Vercel. La base de producción es el proyecto de Neon `neon-apricot-pendant` (ADR 0005). **Las migraciones no se aplican solas:** antes de subir un cambio con migración, aplicarla en producción con la dirección *directa* de Neon (Connect, con «Connection pooling» apagado). Diego la deja en un `.env.prod` (ignorado por git), y se corre `DATABASE_URL="<directa>" npx prisma migrate deploy` sin mostrarla. Después se borra el `.env.prod`. En Vercel, `DATABASE_URL` es la dirección *con* pooling.
+Subir a `main` publica solo en Vercel. La base de producción es el proyecto de Neon `neon-apricot-pendant` (ADR 0005). En Vercel, `DATABASE_URL` es la dirección *con* pooling y la usa la app.
+
+**Las migraciones se aplican solas al publicar** (ADR 0009): el build de producción de Vercel corre `scripts/migrar-produccion.mjs` después de `next build`, con `DIRECT_URL`, la dirección *directa* de Neon guardada en Vercel. En local, en los espacios y en las vistas previas ese paso no hace nada. Si falta `DIRECT_URL` o una migración falla, el build se detiene y sigue publicada la versión anterior. Como mezclar y subir ya migra producción, las migraciones se revisan antes de mezclar.
+
+**A mano, solo en emergencias:** Diego deja la dirección directa (Neon → Connect, con «Connection pooling» apagado) en un `.env.prod` (ignorado por git), se corre `DATABASE_URL="<directa>" npx prisma migrate deploy` sin mostrarla y se borra el `.env.prod`.

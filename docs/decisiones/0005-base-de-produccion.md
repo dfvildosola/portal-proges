@@ -36,7 +36,7 @@ Había que elegir dónde vive la base de producción. Las opciones eran Neon, Su
 
 ## Consecuencias
 
-- **Las migraciones no se aplican solas al subir.** El build de Vercel solo corre `prisma generate`. Antes de subir a `main` un cambio con migración, hay que aplicarla en producción con la dirección directa: `DATABASE_URL="<directa>" npx prisma migrate deploy`. El paso está escrito en `AGENTS.md`. Si se sube sin migrar, las páginas que leen columnas nuevas fallan hasta que se migre.
+- **Las migraciones no se aplican solas al subir.** *(Reemplazado por el ADR 0009: desde el 2026-10-05 las aplica el build de producción.)* El build de Vercel solo corre `prisma generate`. Antes de subir a `main` un cambio con migración, hay que aplicarla en producción con la dirección directa: `DATABASE_URL="<directa>" npx prisma migrate deploy`. El paso está escrito en `AGENTS.md`. Si se sube sin migrar, las páginas que leen columnas nuevas fallan hasta que se migre.
 - **Producción parte vacía.** Las propiedades se cargan desde la app.
 - **La base del 1 de junio no se borró ni se tocó.** Si existía con datos, siguen donde estaban, y se puede volver a apuntar a ella.
 - **Para migrar hay que conseguir la dirección directa en Neon:** proyecto `neon-apricot-pendant` → Connect, con «Connection pooling» apagado. Vercel no la entrega.
