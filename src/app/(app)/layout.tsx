@@ -19,7 +19,10 @@ export default async function AppLayout({
       <AppSidebar pendientes={pendientes} />
       <SidebarInset>
         <AppHeader />
-        <div className="min-w-0 flex-1 p-4 md:p-6 lg:p-8">{children}</div>
+        {/* Ancho máximo: en pantallas anchas las líneas no se estiran de borde a borde. */}
+        <div className="mx-auto w-full max-w-7xl min-w-0 flex-1 p-4 md:p-6 lg:p-8">
+          {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );
