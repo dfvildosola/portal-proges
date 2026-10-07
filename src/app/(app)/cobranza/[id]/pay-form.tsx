@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useFormAction } from "@/hooks/use-form-action";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/field";
 import { Button } from "@/components/ui/button";
@@ -16,14 +16,14 @@ export function PayForm({
   defaultAmount: string;
   defaultDate: string;
 }) {
-  const [state, formAction, pending] = useActionState(
+  const [state, formProps, pending] = useFormAction(
     registerPayment,
     {} as ChargeFormState,
   );
   const err = (f: string) => state?.fieldErrors?.[f];
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form {...formProps} className="space-y-4">
       <input type="hidden" name="chargeId" value={chargeId} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Fecha de pago" htmlFor="fechaPago" error={err("fechaPago")}>

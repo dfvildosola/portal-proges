@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useFormAction } from "@/hooks/use-form-action";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/field";
 import { Button } from "@/components/ui/button";
@@ -24,11 +24,11 @@ import type { BillFormState } from "../../cuentas/actions";
 import type { MovementFormState, TaxFormState } from "../finance-actions";
 
 export function AddMovementForm({ propertyId }: { propertyId: string }) {
-  const [state, formAction, pending] = useActionState(addMovement, {} as MovementFormState);
+  const [state, formProps, pending] = useFormAction(addMovement, {} as MovementFormState);
   const err = (f: string) => state?.fieldErrors?.[f];
 
   return (
-    <form action={formAction} className="w-full space-y-3">
+    <form {...formProps} className="w-full space-y-3">
       <input type="hidden" name="propertyId" value={propertyId} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label="Tipo" error={err("tipo")}>
@@ -156,11 +156,11 @@ export function UpdateTaxMontoForm({
 }
 
 export function AddTaxForm({ propertyId }: { propertyId: string }) {
-  const [state, formAction, pending] = useActionState(addTax, {} as TaxFormState);
+  const [state, formProps, pending] = useFormAction(addTax, {} as TaxFormState);
   const err = (f: string) => state?.fieldErrors?.[f];
 
   return (
-    <form action={formAction} className="w-full">
+    <form {...formProps} className="w-full">
       <input type="hidden" name="propertyId" value={propertyId} />
       <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-[auto_auto_1fr_auto]">
         <Field label="Año" htmlFor="tax-anio" error={err("anio")}>
@@ -213,11 +213,11 @@ export function AddTaxForm({ propertyId }: { propertyId: string }) {
 }
 
 export function AddBillForm({ propertyId }: { propertyId: string }) {
-  const [state, formAction, pending] = useActionState(addBill, {} as BillFormState);
+  const [state, formProps, pending] = useFormAction(addBill, {} as BillFormState);
   const err = (f: string) => state?.fieldErrors?.[f];
 
   return (
-    <form action={formAction} className="w-full space-y-3">
+    <form {...formProps} className="w-full space-y-3">
       <input type="hidden" name="propertyId" value={propertyId} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label="Tipo" error={err("tipo")}>

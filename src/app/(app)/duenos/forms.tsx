@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useFormAction } from "@/hooks/use-form-action";
 import { Plus, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,10 +21,10 @@ const SIN_GRUPO = "__none__";
 
 // Crea un grupo económico.
 export function CreateGrupoForm() {
-  const [state, formAction, pending] = useActionState(createGrupo, {});
+  const [state, formProps, pending] = useFormAction(createGrupo, {});
   const err = (f: string) => state?.fieldErrors?.[f];
   return (
-    <form action={formAction} className="flex flex-wrap items-start gap-2">
+    <form {...formProps} className="flex flex-wrap items-start gap-2">
       <div className="min-w-48 flex-1">
         <Input name="nombre" placeholder="Nombre del grupo / familia" />
         {err("nombre") && (
@@ -43,7 +44,7 @@ export function CreateGrupoForm() {
 
 // Crea una entidad legal (persona/sociedad), opcionalmente dentro de un grupo.
 export function CreateOwnerForm({ grupos }: { grupos: GrupoOpt[] }) {
-  const [state, formAction, pending] = useActionState(createOwner, {});
+  const [state, formProps, pending] = useFormAction(createOwner, {});
   const err = (f: string) => state?.fieldErrors?.[f];
   const [grupo, setGrupo] = useState(SIN_GRUPO);
 
@@ -51,7 +52,7 @@ export function CreateOwnerForm({ grupos }: { grupos: GrupoOpt[] }) {
   for (const g of grupos) items[g.id] = g.nombre;
 
   return (
-    <form action={formAction} className="flex flex-wrap items-start gap-2">
+    <form {...formProps} className="flex flex-wrap items-start gap-2">
       <input
         type="hidden"
         name="grupoId"

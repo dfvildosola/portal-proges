@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
+import { useFormAction } from "@/hooks/use-form-action";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +55,7 @@ export function UploadDocumentDialog({
   const [papel, setPapel] = useState<PapelElegido | null>(papelInicial ?? null);
   const [tipo, setTipo] = useState<DocumentType>("OTRO");
   // Close and reset right when the upload succeeds, inside the action itself.
-  const [state, formAction, pending] = useActionState(
+  const [state, formProps, pending] = useFormAction(
     async (prev: DocumentFormState, formData: FormData) => {
       const result = await uploadDocument(prev, formData);
       if (result.success) {
@@ -88,7 +89,7 @@ export function UploadDocumentDialog({
         )}
       </DialogTrigger>
       <DialogContent className="max-w-md">
-        <form action={formAction}>
+        <form {...formProps}>
           <input type="hidden" name="propertyId" value={propertyId} />
           <input type="hidden" name="papel" value={papel ?? ""} />
           <input type="hidden" name="tipo" value={tipo} />

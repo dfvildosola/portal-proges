@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { useFormAction } from "@/hooks/use-form-action";
 import { Plus } from "lucide-react";
 import type { OwnerType } from "@/generated/prisma/enums";
 import { Input } from "@/components/ui/input";
@@ -70,7 +71,7 @@ function useAddAction(
   ) => Promise<PropertyFormState>,
   close: () => void,
 ) {
-  const [state, formAction, pending] = useActionState(
+  const [state, formProps, pending] = useFormAction(
     async (prev: PropertyFormState, formData: FormData) => {
       const result = await action(prev, formData);
       if (!result.error && !result.fieldErrors) close();
@@ -79,7 +80,7 @@ function useAddAction(
     {} as PropertyFormState,
   );
   const err = (f: string) => state?.fieldErrors?.[f];
-  return { state, formAction, pending, err };
+  return { state, formProps, pending, err };
 }
 
 function FieldError({ message }: { message?: string }) {
@@ -112,7 +113,7 @@ function OwnerFormBody({
   entidades: Entidad[];
   close: () => void;
 }) {
-  const { state, formAction, pending, err } = useAddAction(addOwner, close);
+  const { state, formProps, pending, err } = useAddAction(addOwner, close);
   const [sel, setSel] = useState(NUEVA);
   const isNew = sel === NUEVA;
 
@@ -122,7 +123,7 @@ function OwnerFormBody({
     items[e.id] = `${e.nombre} · ${ownerTypeLabels[e.tipo]}`;
 
   return (
-    <form action={formAction}>
+    <form {...formProps}>
       <input type="hidden" name="propertyId" value={propertyId} />
       <input type="hidden" name="ownerId" value={isNew ? "" : sel} />
       <div className="space-y-4 py-4">
@@ -235,10 +236,10 @@ function UnitFormBody({
   propertyId: string;
   close: () => void;
 }) {
-  const { state, formAction, pending, err } = useAddAction(addUnit, close);
+  const { state, formProps, pending, err } = useAddAction(addUnit, close);
 
   return (
-    <form action={formAction}>
+    <form {...formProps}>
       <input type="hidden" name="propertyId" value={propertyId} />
       <div className="space-y-4 py-4">
         <div className="flex flex-col gap-1.5">
@@ -312,10 +313,10 @@ function AssessmentFormBody({
   propertyId: string;
   close: () => void;
 }) {
-  const { state, formAction, pending, err } = useAddAction(addAssessment, close);
+  const { state, formProps, pending, err } = useAddAction(addAssessment, close);
 
   return (
-    <form action={formAction}>
+    <form {...formProps}>
       <input type="hidden" name="propertyId" value={propertyId} />
       <div className="space-y-4 py-4">
         <div className="flex flex-col gap-1.5">
@@ -370,10 +371,10 @@ function TagFormBody({
   propertyId: string;
   close: () => void;
 }) {
-  const { state, formAction, pending, err } = useAddAction(addTag, close);
+  const { state, formProps, pending, err } = useAddAction(addTag, close);
 
   return (
-    <form action={formAction}>
+    <form {...formProps}>
       <input type="hidden" name="propertyId" value={propertyId} />
       <div className="space-y-4 py-4">
         <div className="flex flex-col gap-1.5">

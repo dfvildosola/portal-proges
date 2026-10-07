@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
+import { useFormAction } from "@/hooks/use-form-action";
 import { TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +33,7 @@ export function ReajustarButton({
 }) {
   const [open, setOpen] = useState(false);
   const [porcentaje, setPorcentaje] = useState("");
-  const [state, formAction, pending] = useActionState(
+  const [state, formProps, pending] = useFormAction(
     async (prev: CicloFormState, fd: FormData) => {
       const r = await reajustarContrato(id, prev, fd);
       if (r.ok) setOpen(false);
@@ -57,7 +58,7 @@ export function ReajustarButton({
         Reajustar
       </DialogTrigger>
       <DialogContent>
-        <form action={formAction} className="space-y-4">
+        <form {...formProps} className="space-y-4">
           <DialogHeader>
             <DialogTitle>Reajustar arriendo</DialogTitle>
             <DialogDescription>

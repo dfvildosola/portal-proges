@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useFormAction } from "@/hooks/use-form-action";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/field";
@@ -31,11 +31,11 @@ export function TenantForm({
   initial?: TenantValues;
   submitLabel: string;
 }) {
-  const [state, formAction, pending] = useActionState(action, {});
+  const [state, formProps, pending] = useFormAction(action, {});
   const err = (f: string) => state?.fieldErrors?.[f];
 
   return (
-    <form action={formAction} className="max-w-2xl">
+    <form {...formProps} className="max-w-2xl">
       {initial?.id && <input type="hidden" name="id" value={initial.id} />}
 
       <Card>

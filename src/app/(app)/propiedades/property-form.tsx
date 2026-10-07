@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useFormAction } from "@/hooks/use-form-action";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/field";
@@ -71,11 +71,11 @@ export function PropertyForm({
   initial?: PropertyValues;
   submitLabel: string;
 }) {
-  const [state, formAction, pending] = useActionState(action, {});
+  const [state, formProps, pending] = useFormAction(action, {});
   const err = (f: string) => state?.fieldErrors?.[f];
 
   return (
-    <form action={formAction} className="flex max-w-2xl flex-col gap-4">
+    <form {...formProps} className="flex max-w-2xl flex-col gap-4">
       {initial?.id && <input type="hidden" name="id" value={initial.id} />}
 
       <Card>

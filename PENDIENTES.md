@@ -10,7 +10,6 @@ Ordenados por prioridad el 2026-10-06 con Diego. El login no es prioridad por ah
 
 ## 2. Arreglos chicos (branch `arreglos-chicos`)
 
-- **Los cuadros de agregar se vacían cuando hay un error.** React 19 limpia el formulario cada vez que corre la acción, haya salido bien o no, así que tras «Revisa los campos.» hay que volver a escribir todo. Ya pasaba con los formularios en línea. En **editar propiedad** (`property-form.tsx`) duele más: una fecha mal puesta borra lo escrito en compra y deuda, y los campos vuelven a los valores guardados. Arreglarlo devolviendo lo escrito en el estado y usándolo como `defaultValue`. 2026-10-01.
 
 ## 3. Siguiente tarea grande: cobrar según cada contrato
 

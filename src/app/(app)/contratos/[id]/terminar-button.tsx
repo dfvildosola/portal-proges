@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
+import { useFormAction } from "@/hooks/use-form-action";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +31,7 @@ export function TerminarButton({
 }) {
   const [open, setOpen] = useState(false);
   const [fecha, setFecha] = useState(hoy);
-  const [state, formAction, pending] = useActionState(
+  const [state, formProps, pending] = useFormAction(
     async (prev: CicloFormState, fd: FormData) => {
       const r = await terminarContrato(id, prev, fd);
       if (r.ok) setOpen(false);
@@ -52,7 +53,7 @@ export function TerminarButton({
         Terminar
       </DialogTrigger>
       <DialogContent>
-        <form action={formAction} className="space-y-4">
+        <form {...formProps} className="space-y-4">
           <DialogHeader>
             <DialogTitle>Terminar contrato</DialogTitle>
             <DialogDescription>
