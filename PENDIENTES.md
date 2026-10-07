@@ -10,7 +10,6 @@ Ordenados por prioridad el 2026-10-06 con Diego. El login no es prioridad por ah
 
 ## 2. Arreglos chicos (branch `arreglos-chicos`)
 
-- **Pendientes ocupa demasiado alto.** Cada línea de la agenda usa tres renglones (etiqueta del tipo, texto, dirección y arrendatario), y con 65 atrasados la página es muy larga. Compactarla a dos renglones. Diego, 2026-10-06.
 - **Los cuadros de agregar se vacían cuando hay un error.** React 19 limpia el formulario cada vez que corre la acción, haya salido bien o no, así que tras «Revisa los campos.» hay que volver a escribir todo. Ya pasaba con los formularios en línea. En **editar propiedad** (`property-form.tsx`) duele más: una fecha mal puesta borra lo escrito en compra y deuda, y los campos vuelven a los valores guardados. Arreglarlo devolviendo lo escrito en el estado y usándolo como `defaultValue`. 2026-10-01.
 - **Selectores que muestran el valor interno** (`PERSONA`, `GASTO_COMUN`…) en vez de la etiqueta: les falta `items={…Labels}` en el `<Select>`, como ya se hizo en la ficha. Quedan `propiedades/[id]/economic-forms.tsx` y `duenos/forms.tsx`. 2026-10-01.
 - **Contribuciones: «Marcar pagada» no propone la fecha de hoy** (pestaña Finanzas de la ficha), como ya hacen cuentas y cobros. 2026-10-04.

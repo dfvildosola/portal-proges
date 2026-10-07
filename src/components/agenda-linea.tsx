@@ -21,10 +21,13 @@ export function AgendaLinea({
   const enlazaASiMisma =
     !conPropiedad && !!propiedad && accion.href === `/propiedades/${propiedad.id}`;
   return (
-    <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0 space-y-1">
-        <Badge variant="secondary">{tipoItemLabels[item.tipo]}</Badge>
-        <p className="text-sm">{item.texto}</p>
+    <div className="flex flex-col gap-2 px-4 py-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0 space-y-0.5">
+        {/* El tipo va en el mismo renglón que el texto, para que cada línea ocupe dos renglones y no tres. */}
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+          <Badge variant="secondary">{tipoItemLabels[item.tipo]}</Badge>
+          <span>{item.texto}</span>
+        </p>
         {((conPropiedad && propiedad) || contrato) && (
           <p className="text-xs text-muted-foreground">
             {conPropiedad && propiedad && (
