@@ -8,10 +8,7 @@ Ordenados por prioridad el 2026-10-06 con Diego. El login no es prioridad por ah
 - **Responder las preguntas abiertas** de la sección «Esperan respuesta de Diego». Desbloquean cuentas, el resto de la cobranza y el tablero de Inicio. 2026-10-06.
 - **Mirar la ficha en el celular.** La vista en una columna se revisó en el código, pero no en pantalla (Chrome estaba en pantalla completa). Diego la tiene que mirar. 2026-10-01.
 
-## 2. Arreglos chicos (branch `arreglos-chicos`)
-
-
-## 3. Siguiente tarea grande: cobrar según cada contrato
+## 2. Siguiente tarea grande: cobrar según cada contrato
 
 - **Cobrar según lo que dice cada contrato.** Pedido de Diego (2026-10-05). Al registrar un pago, el formulario muestra las condiciones del contrato y propone el total: arriendo, días de atraso, multa e interés según ese contrato, y la UF usada (valor, fecha y conversión a pesos). La multa se muestra aunque después el dueño la perdone. Tarea grande: plan por etapas y aprobación antes de construir, en una branch nueva después de mezclar `contratos-cobranza`. Ya decidido:
   - **No hay una regla común: cada contrato trae sus condiciones.** Unos cobran interés y otros no; unos tienen multa diaria, otros multa única o ninguna; el arriendo puede ser en UF o en pesos; el día de pago cambia (el 5, el 30). Moneda y día de pago ya están en el contrato; faltan las condiciones de atraso (días de gracia, multa con su tipo y monto o porcentaje, interés).
@@ -22,7 +19,7 @@ Ordenados por prioridad el 2026-10-06 con Diego. El login no es prioridad por ah
   Propuesta: en un contrato en UF, el monto recibido se escribe en pesos y la app lo convierte (hoy hay que convertirlo a mano). Por decidir: cómo tratar un interés «máximo convencional» (lo publica la CMF, otra fuente); si el primer y el último mes se prorratean (hoy «Generar cobros del mes» cobra el mes completo aunque el contrato empiece el 20 o termine el 10).
   2026-10-05.
 
-## 4. Pendientes organizable
+## 3. Pendientes organizable
 
 - **Pendientes: que cada uno lo organice a su conveniencia.** Pedido de Diego al revisar la página en local (2026-10-05). Tarea mediana: plan y aprobación antes de construir. Hacerla en el original, en una branch nueva, después de mezclar `contratos-cobranza`. Ya decidido:
   - **Buscador** por texto: propiedad, arrendatario, tipo y descripción. Las secciones sin coincidencias se esconden.
@@ -32,9 +29,9 @@ Ordenados por prioridad el 2026-10-06 con Diego. El login no es prioridad por ah
   2026-10-05.
 - **Pendientes: «Posponer» un ítem** («recuérdamelo en una semana»). La agenda se calcula al momento y no guarda nada (ADR 0008), así que posponer necesita guardar algo: qué ítem (su `clave`) y hasta cuándo. Hacerlo si en el uso aparecen pendientes que no se pueden resolver todavía y estorban. 2026-10-04.
 
-## 5. Documentos y lectura con IA
+## 4. Documentos y lectura con IA
 
-Va al final porque necesita los campos de la tarea 3 y que funcione la subida de documentos. La línea «Leer con IA» está en «Datos automáticos».
+Va al final porque necesita los campos de la tarea 2 y que funcione la subida de documentos. La línea «Leer con IA» está en «Datos automáticos».
 
 - **Subir documentos no funciona en local: `BLOB_READ_WRITE_TOKEN` está vacío en `.env`.** Toda subida responde «Error al subir el archivo…» antes de llegar a Vercel; en la etapa 3 de la ficha (papeles) el flujo se probó hasta ese paso, pero no la escritura del documento. Decidir antes de cargar el token:
   - un almacén de Vercel Blob aparte para desarrollo, para que ni `npm run dev` ni los espacios (que copian el `.env` del original) escriban en el de producción;
