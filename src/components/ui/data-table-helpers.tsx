@@ -2,8 +2,7 @@ import type { HeaderContext, Row } from "@tanstack/react-table";
 
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
 
-// Piezas que repiten las tablas de datos. Las tablas anteriores a este archivo
-// todavía tienen su copia; se cambian a estas al tocarlas (PENDIENTES.md).
+// Piezas que repiten las tablas de datos; todas las tablas las importan de aquí.
 
 // Filtro de columna con varios valores marcados (el de `DataTableFacetedFilter`).
 export function inArray<T>(row: Row<T>, id: string, value: unknown): boolean {
