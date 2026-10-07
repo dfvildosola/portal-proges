@@ -108,11 +108,9 @@ export async function deleteDocument(formData: FormData): Promise<void> {
   try {
     await del(doc.blobKey);
   } catch (e) {
-    // Se conserva el registro para poder reintentar; así no queda un archivo huérfano en el almacén.
-    console.error("deleteDocument: no se pudo borrar el archivo del almacén", { documentId }, e);
-    throw new Error(
-      "No se pudo borrar el archivo del almacén; el documento sigue en la lista. Intenta de nuevo.",
-    );
+    // Se borra igual de la lista (es una acción sin estado: no hay dónde mostrar un aviso),
+    // pero queda registrado qué archivo quedó en el almacén para poder limpiarlo.
+    console.error("deleteDocument: no se pudo borrar el archivo del almacén", { documentId, blobKey: doc.blobKey }, e);
   }
 
   await db.document.delete({ where: { id: documentId } });

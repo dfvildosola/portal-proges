@@ -6,7 +6,7 @@ import { startTransition, useActionState, useRef, type FormEvent } from "react";
 // React 19 limpia un <form action={…}> cada vez que corre la acción, haya salido bien o no, y obliga
 // a escribir todo de nuevo. Enviando desde onSubmit no lo limpia; aquí se limpia a mano solo si no hubo error.
 // Uso: const [state, formProps, pending] = useFormAction(accion, {}); <form {...formProps}>
-export function useFormAction<S extends { error?: string }>(
+export function useFormAction<S extends { error?: string; fieldErrors?: unknown }>(
   action: (state: Awaited<S>, formData: FormData) => Promise<S>,
   initialState: Awaited<S>,
 ) {
@@ -14,7 +14,8 @@ export function useFormAction<S extends { error?: string }>(
   const [state, dispatch, pending] = useActionState(
     async (prev: Awaited<S>, formData: FormData) => {
       const next = await action(prev, formData);
-      if (!next?.error) formRef.current?.reset();
+      // Algunas acciones devuelven solo errores de campo, sin `error`: también cuentan como error.
+      if (!next?.error && !next?.fieldErrors) formRef.current?.reset();
       return next;
     },
     initialState,
@@ -27,5 +28,7 @@ export function useFormAction<S extends { error?: string }>(
     startTransition(() => dispatch(formData));
   }
 
-  return [state, { ref: formRef, onSubmit }, pending] as const;
+  // `action` sigue puesto aunque onSubmit lo intercepta: así useFormStatus ve el envío, y si alguien
+  // envía antes de que cargue el JavaScript, React no deja que el navegador mande los datos en la URL.
+  return [state, { ref: formRef, action: dispatch, onSubmit }, pending] as const;
 }
