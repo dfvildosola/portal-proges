@@ -69,7 +69,7 @@ export function CreateOwnerForm({ grupos }: { grupos: GrupoOpt[] }) {
           <p className="mt-1 text-xs text-destructive">{err("rut")}</p>
         )}
       </div>
-      <Select name="tipo" defaultValue="PERSONA">
+      <Select name="tipo" defaultValue="PERSONA" items={ownerTypeLabels}>
         <SelectTrigger className="w-32">
           <SelectValue />
         </SelectTrigger>

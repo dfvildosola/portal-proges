@@ -52,7 +52,7 @@ export function AddMovementForm({ propertyId }: { propertyId: string }) {
       <input type="hidden" name="propertyId" value={propertyId} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label="Tipo" error={err("tipo")}>
-          <Select name="tipo" defaultValue="INGRESO">
+          <Select name="tipo" defaultValue="INGRESO" items={movementTypeLabels}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -66,7 +66,7 @@ export function AddMovementForm({ propertyId }: { propertyId: string }) {
           </Select>
         </Field>
         <Field label="Categoría" error={err("categoria")}>
-          <Select name="categoria" defaultValue="ARRIENDO">
+          <Select name="categoria" defaultValue="ARRIENDO" items={movementCategoryLabels}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -95,7 +95,7 @@ export function AddMovementForm({ propertyId }: { propertyId: string }) {
           />
         </Field>
         <Field label="Moneda" error={err("moneda")}>
-          <Select name="moneda" defaultValue="CLP">
+          <Select name="moneda" defaultValue="CLP" items={currencyLabels}>
             <SelectTrigger className="w-28">
               <SelectValue />
             </SelectTrigger>
@@ -241,7 +241,7 @@ export function AddBillForm({ propertyId }: { propertyId: string }) {
       <input type="hidden" name="propertyId" value={propertyId} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Field label="Tipo" error={err("tipo")}>
-          <Select name="tipo" defaultValue="GASTO_COMUN">
+          <Select name="tipo" defaultValue="GASTO_COMUN" items={billTypeLabels}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -273,7 +273,7 @@ export function AddBillForm({ propertyId }: { propertyId: string }) {
           />
         </Field>
         <Field label="Moneda" error={err("moneda")}>
-          <Select name="moneda" defaultValue="CLP">
+          <Select name="moneda" defaultValue="CLP" items={currencyLabels}>
             <SelectTrigger className="w-28">
               <SelectValue />
             </SelectTrigger>
