@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import { getOrgId } from "@/lib/org";
 import {
   assertProperty,
@@ -167,8 +168,12 @@ export async function addTax(
         estado: TaxStatus.PENDIENTE,
       },
     });
-  } catch {
-    return { error: "Ya existe una contribución para ese año y cuota." };
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { error: "Ya existe una contribución para ese año y cuota." };
+    }
+    console.error("addTax: no se pudo guardar la contribución", { propertyId, anio: parsed.data.anio, cuota: parsed.data.cuota }, e);
+    return { error: "No se pudo guardar la contribución. Intenta de nuevo." };
   }
 
   revalidatePath(`/propiedades/${propertyId}`);

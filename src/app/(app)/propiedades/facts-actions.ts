@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import { getOrgId } from "@/lib/org";
 import {
   assertProperty,
@@ -261,8 +262,12 @@ export async function addAssessment(
         valor: parsed.data.valor,
       },
     });
-  } catch {
-    return { error: "Ya existe un avalúo para ese año." };
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { error: "Ya existe un avalúo para ese año." };
+    }
+    console.error("addAssessment: no se pudo guardar el avalúo", { propertyId, anio: parsed.data.anio }, e);
+    return { error: "No se pudo guardar el avalúo. Intenta de nuevo." };
   }
 
   revalidatePath(`/propiedades/${propertyId}`);
