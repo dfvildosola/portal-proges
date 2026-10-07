@@ -4,7 +4,7 @@
 // deuda hipotecaria. Van dentro del <form> de property-form.tsx.
 
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field } from "@/components/field";
 import {
   Card,
   CardContent,
@@ -27,28 +27,6 @@ const monedaCorta = { CLP: "CLP", UF: "UF" };
 
 // Sin fuente: se manda "" y la acción lo guarda como vacío.
 const fuenteItems = { "": "Sin fuente", ...valorFuenteLabels };
-
-function Field({
-  label,
-  htmlFor,
-  error,
-  className,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  error?: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={`flex flex-col gap-1.5 ${className ?? ""}`}>
-      <Label htmlFor={htmlFor}>{label}</Label>
-      {children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
-  );
-}
 
 // Un monto con su moneda al lado.
 function MoneyField({

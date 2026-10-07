@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field } from "@/components/field";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -22,26 +22,6 @@ import { addMovement, addTax, generateYearTaxes, updateTaxMonto } from "../finan
 import { addBill } from "../../cuentas/actions";
 import type { BillFormState } from "../../cuentas/actions";
 import type { MovementFormState, TaxFormState } from "../finance-actions";
-
-function Field({
-  label,
-  htmlFor,
-  error,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor={htmlFor}>{label}</Label>
-      {children}
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
-  );
-}
 
 export function AddMovementForm({ propertyId }: { propertyId: string }) {
   const [state, formAction, pending] = useActionState(addMovement, {} as MovementFormState);
