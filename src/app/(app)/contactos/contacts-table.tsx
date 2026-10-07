@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import type { ColumnDef, HeaderContext } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Pencil, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
-import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
+import { sortHeader } from "@/components/ui/data-table-helpers";
 import { DataTableViewOptions } from "@/components/ui/data-table-view-options";
 import { DeleteTenantButton } from "./delete-tenant-button";
 
@@ -29,14 +29,6 @@ const columnLabels: Record<string, string> = {
   telefono: "Teléfono",
   contratos: "Contratos",
 };
-
-function sortHeader(title: string) {
-  const Header = ({ column }: HeaderContext<TenantRow, unknown>) => (
-    <DataTableColumnHeader column={column} title={title} />
-  );
-  Header.displayName = `SortHeader(${title})`;
-  return Header;
-}
 
 const columns: ColumnDef<TenantRow>[] = [
   {

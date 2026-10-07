@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ColumnDef, HeaderContext } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { X } from "lucide-react";
 
 import type {
@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
+import { inArray, sortHeader } from "@/components/ui/data-table-helpers";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 
 export type RentabilidadRow = {
@@ -42,17 +43,6 @@ export type RentabilidadRow = {
   annualCLP: number;
   capRate: number | null;
 };
-
-function sortHeader(title: string) {
-  const Header = ({ column }: HeaderContext<RentabilidadRow, unknown>) => (
-    <DataTableColumnHeader column={column} title={title} />
-  );
-  Header.displayName = `SortHeader(${title})`;
-  return Header;
-}
-
-const inArray: ColumnDef<RentabilidadRow>["filterFn"] = (row, id, value) =>
-  (value as string[]).includes(row.getValue(id));
 
 const columns: ColumnDef<RentabilidadRow>[] = [
   {

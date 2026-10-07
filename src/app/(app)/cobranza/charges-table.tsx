@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { ColumnDef, HeaderContext } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { X } from "lucide-react";
 
 import type { Currency, ChargeStatus } from "@/generated/prisma/enums";
@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
+import { inArray, sortHeader } from "@/components/ui/data-table-helpers";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 import { DataTableViewOptions } from "@/components/ui/data-table-view-options";
 
@@ -38,9 +39,6 @@ export type ChargeRow = {
   tenantNombre: string;
 };
 
-const inArray: ColumnDef<ChargeRow>["filterFn"] = (row, id, value) =>
-  (value as string[]).includes(row.getValue(id));
-
 const columnLabels: Record<string, string> = {
   propertyRol: "Propiedad",
   tenantNombre: "Arrendatario",
@@ -49,14 +47,6 @@ const columnLabels: Record<string, string> = {
   estado: "Estado",
   montoPagado: "Monto pagado",
 };
-
-function sortHeader(title: string) {
-  const Header = ({ column }: HeaderContext<ChargeRow, unknown>) => (
-    <DataTableColumnHeader column={column} title={title} />
-  );
-  Header.displayName = `SortHeader(${title})`;
-  return Header;
-}
 
 const columns: ColumnDef<ChargeRow>[] = [
   {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { ColumnDef, HeaderContext } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
 import { X } from "lucide-react";
 
 import type {
@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableColumnHeader } from "@/components/ui/data-table-column-header";
+import { inArray, sortHeader } from "@/components/ui/data-table-helpers";
 import { DataTableFacetedFilter } from "@/components/ui/data-table-faceted-filter";
 import { DataTableViewOptions } from "@/components/ui/data-table-view-options";
 
@@ -44,9 +45,6 @@ export type PropertyRow = {
 };
 
 // Coincidencia para filtros multi-selección (la columna guarda un arreglo de valores).
-const inArray: ColumnDef<PropertyRow>["filterFn"] = (row, id, value) =>
-  (value as string[]).includes(row.getValue(id));
-
 const columnLabels: Record<string, string> = {
   rolSII: "ROL",
   tipo: "Tipo",
@@ -62,14 +60,6 @@ const columnLabels: Record<string, string> = {
 
 // Fábrica de cabecera ordenable. Se invoca al construir `columns` (una vez),
 // así que cada componente resultante es estable.
-function sortHeader(title: string) {
-  const Header = ({ column }: HeaderContext<PropertyRow, unknown>) => (
-    <DataTableColumnHeader column={column} title={title} />
-  );
-  Header.displayName = `SortHeader(${title})`;
-  return Header;
-}
-
 const columns: ColumnDef<PropertyRow>[] = [
   {
     accessorKey: "rolSII",
