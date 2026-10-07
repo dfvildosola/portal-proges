@@ -11,7 +11,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { taxStatusLabels, taxStatusVariant } from "@/lib/domain";
-import { formatMoney, formatDate } from "@/lib/format";
+import { formatMoney, formatDate, toDateInputValue } from "@/lib/format";
+import { hoyChile } from "@/lib/fechas";
 import { AddTaxForm, GenerateYearTaxesForm, UpdateTaxMontoForm } from "./economic-forms";
 import { markTaxPaid, removeTax } from "../finance-actions";
 
@@ -27,6 +28,7 @@ export function TaxesTab({
   taxes: PropertyTax[];
   exenta: boolean;
 }) {
+  const hoy = hoyChile();
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -85,6 +87,7 @@ export function TaxesTab({
                         name="fechaPago"
                         type="date"
                         required
+                        defaultValue={toDateInputValue(hoy)}
                         className="h-7 w-36 text-xs"
                       />
                       <Button
