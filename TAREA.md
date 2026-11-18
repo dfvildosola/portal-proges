@@ -1,8 +1,22 @@
 # TAREA — Etapa 1: el portal con dos caras (equipo Proges + cliente)
 
-**Estado: plan v3 escrito, esperando la aprobación de Diego.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v3). Branch: `plan/etapa-1-dos-caras`.
+**Estado: plan v3 APROBADO por Diego el 2026-11-18 («ok, con workflow», d7 = a). En ejecución.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v3). Branch: `plan/etapa-1-dos-caras`.
 
-Paso siguiente: Diego recorre la página (una decisión, d7, y diez supuestos) y pega su respuesta. Con el ok se guarda acá, se hace commit, el coordinador deja la pieza 0 y se lanza el workflow (o subagentes sueltos si dice «sin workflow»).
+Paso siguiente: ver «Estado de la ejecución» más abajo.
+
+## Estado de la ejecución
+- Pieza 0 ✅ hecha (convenciones en `AGENTS.md`, catálogo en `prisma/datos/catalogo-servicios.csv`).
+- El workflow va en dos partes, porque el hook `librerias` frena la instalación de `@clerk/nextjs` hasta que Diego escriba «instala @clerk/nextjs» (un subagente no puede recibir ese pedido):
+  - **Parte 1** (no necesita Clerk): B → E y G. ⏳ lanzada.
+  - **Parte 2:** el coordinador instala Clerk cuando Diego lo pida; después A → T, S, C, D y F.
+- Después: enchufar el componente de C en la página del servicio (S), verificación del repo, prueba en el navegador, `revisor` enfocado (login, `src/lib/cliente.ts`, migración), cierre contra el plan, ADR 0010 y 0011, `BRIEF.md`, `PENDIENTES.md`.
+
+## Lo que se supo al preparar la pieza 0 (2026-11-18)
+- El catálogo completo tiene 99 filas y seis familias: ADMP, ET, IRP, NV, RR y **SC (servicios complementarios)**, que el plan no nombraba.
+- **t4 era falso:** el arriendo sí tiene código propio, `SC-600` «Comisión por servicio de corretaje arriendo». El tipo ARRIENDO ofrece los códigos de NV, SC y ADMP.
+- **Tres códigos están repetidos en la Sheet** con nombres distintos: `RR-601` (luminarias / retiro de escombros), `RR-602` (interruptores / aseo general) y `RR-604` (normalización de circuitos / fletes). `RR-901` no tiene nombre y quedó fuera del CSV. El catálogo del portal no puede usar el código como llave única: usa código + nombre. Anotado en `PENDIENTES.md` para que Diego lo corrija en la Sheet y en Odoo.
+- Qué tipo ofrece qué familias al abrir un servicio: EVALUACION → ET; INSPECCION → IRP; VENTA → NV; ARRIENDO → NV, SC, ADMP; OBRA → RR; ADMINISTRACION → ADMP. Los códigos SC se pueden elegir en cualquier tipo.
+- Diego pidió (2026-11-18) llevar el seguimiento de la obra en el portal: tareas con avance en %, hitos, planificada al aprobarse el presupuesto y armada desde la orden de Odoo (ejemplo: S00047, 14 secciones por recinto, unas 70 partidas RR y 3 anticipos). **No entra en esta tarea:** es la tarea siguiente, anotada en `PENDIENTES.md`. El modelo queda listo: las tareas colgarían del servicio en curso de tipo OBRA.
 
 ## Lo que ya cerró Diego (2026-11-18)
 - Convecta no ha respondido. El plan no depende de Nexxos: **solo publica los avisos**; toda la gestión se registra en el portal.
@@ -128,8 +142,8 @@ De Claude:
 Pieza 0 (coordinador, antes del workflow): sección «Convenciones de frontend» en `AGENTS.md`, escrita desde lo que el código ya hace; exportar el catálogo a `prisma/datos/catalogo-servicios.csv`.
 
 Olas: [B] → [A, E, G] → [T, S, C, D, F]. 9 agentes en Sonnet. Verificación común: `npx tsc --noEmit && npm run lint && npm run build`.
-- ◻️ 0. Convenciones y catálogo (coordinador).
-- ◻️ B. Esquema, catálogo y etapas iniciales. `prisma/schema.prisma`, migración nueva (siembra las etapas), `scripts/cargar-catalogo.ts`. Verifica: `npx prisma migrate dev` aplica en `proges_dev`, el catálogo carga, existen las seis listas de etapas, build.
+- ✅ 0. Convenciones y catálogo (coordinador).
+- ⏳ B. Esquema, catálogo y etapas iniciales. `prisma/schema.prisma`, migración nueva (siembra las etapas), `scripts/cargar-catalogo.ts`. Verifica: `npx prisma migrate dev` aplica en `proges_dev`, el catálogo carga, existen las seis listas de etapas, build.
 - ◻️ A. Login, alcance y accesos. `src/proxy.ts`, `src/lib/sesion.ts`, `src/app/layout.tsx`, `src/app/(app)/layout.tsx`, `src/app/(app)/equipo/` (usuarios; con el enlace a Etapas), pantalla de entrar, `src/lib/nav.ts` (ítem Equipo). Depende de B. Verifica: común, y entrar en local con un EQUIPO, un CLIENTE de todo el grupo y uno limitado a una sociedad.
 - ◻️ E. Carga inicial. `scripts/carga-inicial.ts`. Depende de B. Verifica: correrlo dos veces en `proges_dev`; el segundo no crea nada.
 - ◻️ G. Reglas e indicadores. `src/lib/servicios.ts`, `scripts/probar-indicadores.ts`. Depende de B. Verifica: `npx tsx scripts/probar-indicadores.ts`.
@@ -177,4 +191,17 @@ Claude: tipos, lint y build; `npx tsx scripts/probar-indicadores.ts`; la carga i
 ## Respuestas de Diego
 **A la v2 (2026-11-18):** «ok, con workflow», con d1 a, d2 b, d3 b, d4 a, d5 b (distinto de lo propuesto) y d6 b. Marcó falsos cuatro supuestos (etapa única y una sola gestión; datos de prueba que conviven; el precio lo decide el propietario; siete etapas consecutivas) y «no sé» el de separar por sociedad. No se ejecutó: las correcciones cambiaban el diseño. El texto completo está en el commit `2a0b1e9`.
 
-**A la v3:** (pendiente)
+**A la v3 (2026-11-18):**
+```
+ok, con workflow
+Plan: etapa 1 de Proges, versión 3
+
+Decisiones:
+- ¿Cuánta revisión antes de mezclar? Enfocada ahora, completa antes de abrirle el panel al cliente real
+
+Supuestos que no son así:
+- ninguno marcado
+
+Supuestos que no sé:
+- Una obra se registra como un solo servicio (presupuesto → entregada), sin el detalle de sus partidas ni costos.
+```

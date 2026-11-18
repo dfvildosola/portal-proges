@@ -8,6 +8,12 @@ Ordenados por prioridad el 2026-10-06 con Diego. El login no es prioridad por ah
 - **Responder las preguntas abiertas** de la sección «Esperan respuesta de Diego». Desbloquean cuentas, el resto de la cobranza y el tablero de Inicio. 2026-10-06.
 - **Mirar la ficha en el celular.** La vista en una columna se revisó en el código, pero no en pantalla (Chrome estaba en pantalla completa). Diego la tiene que mirar. 2026-10-01.
 
+- [diego] **Códigos repetidos en el catálogo de servicios.** En la Sheet «CODIGOS SERVICIOS PROGES», `RR-601`, `RR-602` y `RR-604` nombran dos servicios distintos cada uno, y `RR-901` no tiene nombre. Corregirlos en la Sheet y en Odoo; después se vuelve a cargar el catálogo del portal (`scripts/cargar-catalogo.ts`). (2026-11-18)
+
+## 1b. Siguiente tarea: seguimiento de obra
+
+- [grande] **Llevar la obra en el portal.** Pedido de Diego (2026-11-18): una vez aprobado el presupuesto, planificar la obra y controlarla en el portal, con hitos y avance en % por tarea o etapa; sencillo y directo; que se arme desde el presupuesto aprobado en Odoo (ejemplo: orden S00047, secciones por recinto con partidas RR y anticipos). Las tareas cuelgan del servicio en curso de tipo OBRA (ADR 0011). Antes de planificar: preguntarle a Leo cómo lleva hoy una obra (regla 8) y decidir cómo llega la orden de Odoo (conexión o pegar la orden). Se retoma cuando la etapa 1 esté en uso. (2026-11-18)
+
 ## 2. Siguiente tarea grande: cobrar según cada contrato
 
 - **Cobrar según lo que dice cada contrato.** Pedido de Diego (2026-10-05). Al registrar un pago, el formulario muestra las condiciones del contrato y propone el total: arriendo, días de atraso, multa e interés según ese contrato, y la UF usada (valor, fecha y conversión a pesos). La multa se muestra aunque después el dueño la perdone. Tarea grande: plan por etapas y aprobación antes de construir, en una branch nueva después de mezclar `contratos-cobranza`. Ya decidido:
