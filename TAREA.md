@@ -180,6 +180,12 @@ Diego agregó: las etapas no son consecutivas ni todas las propiedades requieren
 - Se elimina la etapa única por propiedad (s9 y s2 falsos). La unidad pasa a ser el **servicio en curso**: una propiedad tiene los que necesita, en paralelo, y cada uno avanza por las etapas de su familia (d5 = b). La venta y el arriendo son servicios de la familia NV con sus fases, visitas, ofertas y precio.
 - Familias del catálogo (leído de la Sheet el 2026-11-18): ET evaluación comercial (1 servicio); IRP inspección, regularización y toma de posesión (acercamiento comercial, títulos, mercado, toma de posesión, recepción, trámites); NV negociación y venta (venta, visitas, preparación); RR renovaciones (lista de precios por m², partidas de obra); ADMP administración de patrimonio (mensual).
 
+**Estándares de construcción (pedido de Diego, 2026-11-18): la misma vara que el portal de RASA**
+- Ningún archivo pasa de ~800 líneas (regla de código 4): cada pestaña y cada formulario en su archivo; si uno existente va a crecer, primero se le saca una parte. Hoy el más largo propio es `resumen/page.tsx` (579).
+- Antes de las piezas, el coordinador deja dos cosas (chicas): un agente `implementador-proges` en `.claude/agents/` (adaptado del `implementador-portal` de RASA: lee `AGENTS.md` y la guía de Next en `node_modules/next/dist/docs/`, no toca archivos fuera del encargo, no devuelve hasta que pasan `npx tsc --noEmit && npm run lint && npm run build`, informe corto, sin commit) y una sección «Convenciones de frontend» en `AGENTS.md`, escrita desde lo que el código de Proges ya hace (shadcn primero, íconos lucide, colores por tokens en claro y oscuro, formularios con server actions y validación repetida en el servidor, fechas con `src/lib/fechas.ts`, textos en español sin jerga). Misma vara, no las mismas librerías: Proges ya usa zod y RASA no.
+- Un número vive en un solo lugar (`src/lib/gestion.ts`), errores explícitos, sin librerías nuevas fuera de Clerk.
+- Revisión antes de mezclar: `/code-review` y cierre contra el plan (regla 6).
+
 **Preguntas abiertas antes de escribir la v3**
 1. Las etapas de cada familia: cuáles son (se preguntó a Diego; propuesta de borrador en el chat).
 2. s4: qué datos hay hoy en el portal y por qué no pueden convivir con los del cliente.
