@@ -38,7 +38,7 @@ export function PropertyHeader({
     propertyTypeLabels[property.tipo],
     property.comuna,
     superficie,
-    `ROL ${property.rolSII}`,
+    property.rolSII ? `ROL ${property.rolSII}` : "Sin ROL",
   ].filter(Boolean);
 
   return (

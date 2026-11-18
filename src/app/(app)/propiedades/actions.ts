@@ -27,7 +27,7 @@ export type PropertyFormState = {
 };
 
 const propertySchema = z.object({
-  rolSII: z.string().trim().min(1, "El ROL es obligatorio"),
+  rolSII: optionalText, // el ROL puede faltar (el inventario del Drive no lo trae)
   tipo: enumField(PropertyType),
   direccion: z.string().trim().min(1, "La dirección es obligatoria"),
   comuna: z.string().trim().min(1, "La comuna es obligatoria"),

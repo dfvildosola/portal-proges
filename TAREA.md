@@ -7,9 +7,16 @@ Paso siguiente: ver «Estado de la ejecución» más abajo.
 ## Estado de la ejecución
 - Pieza 0 ✅ hecha (convenciones en `AGENTS.md`, catálogo en `prisma/datos/catalogo-servicios.csv`).
 - El workflow va en dos partes, porque el hook `librerias` frena la instalación de `@clerk/nextjs` hasta que Diego escriba «instala @clerk/nextjs» (un subagente no puede recibir ese pedido):
-  - **Parte 1** (no necesita Clerk): B → E y G. ⏳ lanzada.
-  - **Parte 2:** el coordinador instala Clerk cuando Diego lo pida; después A → T, S, C, D y F.
+  - **Parte 1** (no necesita Clerk): B → E y G. ✅ hecha y verificada por el coordinador el 2026-11-18 (tsc, lint, build, 19 casos de indicadores con TZ=UTC y TZ=America/Santiago, SQL de la migración leído: solo crea, agrega y quita el NOT NULL del ROL).
+  - **Parte 2:** ⏳ siguiente. Espera que Diego escriba «instala @clerk/nextjs»; el coordinador la instala y lanza A → T, S, C, D y F. En la ola de cinco, cada agente corre solo tsc y lint (dos builds a la vez se pisan); el build lo corre el coordinador al final.
 - Después: enchufar el componente de C en la página del servicio (S), verificación del repo, prueba en el navegador, `revisor` enfocado (login, `src/lib/cliente.ts`, migración), cierre contra el plan, ADR 0010 y 0011, `BRIEF.md`, `PENDIENTES.md`.
+
+## Lo que dejó la parte 1 (para los encargos de la parte 2)
+- Migración `20261118234053_etapa1_servicios`. Ids de etapas fijos y legibles (`etapa_venta_02_publicada`…).
+- `src/lib/servicios.ts` exporta `TIPOS_SERVICIO`, `familiasDelTipo(tipo)`, `esComercial(tipo)`, los nombres de estados, y `diasPublicada`, `visitasUltimaSemana`, `visitasPorSemana`, `diasDesdeUltimaRebaja`, `indicadoresComerciales`, `diaChile()`.
+- **`Visita.fecha` es «solo fecha»** (medianoche UTC, como el resto del proyecto): el formulario de visita pide el día, no la hora. `Evento.fecha` y `cerradoEl` son instantes y se llevan al día de Chile.
+- El ROL quedó opcional también en el formulario de crear y editar propiedad.
+- Carga inicial en `proges_dev`: 42 propiedades (63 filas − 20 vendidas − 1 carpeta de formatos), 32 servicios «por confirmar» (10 inspección, 10 venta, 6 obra, 6 administración). Conviven con las 80 inventadas del seed. El tipo de propiedad se dedujo de la dirección y hay que revisarlo; posibles duplicados sin resolver: Mirador 1851 (dos carpetas) y unidades de Agustinas 715 y Monjitas 550.
 
 ## Lo que se supo al preparar la pieza 0 (2026-11-18)
 - El catálogo completo tiene 99 filas y seis familias: ADMP, ET, IRP, NV, RR y **SC (servicios complementarios)**, que el plan no nombraba.
@@ -143,10 +150,10 @@ Pieza 0 (coordinador, antes del workflow): sección «Convenciones de frontend»
 
 Olas: [B] → [A, E, G] → [T, S, C, D, F]. 9 agentes en Sonnet. Verificación común: `npx tsc --noEmit && npm run lint && npm run build`.
 - ✅ 0. Convenciones y catálogo (coordinador).
-- ⏳ B. Esquema, catálogo y etapas iniciales. `prisma/schema.prisma`, migración nueva (siembra las etapas), `scripts/cargar-catalogo.ts`. Verifica: `npx prisma migrate dev` aplica en `proges_dev`, el catálogo carga, existen las seis listas de etapas, build.
-- ◻️ A. Login, alcance y accesos. `src/proxy.ts`, `src/lib/sesion.ts`, `src/app/layout.tsx`, `src/app/(app)/layout.tsx`, `src/app/(app)/equipo/` (usuarios; con el enlace a Etapas), pantalla de entrar, `src/lib/nav.ts` (ítem Equipo). Depende de B. Verifica: común, y entrar en local con un EQUIPO, un CLIENTE de todo el grupo y uno limitado a una sociedad.
-- ◻️ E. Carga inicial. `scripts/carga-inicial.ts`. Depende de B. Verifica: correrlo dos veces en `proges_dev`; el segundo no crea nada.
-- ◻️ G. Reglas e indicadores. `src/lib/servicios.ts`, `scripts/probar-indicadores.ts`. Depende de B. Verifica: `npx tsx scripts/probar-indicadores.ts`.
+- ✅ B. Esquema, catálogo y etapas iniciales. `prisma/schema.prisma`, migración nueva (siembra las etapas), `scripts/cargar-catalogo.ts`. Verifica: `npx prisma migrate dev` aplica en `proges_dev`, el catálogo carga, existen las seis listas de etapas, build.
+- ⏳ A. Login, alcance y accesos. `src/proxy.ts`, `src/lib/sesion.ts`, `src/app/layout.tsx`, `src/app/(app)/layout.tsx`, `src/app/(app)/equipo/` (usuarios; con el enlace a Etapas), pantalla de entrar, `src/lib/nav.ts` (ítem Equipo). Depende de B. Verifica: común, y entrar en local con un EQUIPO, un CLIENTE de todo el grupo y uno limitado a una sociedad.
+- ✅ E. Carga inicial. `scripts/carga-inicial.ts`. Depende de B. Verifica: correrlo dos veces en `proges_dev`; el segundo no crea nada.
+- ✅ G. Reglas e indicadores. `src/lib/servicios.ts`, `scripts/probar-indicadores.ts`. Depende de B. Verifica: `npx tsx scripts/probar-indicadores.ts`.
 - ◻️ T. Etapas editables. `src/app/(app)/equipo/etapas/`. Depende de A y B. Verifica: común; agregar, renombrar, reordenar, desactivar; una con servicios no se borra; aviso si falta la etapa que cierra o la publicada.
 - ◻️ S. Servicios en la ficha. `src/app/(app)/propiedades/[id]/servicios-*.tsx`, `src/app/(app)/propiedades/[id]/servicios/[sid]/page.tsx`, `src/app/(app)/propiedades/servicios-actions.ts`, y en `[id]/page.tsx` la pestaña nueva y el enlace al Drive. Depende de A, B y G. Verifica: común; dos servicios en una propiedad, moverlos por separado, cerrar uno y cancelar el otro.
 - ◻️ C. Venta y arriendo. `src/app/(app)/propiedades/[id]/comercial-*.tsx`, `src/app/(app)/propiedades/comercial-actions.ts`. Depende de A, B y G. Verifica: común; precio, visita, oferta y recomendación, también a ancho de celular. No toca la página del servicio (es de S): el coordinador enchufa su componente al terminar la ola.

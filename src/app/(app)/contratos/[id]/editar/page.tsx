@@ -58,7 +58,7 @@ export default async function EditarContratoPage({
         }}
         properties={properties.map((p) => ({
           value: p.id,
-          label: `${p.rolSII} · ${p.direccion}`,
+          label: `${p.rolSII ?? "Sin ROL"} · ${p.direccion}`,
         }))}
         tenants={tenants.map((t) => ({
           value: t.id,

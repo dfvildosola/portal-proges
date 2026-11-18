@@ -90,7 +90,7 @@ export function FactsCard({
           <div className="grid gap-x-8 sm:grid-cols-2">
             <DataItem label="Tipo" value={propertyTypeLabels[p.tipo]} />
             <DataItem label="Objetivo" value={propertyGoalLabels[p.objetivo]} />
-            <DataItem label="ROL SII" value={p.rolSII} />
+            <DataItem label="ROL SII" value={p.rolSII ?? "Sin ROL"} />
             <DataItem label="Dirección" value={p.direccion} />
             <DataItem label="Comuna" value={p.comuna} />
             <DataItem label="Región" value={p.region} />

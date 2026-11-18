@@ -248,7 +248,7 @@ export default async function ResumenPage({
     if (comercial !== null) {
       rentaRows.push({
         id: p.id,
-        rol: p.rolSII,
+        rol: p.rolSII ?? "Sin ROL",
         direccion: p.direccion,
         tipo: p.tipo,
         objetivo: p.objetivo,

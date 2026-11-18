@@ -33,7 +33,7 @@ export default async function CuentasPage() {
           ? "VENCIDA"
           : "PENDIENTE",
     propertyId: b.property.id,
-    propertyRol: b.property.rolSII,
+    propertyRol: b.property.rolSII ?? "Sin ROL",
     propertyDireccion: b.property.direccion,
   }));
 

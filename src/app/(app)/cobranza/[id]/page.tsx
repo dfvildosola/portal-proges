@@ -85,7 +85,7 @@ export default async function CobroDetallePage({
             {isPartial && <Badge variant="warning">Parcial</Badge>}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            {c.property.rolSII} · {c.tenant.nombre}
+            {c.property.rolSII ?? "Sin ROL"} · {c.tenant.nombre}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -197,7 +197,7 @@ export default async function CobroDetallePage({
                 href={`/propiedades/${c.property.id}`}
                 className="text-sm font-medium hover:underline"
               >
-                {c.property.rolSII}
+                {c.property.rolSII ?? "Sin ROL"}
               </Link>
               <p className="text-sm text-muted-foreground">
                 {c.property.direccion}, {c.property.comuna}

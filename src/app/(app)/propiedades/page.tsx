@@ -17,7 +17,7 @@ export default async function PropiedadesPage() {
   // Aplanamos a una forma serializable (Decimal/Date no cruzan a Client Components).
   const rows: PropertyRow[] = properties.map((p) => ({
     id: p.id,
-    rolSII: p.rolSII,
+    rolSII: p.rolSII ?? "Sin ROL",
     tipo: p.tipo,
     direccion: p.direccion,
     comuna: p.comuna,

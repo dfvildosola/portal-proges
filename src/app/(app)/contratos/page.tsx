@@ -24,7 +24,7 @@ export default async function ContratosPage() {
   // Aplanamos a una forma serializable (Decimal/Date no cruzan a Client Components).
   const rows: ContractRow[] = contracts.map((c) => ({
     id: c.id,
-    propertyRol: c.property.rolSII,
+    propertyRol: c.property.rolSII ?? "Sin ROL",
     propertyDireccion: c.property.direccion,
     tenantNombre: c.tenant.nombre,
     monto: Number(c.monto),

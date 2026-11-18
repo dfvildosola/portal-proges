@@ -154,50 +154,54 @@ enum ValorFuente {
 // ----------------------------------------------------------------------------
 
 model Property {
-  id             String         @id @default(cuid())
-  organizationId String
-  rolSII         String
-  tipo           PropertyType
-  direccion      String
-  comuna         String
-  region         String
-  objetivo       PropertyGoal   @default(INVERSION)
-  estado         PropertyStatus @default(DISPONIBLE)
-  monedaPrincipal Currency      @default(CLP)
-  m2Terreno      Decimal?       @db.Decimal(10, 2)
-  m2Construidos  Decimal?       @db.Decimal(10, 2)
-  anoConstruccion Int?
-  valorComercial       Decimal?  @db.Decimal(14, 2)
-  valorComercialMoneda Currency  @default(CLP)
+  id                   String         @id @default(cuid())
+  organizationId       String
+  // El ROL es opcional: el inventario del Drive no lo trae.
+  rolSII               String?
+  tipo                 PropertyType
+  direccion            String
+  comuna               String
+  region               String
+  objetivo             PropertyGoal   @default(INVERSION)
+  estado               PropertyStatus @default(DISPONIBLE)
+  monedaPrincipal      Currency       @default(CLP)
+  m2Terreno            Decimal?       @db.Decimal(10, 2)
+  m2Construidos        Decimal?       @db.Decimal(10, 2)
+  anoConstruccion      Int?
+  valorComercial       Decimal?       @db.Decimal(14, 2)
+  valorComercialMoneda Currency       @default(CLP)
   // Fecha y fuente del valor comercial (para saber qué tan al día está).
   valorComercialFecha  DateTime?
   valorComercialFuente ValorFuente?
   // Compra: cuándo y por cuánto se compró.
   compraFecha          DateTime?
-  compraPrecio         Decimal?  @db.Decimal(14, 2)
-  compraMoneda         Currency  @default(CLP)
+  compraPrecio         Decimal?       @db.Decimal(14, 2)
+  compraMoneda         Currency       @default(CLP)
   // Deuda hipotecaria vigente (todo vacío si no hay deuda). El dividendo va en
   // la misma moneda que el saldo.
-  deudaSaldo           Decimal?  @db.Decimal(14, 2)
-  deudaMoneda          Currency  @default(UF)
+  deudaSaldo           Decimal?       @db.Decimal(14, 2)
+  deudaMoneda          Currency       @default(UF)
   deudaFecha           DateTime? // fecha a la que corresponde el saldo
   deudaBanco           String?
-  deudaDividendo       Decimal?  @db.Decimal(14, 2)
+  deudaDividendo       Decimal?       @db.Decimal(14, 2)
   deudaTermino         DateTime? // fecha del último dividendo
   // Exenta de contribuciones: no paga cuotas (p. ej. bodegas de avalúo bajo).
-  exentaContribuciones Boolean   @default(false)
-  createdAt            DateTime  @default(now())
-  updatedAt      DateTime       @updatedAt
+  exentaContribuciones Boolean        @default(false)
+  // Id de la carpeta de esta propiedad en Google Drive (para abrirla desde la ficha).
+  driveCarpetaId       String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
 
   owners      PropertyOwner[]
   tags        PropertyTag[]        @relation("PropertyToTag")
   units       PropertyUnit[]
   assessments PropertyAssessment[]
-  documents Document[]
-  contracts LeaseContract[]
-  movements Movement[]
-  taxes     PropertyTax[]
-  bills     PropertyBill[]
+  documents   Document[]
+  contracts   LeaseContract[]
+  movements   Movement[]
+  taxes       PropertyTax[]
+  bills       PropertyBill[]
+  servicios   ServicioEnCurso[]
 
   @@index([organizationId])
 }
@@ -259,7 +263,8 @@ model Grupo {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  owners Owner[]
+  owners   Owner[]
+  usuarios Usuario[]
 
   @@index([organizationId])
 }
@@ -267,14 +272,15 @@ model Grupo {
 // Entidad legal dueña de propiedades: persona natural o sociedad. Reutilizable
 // entre propiedades (una misma entidad participa en varias vía PropertyOwner).
 model Owner {
-  id             String          @id @default(cuid())
+  id             String            @id @default(cuid())
   organizationId String
   nombre         String
   rut            String
-  tipo           OwnerType       @default(PERSONA)
+  tipo           OwnerType         @default(PERSONA)
   grupoId        String?
-  grupo          Grupo?          @relation(fields: [grupoId], references: [id], onDelete: SetNull)
+  grupo          Grupo?            @relation(fields: [grupoId], references: [id], onDelete: SetNull)
   properties     PropertyOwner[]
+  usuarios       UsuarioSociedad[]
 
   @@index([organizationId])
   @@index([grupoId])
@@ -282,11 +288,11 @@ model Owner {
 
 // Puente de copropiedad: varios dueños por propiedad, cada uno con su %.
 model PropertyOwner {
-  id             String   @id @default(cuid())
+  id             String  @id @default(cuid())
   organizationId String
   propertyId     String
   ownerId        String
-  porcentaje     Decimal  @db.Decimal(5, 2)
+  porcentaje     Decimal @db.Decimal(5, 2)
 
   property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   owner    Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -347,18 +353,18 @@ model LeaseContract {
 
 // Cobro de arriendo por período. El corazón de la cobranza.
 model RentCharge {
-  id              String       @id @default(cuid())
-  organizationId  String
-  contractId      String
-  periodo         String // "YYYY-MM"
-  montoEsperado   Decimal      @db.Decimal(14, 2)
-  moneda          Currency     @default(CLP)
+  id               String       @id @default(cuid())
+  organizationId   String
+  contractId       String
+  periodo          String // "YYYY-MM"
+  montoEsperado    Decimal      @db.Decimal(14, 2)
+  moneda           Currency     @default(CLP)
   fechaVencimiento DateTime
-  estado          ChargeStatus @default(PENDIENTE)
-  fechaPago       DateTime?
-  montoPagado     Decimal?     @db.Decimal(14, 2)
-  interesMora     Decimal?     @db.Decimal(14, 2) // manual en MVP
-  notas           String?
+  estado           ChargeStatus @default(PENDIENTE)
+  fechaPago        DateTime?
+  montoPagado      Decimal?     @db.Decimal(14, 2)
+  interesMora      Decimal?     @db.Decimal(14, 2) // manual en MVP
+  notas            String?
 
   contract  LeaseContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
   movements Movement[]
@@ -389,15 +395,15 @@ model Movement {
 }
 
 model PropertyTax {
-  id              String    @id @default(cuid())
-  organizationId  String
-  propertyId      String
-  anio            Int
-  cuota           Int // 1-4
-  monto           Decimal?  @db.Decimal(14, 2)
+  id               String    @id @default(cuid())
+  organizationId   String
+  propertyId       String
+  anio             Int
+  cuota            Int // 1-4
+  monto            Decimal?  @db.Decimal(14, 2)
   fechaVencimiento DateTime
-  estado          TaxStatus @default(PENDIENTE)
-  fechaPago       DateTime?
+  estado           TaxStatus @default(PENDIENTE)
+  fechaPago        DateTime?
 
   property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
@@ -434,22 +440,22 @@ model PropertyBill {
 // Metadatos + puntero al archivo. El binario vive en Vercel Blob (privado).
 // `extractedText`/embeddings (silver/gold) son post-MVP — reservados, no se llenan aún.
 model Document {
-  id             String       @id @default(cuid())
-  organizationId String
-  propertyId     String
-  tipo           DocumentType
-  papel          Papel? // qué papel es (null = documento suelto, sin papel asignado)
-  nombre         String
-  blobKey        String // puntero al objeto en Vercel Blob
-  fechaEmision   DateTime?
+  id               String       @id @default(cuid())
+  organizationId   String
+  propertyId       String
+  tipo             DocumentType
+  papel            Papel? // qué papel es (null = documento suelto, sin papel asignado)
+  nombre           String
+  blobKey          String // puntero al objeto en Vercel Blob
+  fechaEmision     DateTime?
   fechaVencimiento DateTime? // alimenta alertas de vencimiento
   // Campos Conservador (opcionales)
-  fojas          String?
-  numero         String?
-  anio           Int?
+  fojas            String?
+  numero           String?
+  anio             Int?
   // Reservado para IA (post-MVP): texto extraído del PDF/imagen
-  extractedText  String?
-  createdAt      DateTime     @default(now())
+  extractedText    String?
+  createdAt        DateTime     @default(now())
 
   property  Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   movements Movement[]
@@ -470,4 +476,227 @@ model CurrencyValue {
   valor Decimal  @db.Decimal(14, 4)
 
   @@unique([fecha, tipo])
+}
+
+// ----------------------------------------------------------------------------
+// Etapa 1: dos caras (equipo Proges + cliente) y servicios en curso
+// ----------------------------------------------------------------------------
+
+enum UsuarioRol {
+  EQUIPO
+  CLIENTE
+}
+
+// Qué ve un cliente: todo su grupo, o solo las sociedades que se le marcan.
+enum UsuarioAlcance {
+  GRUPO
+  SOCIEDADES
+}
+
+// Los seis tipos de servicio están fijos en el código; sus etapas son filas
+// editables (modelo Etapa).
+enum ServicioTipo {
+  EVALUACION
+  INSPECCION
+  VENTA
+  ARRIENDO
+  OBRA
+  ADMINISTRACION
+}
+
+enum ServicioEstado {
+  ABIERTO
+  TERMINADO
+  CANCELADO
+}
+
+enum EventoTipo {
+  ETAPA
+  PRECIO
+}
+
+// Quién fijó un precio: el propietario, o lo sugirió Proges (por una evaluación).
+enum PrecioOrigen {
+  PROPIETARIO
+  SUGERIDO_PROGES
+}
+
+enum OfertaEstado {
+  RECIBIDA
+  ACEPTADA
+  RECHAZADA
+  CAIDA
+}
+
+// Persona que entra al portal. El correo (en minúsculas) la une con Clerk.
+// Rol EQUIPO ve y edita todo; CLIENTE solo lee dentro de su alcance.
+model Usuario {
+  id             String         @id @default(cuid())
+  organizationId String
+  email          String         @unique // siempre en minúsculas
+  nombre         String
+  rol            UsuarioRol
+  admin          Boolean        @default(false) // crea usuarios y edita etapas
+  grupoId        String? // solo para clientes: su grupo
+  alcance        UsuarioAlcance @default(GRUPO)
+  activo         Boolean        @default(true)
+  ultimoIngreso  DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  grupo       Grupo?            @relation(fields: [grupoId], references: [id], onDelete: SetNull)
+  sociedades  UsuarioSociedad[]
+  responsable ServicioEnCurso[]
+  eventos     Evento[]
+  visitas     Visita[]
+
+  @@index([organizationId])
+}
+
+// Sociedades que ve un cliente con alcance SOCIEDADES.
+model UsuarioSociedad {
+  id             String @id @default(cuid())
+  organizationId String
+  usuarioId      String
+  ownerId        String
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  owner   Owner   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, ownerId])
+  @@index([organizationId])
+}
+
+// Un paso del recorrido de un tipo de servicio. Se edita en el portal.
+// Las dos marcas hacen que los indicadores no dependan del nombre de la etapa.
+model Etapa {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  tipo               ServicioTipo
+  nombre             String
+  orden              Int
+  cierraServicio     Boolean      @default(false) // llegar acá termina el servicio
+  propiedadPublicada Boolean      @default(false) // mientras está acá, la propiedad está publicada
+  activa             Boolean      @default(true) // una etapa con servicios adentro no se borra: se desactiva
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  servicios ServicioEnCurso[]
+  eventos   Evento[]
+
+  @@index([organizationId, tipo])
+}
+
+// El catálogo de servicios (viene de la Sheet / Odoo). El código solo NO es
+// único: la fuente trae tres códigos repetidos con nombres distintos.
+model Servicio {
+  id             String  @id @default(cuid())
+  organizationId String
+  codigo         String
+  familia        String // prefijo del código antes del guion (NV, RR, ADMP…)
+  nombre         String
+  unidad         String?
+  activo         Boolean @default(true)
+
+  enCurso ServicioEnCurso[]
+
+  @@unique([organizationId, codigo, nombre])
+  @@index([organizationId])
+}
+
+// La unidad de trabajo: un servicio que se está prestando sobre una propiedad.
+// Una propiedad puede tener varios a la vez; cada uno avanza por las etapas de su tipo.
+model ServicioEnCurso {
+  id             String         @id @default(cuid())
+  organizationId String
+  propertyId     String
+  servicioId     String
+  tipo           ServicioTipo
+  etapaId        String
+  responsableId  String?
+  estado         ServicioEstado @default(ABIERTO)
+  motivoCierre   String? // al cancelar o terminar
+  porConfirmar   Boolean        @default(false) // deducido de la carga inicial, falta que el equipo lo confirme
+  nota           String?
+  abiertoEl      DateTime       @default(now())
+  cerradoEl      DateTime?
+
+  // Solo para VENTA y ARRIENDO.
+  precio             Decimal?  @db.Decimal(14, 2)
+  precioMoneda       Currency?
+  avisoUrl           String? // enlace del aviso publicado (Nexxos solo publica)
+  recomendacion      String?
+  recomendacionFecha DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  servicio    Servicio @relation(fields: [servicioId], references: [id], onDelete: Restrict)
+  etapa       Etapa    @relation(fields: [etapaId], references: [id], onDelete: Restrict)
+  responsable Usuario? @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+  eventos     Evento[]
+  visitas     Visita[]
+  ofertas     Oferta[]
+
+  @@index([propertyId])
+  @@index([organizationId, estado])
+}
+
+// Historial de un servicio: cada cambio de etapa o de precio deja una fila.
+model Evento {
+  id                String        @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String
+  tipo              EventoTipo
+  etapaId           String? // solo en ETAPA: la etapa a la que entró
+  anterior          String?
+  nuevo             String // ETAPA: nombre de la etapa tal como era ese día; PRECIO: el monto como texto
+  moneda            Currency?
+  origen            PrecioOrigen? // solo en PRECIO
+  motivo            String?
+  autorId           String?
+  fecha             DateTime      @default(now())
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  etapa           Etapa?          @relation(fields: [etapaId], references: [id], onDelete: SetNull)
+  autor           Usuario?        @relation(fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@index([servicioEnCursoId])
+}
+
+model Visita {
+  id                 String   @id @default(cuid())
+  organizationId     String
+  servicioEnCursoId  String
+  fecha              DateTime
+  realizadaPorId     String?
+  interesadoNombre   String? // el cliente no ve los datos del interesado
+  interesadoContacto String?
+  evaluacion         Int? // 1 a 5
+  comentario         String?
+  createdAt          DateTime @default(now())
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  realizadaPor    Usuario?        @relation(fields: [realizadaPorId], references: [id], onDelete: SetNull)
+
+  @@index([servicioEnCursoId])
+}
+
+model Oferta {
+  id                String       @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String
+  fecha             DateTime
+  monto             Decimal      @db.Decimal(14, 2)
+  moneda            Currency
+  oferente          String
+  estado            OfertaEstado @default(RECIBIDA)
+  nota              String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+
+  @@index([servicioEnCursoId])
 }

@@ -55,7 +55,7 @@ export default async function CobranzaPage({
     interesMora: ch.interesMora !== null ? Number(ch.interesMora) : null,
     notas: ch.notas,
     propertyId: ch.contract.property.id,
-    propertyRol: ch.contract.property.rolSII,
+    propertyRol: ch.contract.property.rolSII ?? "Sin ROL",
     propertyDireccion: ch.contract.property.direccion,
     tenantNombre: ch.contract.tenant.nombre,
   }));

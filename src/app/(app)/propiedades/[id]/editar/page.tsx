@@ -20,13 +20,13 @@ export default async function EditarPropiedadPage({
   return (
     <>
       <BackLink href={`/propiedades/${p.id}`}>Volver a la ficha</BackLink>
-      <PageHeader title="Editar propiedad" description={p.rolSII} />
+      <PageHeader title="Editar propiedad" description={p.rolSII ?? "Sin ROL"} />
       <PropertyForm
         action={updateProperty}
         submitLabel="Guardar cambios"
         initial={{
           id: p.id,
-          rolSII: p.rolSII,
+          rolSII: p.rolSII ?? undefined,
           tipo: p.tipo,
           direccion: p.direccion,
           comuna: p.comuna,
