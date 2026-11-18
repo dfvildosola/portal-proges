@@ -1,193 +1,180 @@
 # TAREA — Etapa 1: el portal con dos caras (equipo Proges + cliente)
 
-**Estado: v2 respondida por Diego el 2026-11-18, pero NO se ejecuta: su respuesta cambia el diseño. Falta escribir la v3 y que la apruebe.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v2). Branch: `plan/etapa-1-dos-caras`.
+**Estado: plan v3 escrito, esperando la aprobación de Diego.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v3). Branch: `plan/etapa-1-dos-caras`.
 
-Paso siguiente: cerrar con Diego las cuatro preguntas de «Respuesta de Diego a la v2» (al final), reescribir el plano como v3 con el servicio en curso como unidad (sin etapa única por propiedad) y volver a publicar la página para que la apruebe.
+Paso siguiente: Diego recorre la página (una decisión, d7, y diez supuestos) y pega su respuesta. Con el ok se guarda acá, se hace commit, el coordinador deja la pieza 0 y se lanza el workflow (o subagentes sueltos si dice «sin workflow»).
 
 ## Lo que ya cerró Diego (2026-11-18)
-- Convecta no ha respondido. El plan no depende de Nexxos.
-- **Nexxos solo publica los avisos.** Las visitas, ofertas, fases, precios y toda la gestión de la venta o el arriendo se registran en el portal.
+- Convecta no ha respondido. El plan no depende de Nexxos: **solo publica los avisos**; toda la gestión se registra en el portal.
 - **Se pausa «Cobrar según cada contrato»**: queda en `PENDIENTES.md`, en espera.
-- **DuckDB y dbt (el stack analítico de RASA) quedan para la etapa en que entre Odoo.** En la etapa 1 quedan listos el historial por eventos, las fechas y los códigos del catálogo iguales a los de Odoo.
-- **Un cliente grande puede tener varios usuarios con accesos distintos.** Del cliente actual entrarían entre 3 y 5 personas; no se sabe todavía si ven lo mismo.
-- **Entran a la etapa 1:** la etapa del recorrido para todas las propiedades, los indicadores que salen del historial, el enlace a la carpeta del Drive en la ficha y el último ingreso de cada cliente.
-- Contexto de la conversación: dos caras sobre la misma ficha; el cliente actual compra cartera de deuda (unas 80 propiedades, 20 a 25 activas) y pide reportes de corretaje que hoy van en un Word semanal; piloto de propietarios con Diego (1 propiedad) y un amigo (3); equipo: Álvaro, Cecilia, Leo Maris y François, sin responsable fijo por propiedad; catálogo de servicios en la Sheet `18YgGpb6fEHPLkq5TCAb6lKEWWtiXUANzrKEAIrihQEs` y en Odoo; inventario del Drive en `docs/inventario-drive/`.
+- **DuckDB y dbt quedan para la etapa en que entre Odoo.**
+- **Decisiones de la v2, cerradas:** un solo tipo de usuario «cliente» con su alcance (d1 a); el cliente ve las visitas sin los datos del interesado (d2 b); carga inicial de las 42 sin las 20 posiblemente vendidas, después de que el equipo confirme la lista (d3 b); el cliente ve en vivo (d4 a); etapas propias por tipo de servicio (d5 b); acceso por sociedad (d6 b).
+- **Correcciones a la v2:** no hay etapas consecutivas ni una etapa única por propiedad; una propiedad usa solo los servicios que necesita (puede ser solo papeles, solo toma de posesión, o solo venta o arriendo) y puede estar en venta y en arriendo a la vez.
+- **Las etapas las propone Claude y después se editan dentro del portal.**
+- **Los datos que hay hoy en el portal son inventados.**
+- **El precio lo puede dar el propietario o lo sugiere Proges** (si le piden una evaluación).
+- **Estándares:** ningún archivo sobre 800 líneas y la misma vara que el portal de RASA.
+- Del cliente actual entrarían entre 3 y 5 personas; no se sabe si se separan por sociedad.
+- Contexto: el cliente actual compra cartera de deuda (unas 80 propiedades, 20 a 25 activas) y pide reportes de corretaje que hoy van en un Word semanal; piloto de propietarios con Diego (1 propiedad) y un amigo (3); equipo: Álvaro, Cecilia, Leo Maris y François, sin responsable fijo por propiedad; catálogo de servicios en la Sheet `18YgGpb6fEHPLkq5TCAb6lKEWWtiXUANzrKEAIrihQEs` (pestaña «Odoo Servicios», 78 filas) y en Odoo; inventario del Drive en `docs/inventario-drive/`.
 
-## Cambios de la v1 a la v2
-- Nueva: etapa del recorrido en la propiedad (la v1 solo cubría las propiedades en venta o arriendo).
-- Nueva: acceso por sociedad para los usuarios de un cliente (decisión d6).
-- Nueva pieza G (reglas e indicadores) y un historial único (`Evento`) para etapa, fase y precio.
-- Nuevos: enlace a la carpeta del Drive y último ingreso.
-- Fuera, con su gatillo en el ADR: DuckDB y dbt, roles por sección, pedir un servicio desde el panel, costos por propiedad.
+## Cambios de la v2 a la v3
+- Se elimina la etapa del recorrido en la propiedad. **La unidad es el servicio en curso**: una propiedad tiene varios a la vez y cada uno avanza por las etapas de su tipo.
+- La venta y el arriendo son servicios (tipo VENTA y ARRIENDO) con precio, visitas, ofertas y recomendación. No hay tabla `Gestion`.
+- Las etapas son filas editables en `/equipo/etapas` (pieza nueva T), con dos marcas: cierra el servicio y propiedad publicada.
+- El precio guarda quién lo fijó (propietario o sugerido por Proges).
+- Sin agente implementador propio: las convenciones van en `AGENTS.md` (pieza 0). Decisión d7 sobre cuánta revisión.
+
+## Estándares de construcción (la misma vara que el portal de RASA)
+- Ningún archivo pasa de ~800 líneas: cada pestaña y cada formulario en su archivo. Hoy el más largo propio es `resumen/page.tsx` (579).
+- Cada pieza pasa `npx tsc --noEmit && npm run lint && npm run build` antes de devolverse; no toca archivos fuera de su encargo; no hace commit; devuelve un informe corto.
+- Cada agente lee `AGENTS.md` (convenciones) y la guía de Next en `node_modules/next/dist/docs/` antes de usar una API del framework.
+- Un número vive en un solo lugar (`src/lib/servicios.ts`), errores explícitos, sin librerías nuevas fuera de Clerk, textos en español sin jerga, fechas con `src/lib/fechas.ts`.
 
 ## 1. Qué va a existir
-- **Equipo Proges** (Álvaro, Cecilia, Leo, François, Diego): entra con su correo; ve y edita toda la cartera como hoy; mueve cada propiedad por las etapas del recorrido; en la venta o el arriendo lleva fase, precio con su historial, visitas, ofertas y recomendación al propietario; asigna servicios en curso (código del catálogo, responsable, estado); abre la carpeta del Drive desde la ficha; en «Operación» ve toda la cartera por etapa y lo activo por fase, semana y responsable.
-- **Cliente** (el comprador de cartera y los propietarios del piloto): entra con su correo y ve solo lo que está dentro de su alcance (todo su grupo o solo algunas sociedades), en un panel de solo lectura: la cartera por etapa y, por propiedad, fase, indicadores, precio y su historial, visitas con su evaluación, ofertas, recomendación y servicios en curso.
-- **Diego como admin:** crea usuarios, define su alcance y ve su último ingreso.
-- **Listo:** pasan `npm run lint` y `npm run build`; un cliente de prueba no logra ver ni abrir una propiedad de otro grupo ni de una sociedad que no le toca; una visita registrada desde el celular aparece en el panel del cliente; cada cambio de etapa, fase o precio queda en el historial con fecha y autor; los indicadores coinciden con la cuenta a mano; la carga inicial deja las propiedades con su etapa «por confirmar» y su carpeta enlazada; ADRs y `PENDIENTES.md` al día.
+- **Equipo Proges** (Álvaro, Cecilia, Leo, François, Diego): entra con su correo; ve y edita toda la cartera como hoy; abre en cada propiedad los servicios que necesita (tipo, código del catálogo, responsable), los mueve por sus etapas y los cierra (terminado o cancelado con motivo); en venta y arriendo lleva precio con historial, visitas, ofertas y recomendación; abre la carpeta del Drive desde la ficha; en «Operación» ve todos los servicios abiertos por tipo y etapa, por responsable, los «por confirmar» y las visitas de la semana.
+- **Cliente:** entra con su correo y ve, solo lectura y dentro de su alcance (todo su grupo o solo algunas sociedades), su cartera con los servicios abiertos de cada propiedad y su etapa; en venta o arriendo, indicadores, precio y su historial, visitas con su evaluación, ofertas y recomendación.
+- **Diego como admin:** crea usuarios y define su alcance, edita las etapas de cada tipo de servicio, ve el último ingreso de cada usuario.
+- **Listo:** pasan tipos, lint y build; un cliente de prueba no ve ni abre una propiedad de otro grupo ni de una sociedad que no le toca; una propiedad tiene dos servicios abiertos a la vez y avanzan por separado; una etapa agregada o renombrada aparece al tiro; una visita registrada desde el celular aparece en el panel del cliente; cada cambio de etapa o precio queda en el historial; los indicadores coinciden con la cuenta a mano; ningún archivo nuevo sobre 800 líneas; ADRs y `PENDIENTES.md` al día.
 
 ## 2. Flujo de los usuarios
-1. Diego (admin) crea los usuarios en `/equipo`, asocia cada cliente a su grupo y elige si ve todo el grupo o solo algunas sociedades. Pieza A.
-2. Equipo confirma o mueve la etapa del recorrido (evaluación → toma de posesión → papeles → reparación → venta o arriendo → administración → cerrada). Las de la carga inicial vienen «por confirmar». Piezas C y D.
-3. Equipo abre una gestión (venta o arriendo) cuando la propiedad sale al mercado: fase «captada», precio inicial, enlace del aviso. Pieza C.
-4. Quien hizo la visita la registra desde el celular: fecha, quién la hizo, interesado, evaluación (1 a 5) y comentario. Pieza C.
-5. Equipo cambia la fase o el precio: queda en el historial con fecha, autor y motivo. Pieza C.
-6. Equipo registra una oferta (monto, moneda, oferente, estado: recibida, aceptada, rechazada, caída). Pieza C.
-7. El portal calcula los indicadores al mirar: días publicada, visitas por semana, días desde la última rebaja. Pieza G.
-8. Equipo escribe la recomendación al propietario (p. ej., bajar el precio). Queda fechada. Pieza C.
-9. Equipo asigna un servicio del catálogo a la propiedad, con responsable y estado (por hacer, en curso, hecho). Pieza S.
-10. Equipo revisa «Operación»: cartera por etapa, gestiones por fase, visitas de la semana y servicios por responsable. Pieza D.
-11. Cliente entra y ve su panel; abre una propiedad y ve su detalle. Pieza F.
+1. Admin crea los usuarios en `/equipo` y define su alcance. Pieza A.
+2. Admin ajusta las etapas en `/equipo/etapas`, solo si hace falta. Pieza T.
+3. Equipo abre un servicio en la ficha: tipo, código del catálogo, responsable. Parte en la primera etapa de su tipo. Los de la carga inicial vienen «por confirmar». Pieza S.
+4. Equipo mueve la etapa: queda en el historial con fecha y autor. Pieza S.
+5. En venta o arriendo, equipo registra el precio, quién lo fijó y el enlace del aviso; cada cambio pide motivo y queda en el historial. Pieza C.
+6. Quien hizo la visita la registra desde el celular: fecha, quién la hizo, interesado, evaluación (1 a 5), comentario. Pieza C.
+7. Equipo registra una oferta: monto, moneda, oferente, estado (recibida, aceptada, rechazada, caída). Pieza C.
+8. El portal calcula los indicadores al mirar: días publicada, visitas por semana, días desde la última rebaja. Pieza G.
+9. Equipo escribe la recomendación al propietario, fechada. Pieza C.
+10. Equipo cierra el servicio: terminado o cancelado con motivo. Pieza S.
+11. Equipo revisa «Operación». Pieza D.
+12. Cliente abre su panel y el detalle de una propiedad. Pieza F.
 
-Fases de la venta: captada → publicada → con visitas → con oferta → promesa firmada → escritura → inscrita y entregada.
-Fases del arriendo: captada → publicada → con visitas → postulante en evaluación → contrato firmado → entregada con inventario → pasa a administración.
+**Etapas iniciales por tipo** (se siembran en la migración; después se editan en el portal):
+- EVALUACION (familia ET): solicitada → en evaluación → informe entregado.
+- INSPECCION (familia IRP: acercamiento, títulos, mercado, toma de posesión, recepción, trámites): solicitada → en gestión → informe entregado.
+- VENTA (familia NV): captada → publicada → con visitas → con oferta → promesa firmada → escritura → inscrita y entregada.
+- ARRIENDO (familias NV y ADMP): captada → publicada → con visitas → postulante en evaluación → contrato firmado → entregada con inventario → pasa a administración.
+- OBRA (familia RR): presupuesto enviado → presupuesto aprobado → en obra → entregada.
+- ADMINISTRACION (familia ADMP): activa → terminada.
+La última de cada lista lleva la marca «cierra el servicio». En VENTA y ARRIENDO, desde «publicada» hasta antes del cierre llevan la marca «propiedad publicada».
 
 ## 3. Flujo de datos
-- Fuentes: Drive (inventario ya hecho, `docs/inventario-drive/inventario.csv`, incluye el id de cada carpeta), Sheet del catálogo (se exporta a `prisma/datos/catalogo-servicios.csv`), Clerk (quién entra), lo que el equipo escribe. Nexxos y Odoo no se leen ni se escriben.
+- Fuentes: Drive (inventario ya hecho, `docs/inventario-drive/inventario.csv`: id de carpeta, conteo de documentos por tipo, `etapa_probable`, `confianza`), Sheet del catálogo (pieza 0 la exporta a `prisma/datos/catalogo-servicios.csv`), Clerk (quién entra), lo que el equipo escribe. Nexxos y Odoo no se leen ni se escriben.
 - Postgres (nuevo):
   - `Usuario` (correo, nombre, rol EQUIPO o CLIENTE, grupoId si es cliente, alcance GRUPO o SOCIEDADES, admin, ultimoIngreso) y `UsuarioSociedad` (usuario, owner).
-  - `Gestion` (propiedad, tipo VENTA/ARRIENDO, fase, precio y moneda vigentes, abierta/cerrada, enlace del aviso, recomendación y su fecha).
-  - `Evento` (propiedad, gestión opcional, tipo ETAPA/FASE/PRECIO, valor anterior y nuevo, fecha, autor, motivo).
-  - `Visita`, `Oferta`.
-  - `Servicio` (catálogo: código, familia, nombre) y `ServicioEnCurso` (propiedad, servicio, responsable, estado, fechas, nota).
-- Postgres (cambia): `Property.rolSII` pasa a opcional (el inventario no trae ROL); `Property` suma `etapa`, `etapaPorConfirmar` y `driveCarpetaId`. `Grupo` es el cliente: sus `Owner` (sociedades) son dueñas de las propiedades. El `estado` que ya existe (ocupación) no se toca.
-- Servidor (nuevo): `src/proxy.ts` (Clerk), `src/lib/sesion.ts` (quién es y su alcance; anota el último ingreso), `src/lib/gestion.ts` (etapas, fases e indicadores, funciones puras), `src/lib/cliente.ts` (todas las consultas del cliente, con alcance).
-- Pantallas (nuevo): etapa, enlace al Drive y pestañas «Gestión» y «Servicios» en la ficha; `/operacion`; `/equipo`; `/cliente` y `/cliente/[id]`.
+  - `Etapa` (tipo, nombre, orden, cierraServicio, propiedadPublicada, activa).
+  - `Servicio` (catálogo: código, familia, nombre).
+  - `ServicioEnCurso` (propiedad, servicio del catálogo, tipo, etapa, responsable, estado ABIERTO/TERMINADO/CANCELADO, motivo de cierre, fechas, nota, porConfirmar; para VENTA y ARRIENDO: precio y moneda vigentes, enlace del aviso, recomendación y su fecha).
+  - `Evento` (servicio en curso, tipo ETAPA o PRECIO, valor anterior y nuevo como texto, fecha, autor, motivo; en PRECIO, origen PROPIETARIO o SUGERIDO_PROGES).
+  - `Visita` y `Oferta`, colgando de un servicio en curso.
+- Postgres (cambia): `Property.rolSII` pasa a opcional; `Property` suma `driveCarpetaId`. `Grupo` es el cliente: sus `Owner` (sociedades) son dueñas de las propiedades. El `estado` que ya existe no se toca.
+- Servidor (nuevo): `src/proxy.ts` (Clerk), `src/lib/sesion.ts` (quién es y su alcance; anota el último ingreso), `src/lib/servicios.ts` (tipos, nombres e indicadores, funciones puras), `src/lib/cliente.ts` (todas las consultas del cliente, con alcance).
+- Pantallas (nuevo): pestaña «Servicios» y enlace al Drive en la ficha; página del servicio; `/operacion`; `/equipo` y `/equipo/etapas`; `/cliente` y `/cliente/[id]`.
+- Carga inicial, cómo deduce servicios «por confirmar» desde `etapa_probable`: evaluación inicial → INSPECCION; toma de posesión → INSPECCION; en regularización → INSPECCION; en reparación → OBRA; reparada o en comercialización → VENTA; oferta o promesa → VENTA; arrendada → ADMINISTRACION; sin clasificar o sin contenido → la propiedad sin servicios. Las 20 «posiblemente vendidas» no entran (d3 b).
 
 ## 4. Permisos
-- Roles: EQUIPO (todo, como hoy), CLIENTE (solo lectura dentro de su alcance) y la marca admin (gestiona usuarios).
-- Alcance de un cliente: todo su grupo, o solo algunas sociedades. Se guarda como marca explícita (no vale «sin sociedades = ve todo»). Una propiedad con varios dueños se ve si alguna de sus sociedades está en el alcance.
-- Todo se exige en el servidor: cada consulta de `/cliente` filtra por el alcance; un CLIENTE que abre cualquier ruta del equipo es redirigido a `/cliente`; todas las acciones del servidor (server actions) exigen EQUIPO, y las de `/equipo`, admin.
-- El enlace al Drive existe solo en las pantallas del equipo.
+- Roles: EQUIPO (todo, como hoy), CLIENTE (solo lectura dentro de su alcance) y la marca admin (usuarios y etapas).
+- Alcance de un cliente: todo su grupo, o solo algunas sociedades, como marca explícita. Una propiedad con varios dueños se ve si alguna de sus sociedades está en el alcance.
+- Todo se exige en el servidor: cada consulta de `/cliente` filtra por el alcance; un CLIENTE que abre una ruta del equipo es redirigido a `/cliente`; todas las acciones del servidor exigen EQUIPO, y las de `/equipo` y `/equipo/etapas`, admin.
+- El enlace al Drive y el contacto del interesado no salen por `src/lib/cliente.ts`.
 - Las pantallas que ya existen no se reescriben: siguen siendo solo del equipo.
-- Quien asigna: Diego, en `/equipo`. Roles por sección y que el cliente administre a sus usuarios: fuera.
+- Fuera: roles por sección y que el cliente administre a sus usuarios.
 
 ## 5. Decisiones
-De Diego:
-- d1. Cliente grande y propietario chico: (a) mismo tipo de usuario, «cliente», con su alcance [rec.]; (b) dos tipos con pantallas distintas.
-- d2. Qué ve el cliente de cada visita: (a) todo, incluido el nombre y teléfono del interesado; (b) fecha, quién la hizo, evaluación y comentario, sin datos del interesado [rec.]; (c) solo cuántas hubo.
-- d3. Qué entra en la carga inicial: (a) las 62 del inventario, con las vendidas como «cerrada»; (b) las 42 sin las 20 posiblemente vendidas, después de que el equipo confirme la lista [rec.]; (c) solo las 20 a 25 activas.
-- d4. Cómo ve el cliente la información: (a) en vivo, con lo que el equipo va registrando [rec.]; (b) un informe semanal que el equipo revisa y publica.
-- d5. Estados de un servicio en curso: (a) por hacer, en curso y hecho [rec.]; (b) etapas propias de cada familia de servicio.
-- d6. Cómo se separa lo que ven los usuarios de un mismo cliente: (a) no se separa; (b) por sociedad: todo el grupo o solo algunas sociedades [rec.]; (c) por sociedad y además por sección.
+De Diego, por cerrar en la v3:
+- d7. Cuánta revisión antes de mezclar: (a) enfocada ahora (el `revisor` sobre login, filtro del cliente y migración, más el cierre contra el plan) y completa antes de abrirle el panel al cliente real [rec.]; (b) `/code-review` completo ahora; (c) ninguna ahora.
 
 De Claude:
-- DuckDB y dbt entran con Odoo (aprobado por Diego el 2026-11-18): hoy todo nace en el portal y Postgres responde directo.
-- Login con Clerk: ya estaba decidido en `BRIEF.md` y las llaves están en `.env` y en Vercel.
-- El rol y el alcance viven en la tabla `Usuario`, no en Clerk.
-- «Solo algunas sociedades» es una marca explícita, para que borrar la lista no abra todo el grupo.
-- El cliente tiene pantallas propias (`/cliente`); las del equipo no se tocan para filtrar.
-- La etapa del recorrido es un dato nuevo, distinto del `estado` (ocupación) que ya existe; no se funden ahora.
-- Un solo historial (`Evento`) para etapa, fase y precio: nunca se sobrescribe sin dejar rastro.
-- Los indicadores se calculan al mirar, en `src/lib/gestion.ts`; no se guardan.
-- La fase la mueve una persona; el portal no la cambia solo.
-- `organizationId` sigue fijo en `org_proges`: los clientes son grupos dentro de Proges.
-- Nexxos no se conecta: un campo para el enlace del aviso.
+- Los tipos de servicio son seis y están fijos en el código; sus etapas son filas editables.
+- Cada etapa tiene dos marcas (cierra el servicio, propiedad publicada): los indicadores no dependen del nombre de la etapa.
+- Una etapa con servicios adentro no se borra: se desactiva. El historial guarda el nombre de la etapa como texto, tal como era.
+- Cancelar es una salida de cualquier servicio (con motivo), no una etapa.
+- El precio guarda quién lo fijó en cada evento.
+- Sin agente implementador propio: las convenciones van en `AGENTS.md`, que cargan todos los agentes; el control de cada pieza lo trae el workflow.
+- Solo el admin edita las etapas.
+- Login con Clerk; rol y alcance en la tabla `Usuario`; «solo algunas sociedades» como marca explícita.
+- El cliente tiene pantallas propias y una sola puerta de datos (`src/lib/cliente.ts`).
+- Los indicadores se calculan al mirar, en `src/lib/servicios.ts`; no se guardan.
+- La etapa la mueve una persona; el portal no la cambia solo.
+- `organizationId` sigue fijo en `org_proges`. Nexxos no se conecta: un campo para el enlace del aviso.
 
 ## 6. Supuestos
-- s1. El cliente de cartera es un solo `Grupo`, y sus sociedades son las dueñas de las propiedades.
-- s2. Una propiedad está en una sola etapa a la vez y tiene a lo más una gestión abierta (o venta, o arriendo).
-- s3. Si una oferta se cae, la gestión vuelve a «con visitas» a mano.
-- s4. Los datos que hay hoy en `proges_dev` y en producción son de prueba o del patrimonio de Diego, y conviven con los del cliente.
-- s5. Los códigos de la Sheet son los mismos que los productos de Odoo.
-- s6. Cada persona del equipo tiene un correo propio (`@progesspa.cl`) para entrar.
-- s7. El precio lo decide el propietario: el equipo solo lo registra y recomienda.
-- s8. La visita se registra el mismo día, desde el celular.
-- s9. Las etapas del recorrido son siete: evaluación, toma de posesión, papeles, reparación, venta o arriendo, administración y cerrada.
-- s10. Si el cliente separa lo que ve su gente, lo hace por sociedad (no por zona ni por ejecutivo).
-- s11. Las personas del equipo abren la carpeta del Drive con su propia cuenta de Google, que ya tiene acceso.
+- t1. El cliente de cartera es un solo `Grupo`, y sus sociedades son las dueñas de las propiedades.
+- t2. Los datos inventados que hay hoy se pueden borrar de producción antes de cargar los reales.
+- t3. Una obra se registra como un solo servicio, sin el detalle de sus partidas ni costos.
+- t4. Para el arriendo se usa un código del catálogo de la familia NV o ADMP: no hay uno propio.
+- t5. Solo Diego edita las etapas; el equipo las usa.
+- t6. Si una oferta se cae, el equipo devuelve la etapa a «con visitas» a mano.
+- t7. Los códigos de la Sheet son los mismos que los productos de Odoo.
+- t8. Cada persona del equipo tiene un correo propio (`@progesspa.cl`) para entrar.
+- t9. La visita se registra el mismo día, desde el celular.
+- t10. Las personas del equipo abren la carpeta del Drive con su propia cuenta de Google, que ya tiene acceso.
 
 ## 7. Lo que no debe pasar
-- Un cliente ve o abre una propiedad, visita u oferta de otro grupo. Cómo: dos clientes de prueba de grupos distintos, abriendo `/cliente/[id]` del otro.
-- Un usuario limitado a una sociedad ve una propiedad de otra sociedad de su mismo grupo. Cómo: cliente limitado a la sociedad A abre `/cliente/[id]` de una de la sociedad B.
+- Un cliente ve o abre una propiedad, servicio, visita u oferta de otro grupo. Cómo: dos clientes de prueba de grupos distintos, abriendo `/cliente/[id]` del otro.
+- Un usuario limitado a una sociedad ve una propiedad de otra sociedad de su mismo grupo. Cómo: cliente limitado a A abre `/cliente/[id]` de una de B.
 - Un cliente modifica algo. Cómo: llamar cada acción del servidor con sesión de cliente.
-- Se cargan datos reales en producción antes de que el login esté publicado. Cómo: el orden del deploy en `PENDIENTES.md`.
-- Un cambio de etapa, precio o fase se pierde. Cómo: cambiar dos veces y ver los dos eventos.
-- El equipo y el cliente ven un indicador distinto para la misma propiedad. Cómo: ambos usan `src/lib/gestion.ts`; comparar ficha y panel.
-- El cliente recibe el enlace del Drive o el contacto del interesado (si d2 = b). Cómo: revisar lo que entrega `src/lib/cliente.ts`.
+- Editar las etapas rompe servicios o historial. Cómo: renombrar, reordenar y desactivar una etapa con servicios adentro.
+- Un cambio de etapa o de precio se pierde. Cómo: cambiar dos veces y ver los dos eventos.
+- El equipo y el cliente ven un indicador distinto para la misma propiedad. Cómo: ambos usan `src/lib/servicios.ts`; comparar ficha y panel.
+- El cliente recibe el enlace del Drive o el contacto del interesado. Cómo: revisar lo que entrega `src/lib/cliente.ts`.
+- Se cargan datos reales en producción antes de publicar el login. Cómo: el orden de la puesta en uso en `PENDIENTES.md`.
 - Se escribe en Odoo o en Nexxos. Cómo: ninguna pieza los usa.
-- La migración borra o cambia datos existentes. Cómo: leer el SQL antes de mezclar (se aplica sola al publicar, ADR 0009).
+- La migración borra o cambia datos existentes. Cómo: leer el SQL antes de mezclar (ADR 0009).
+- Un archivo pasa de 800 líneas. Cómo: `wc -l` de los archivos tocados al cerrar.
 
 ## 8. Piezas y orden
-Olas: [B] → [A, E, G] → [C, S, D, F]. 8 agentes en Sonnet.
-- ◻️ B. Esquema y catálogo. `prisma/schema.prisma`, migración nueva, `prisma/datos/catalogo-servicios.csv`, `scripts/cargar-catalogo.ts`. Verifica: `npx prisma migrate dev` aplica en `proges_dev`, el catálogo carga, `npm run build`.
-- ◻️ A. Login, alcance y accesos. `src/proxy.ts`, `src/lib/sesion.ts`, `src/app/layout.tsx`, `src/app/(app)/layout.tsx`, `src/app/(app)/equipo/`, pantalla de entrar, `src/lib/nav.ts` (ítem Equipo). Depende de B. Verifica: lint, build, entrar en local con un EQUIPO, un CLIENTE de todo el grupo y uno limitado a una sociedad.
-- ◻️ E. Carga inicial. `scripts/carga-inicial.ts` (desde `inventario.csv`: crea propiedad, grupo del cliente, etapa deducida «por confirmar», `driveCarpetaId`, y gestión solo para las que están en venta o arriendo; repetirlo no duplica). Depende de B. Verifica: correrlo dos veces en `proges_dev` y contar.
-- ◻️ G. Reglas e indicadores. `src/lib/gestion.ts`, `scripts/probar-indicadores.ts`. Depende de B. Verifica: `npx tsx scripts/probar-indicadores.ts` con casos hechos a mano.
-- ◻️ C. Etapa y gestión en la ficha. `src/app/(app)/propiedades/[id]/gestion-*.tsx`, `src/app/(app)/propiedades/gestion-actions.ts`, y en `[id]/page.tsx` la etapa, el enlace al Drive y la pestaña nueva. Depende de A, B y G. Verifica: lint, build, los pasos 2 a 8 en el navegador, también a ancho de celular.
-- ◻️ S. Servicios en curso. `src/app/(app)/propiedades/[id]/servicios-*.tsx`, `src/app/(app)/propiedades/servicios-actions.ts`. Depende de A y B. Verifica: lint, build, asignar y cerrar un servicio. (C y S comparten `[id]/page.tsx`: lo toca solo C, y S entrega su componente para que el coordinador lo enchufe.)
-- ◻️ D. Operación. `src/app/(app)/operacion/`, `src/lib/nav.ts` (ítem Operación; A ya terminó con ese archivo en la ola anterior). Depende de A, B y G. Verifica: lint, build, la cartera por etapa con datos de la carga inicial.
-- ◻️ F. Panel del cliente. `src/app/cliente/`, `src/lib/cliente.ts`. Depende de A, B y G. Verifica: lint, build, la prueba con tres clientes (otro grupo, todo el grupo, limitado a una sociedad).
+Pieza 0 (coordinador, antes del workflow): sección «Convenciones de frontend» en `AGENTS.md`, escrita desde lo que el código ya hace; exportar el catálogo a `prisma/datos/catalogo-servicios.csv`.
+
+Olas: [B] → [A, E, G] → [T, S, C, D, F]. 9 agentes en Sonnet. Verificación común: `npx tsc --noEmit && npm run lint && npm run build`.
+- ◻️ 0. Convenciones y catálogo (coordinador).
+- ◻️ B. Esquema, catálogo y etapas iniciales. `prisma/schema.prisma`, migración nueva (siembra las etapas), `scripts/cargar-catalogo.ts`. Verifica: `npx prisma migrate dev` aplica en `proges_dev`, el catálogo carga, existen las seis listas de etapas, build.
+- ◻️ A. Login, alcance y accesos. `src/proxy.ts`, `src/lib/sesion.ts`, `src/app/layout.tsx`, `src/app/(app)/layout.tsx`, `src/app/(app)/equipo/` (usuarios; con el enlace a Etapas), pantalla de entrar, `src/lib/nav.ts` (ítem Equipo). Depende de B. Verifica: común, y entrar en local con un EQUIPO, un CLIENTE de todo el grupo y uno limitado a una sociedad.
+- ◻️ E. Carga inicial. `scripts/carga-inicial.ts`. Depende de B. Verifica: correrlo dos veces en `proges_dev`; el segundo no crea nada.
+- ◻️ G. Reglas e indicadores. `src/lib/servicios.ts`, `scripts/probar-indicadores.ts`. Depende de B. Verifica: `npx tsx scripts/probar-indicadores.ts`.
+- ◻️ T. Etapas editables. `src/app/(app)/equipo/etapas/`. Depende de A y B. Verifica: común; agregar, renombrar, reordenar, desactivar; una con servicios no se borra; aviso si falta la etapa que cierra o la publicada.
+- ◻️ S. Servicios en la ficha. `src/app/(app)/propiedades/[id]/servicios-*.tsx`, `src/app/(app)/propiedades/[id]/servicios/[sid]/page.tsx`, `src/app/(app)/propiedades/servicios-actions.ts`, y en `[id]/page.tsx` la pestaña nueva y el enlace al Drive. Depende de A, B y G. Verifica: común; dos servicios en una propiedad, moverlos por separado, cerrar uno y cancelar el otro.
+- ◻️ C. Venta y arriendo. `src/app/(app)/propiedades/[id]/comercial-*.tsx`, `src/app/(app)/propiedades/comercial-actions.ts`. Depende de A, B y G. Verifica: común; precio, visita, oferta y recomendación, también a ancho de celular. No toca la página del servicio (es de S): el coordinador enchufa su componente al terminar la ola.
+- ◻️ D. Operación. `src/app/(app)/operacion/`, `src/lib/nav.ts` (ítem Operación; A ya soltó ese archivo en la ola anterior). Depende de A, B y G. Verifica: común; los servicios por tipo y etapa con datos de la carga inicial.
+- ◻️ F. Panel del cliente. `src/app/cliente/`, `src/lib/cliente.ts`. Depende de A, B y G. Verifica: común; la prueba con tres clientes (otro grupo, todo el grupo, limitado a una sociedad).
 
 ## 9. Riesgos
-- R1. Una consulta del cliente olvida el filtro por alcance (p 2, i 3; datos). Todas en `src/lib/cliente.ts`, que exige el alcance; prueba con tres clientes.
-- R2. Publicar el login cambia producción, que hoy es pública (p 2, i 2; producción). Antes de subir, Diego se crea su usuario; si algo falla, se revierte el commit.
-- R3. La etapa deducida del Drive está mal (p 3, i 1; datos). Se carga como «por confirmar» (solo 27 de 62 con confianza alta) y el equipo la revisa en «Operación».
-- R4. El equipo no registra las visitas y el panel queda vacío (p 2, i 3; datos). Registro corto desde el celular; Diego conversa con el equipo antes de abrirle el panel al cliente.
-- R5. La migración falla en producción (p 1, i 2; producción). Solo agrega tablas y columnas y vuelve opcional el ROL; si falla, el build se detiene y sigue la versión anterior.
-- R6. Clerk en local y en producción con instancias distintas (p 2, i 1; producción). Se revisa cuáles llaves hay en Vercel antes de subir.
-- R7. La etapa (nueva) y el estado (el de hoy) se contradicen (p 2, i 1; datos). La ficha los nombra distinto: «Etapa» y «Ocupación». Si confunde, se funden con un ADR.
-- R8. El cliente no se organiza por sociedad (p 2, i 1; datos). Parte con todos viendo todo el grupo; cambiar el criterio es editar el filtro de un archivo.
+- R1. Una consulta del cliente olvida el filtro por alcance (p 2, i 3; datos). Todas en `src/lib/cliente.ts`; prueba con tres clientes; lo mira el revisor.
+- R2. Publicar el login cambia producción, que hoy es pública (p 2, i 2; producción). Diego se crea su usuario antes de subir; si falla, se revierte el commit. Los datos son inventados.
+- R3. Los servicios deducidos del Drive están mal (p 3, i 1; datos). Entran «por confirmar»; solo 27 de 62 carpetas tienen confianza alta.
+- R4. El equipo no registra las visitas y el panel queda vacío (p 2, i 3; datos). Registro corto desde el celular; Diego conversa con el equipo antes de abrir el panel.
+- R5. La migración falla en producción (p 1, i 2; producción). Solo agrega; si falla, el build se detiene y sigue la versión anterior.
+- R6. Clerk en local y en producción con instancias distintas (p 2, i 1; producción). Se revisan las llaves en Vercel antes de subir.
+- R7. Las etapas propuestas no calzan con cómo trabaja el equipo (p 3, i 1; datos). Se editan en el portal; revisarlas con Leo, François y Cecilia antes de la carga real.
+- R8. Una lista de etapas queda sin etapa final o sin «publicada» (p 2, i 1; datos). La pantalla de etapas avisa.
+- R9. El cliente no se organiza por sociedad (p 2, i 1; datos). Parte con todos viendo todo el grupo.
 
 ## 10. Documentos accesorios y qué queda fuera
-- ADR 0010 «Dos caras: quién ve qué» (usuario, rol, alcance por grupo y sociedad, exigido en el servidor; dónde irían los roles por sección). Nuevo.
-- ADR 0011 «El recorrido y la gestión» (etapas, fases, historial por eventos, visitas, ofertas, indicadores; Nexxos solo publica). En «Lo que queda fuera», con su gatillo: la bodega de análisis (DuckDB y dbt, cuando entre Odoo), pedir un servicio desde el panel, costos por propiedad, correo semanal. Nuevo.
-- `BRIEF.md`: actualizar «Lo que NO hacemos ahora» (ahora hay roles) y el usuario.
-- `PENDIENTES.md`: «Cobrar según cada contrato» en espera; quitar «Producción es pública»; agregar la puesta en uso (crear usuarios, confirmar la lista de la carga, correr la carga en producción, conversar con el equipo, abrirle el panel al cliente y al piloto) y la respuesta de Convecta.
-- Fuera: DuckDB y dbt; roles por sección y que el cliente administre a sus usuarios; pedir un servicio desde el panel; costos y resultado por propiedad, obras y costeo; Odoo (cobros); leer Nexxos (avisos o contactos); propietarios externos que se registran solos; la API para clientes grandes; el correo semanal; ordenar las carpetas del Drive (se recomienda la estructura de 6 subcarpetas, sin código); cobrar según cada contrato.
+- `AGENTS.md`: sección «Convenciones de frontend» (pieza 0).
+- ADR 0010 «Dos caras: quién ve qué». Nuevo.
+- ADR 0011 «El servicio en curso como unidad» (tipos fijos, etapas editables con dos marcas, historial por eventos, venta y arriendo; Nexxos solo publica). En «Lo que queda fuera», con su gatillo: DuckDB y dbt (cuando entre Odoo), pedir un servicio desde el panel, costos por propiedad, correo semanal. Nuevo.
+- `BRIEF.md`: actualizar «Lo que NO hacemos ahora» y el usuario.
+- `PENDIENTES.md`: cobranza en espera; quitar «Producción es pública»; agregar la puesta en uso (crear usuarios, revisar etapas con el equipo, borrar los datos inventados, confirmar la lista y cargar, abrir el panel al cliente y al piloto) y la respuesta de Convecta.
+- Fuera: DuckDB y dbt; tipos de servicio nuevos creados desde el portal; roles por sección y que el cliente administre a sus usuarios; pedir un servicio desde el panel; partidas, costos y resultado por propiedad; Odoo (cobros); leer Nexxos; propietarios externos que se registran solos; la API para clientes grandes; el correo semanal; ordenar las carpetas del Drive; cobrar según cada contrato.
 
 ## 11. Qué revisar una vez construido
 Diego:
-- v1. Entra como cliente de prueba: ve solo las propiedades de ese grupo, repartidas por etapa.
-- v2. Como cliente, pega en la barra la dirección de una propiedad de otro grupo: no la ve.
+- v1. Entra como cliente de prueba: ve solo las propiedades de ese grupo, con sus servicios abiertos y su etapa.
+- v2. Como cliente, pega la dirección de una propiedad de otro grupo: no la ve.
 - v3. Entra como cliente limitado a una sociedad: ve solo las de esa sociedad.
-- v4. Registra una visita desde el celular: aparece en el panel del cliente, sin el teléfono del interesado.
-- v5. Baja un precio dos veces: el historial muestra los dos cambios y «días desde la última rebaja» vuelve a cero.
-- v6. Cuenta a mano los días publicada y las visitas de una propiedad: coinciden con los indicadores en la ficha y en el panel.
-- v7. Registra una oferta y mueve la fase a «con oferta»: el panel lo muestra.
-- v8. Asigna un servicio a Leo: aparece en «Operación» bajo Leo.
-- v9. Revisa «Operación» después de la carga inicial: cada propiedad con su etapa «por confirmar»; al confirmar una, la marca desaparece.
-- v10. Toca el enlace al Drive en una ficha: abre la carpeta. En el panel del cliente el enlace no existe.
-- v11. Entra como propietario piloto y después mira `/equipo`: ve solo su propiedad y queda su último ingreso.
-Claude: lint y build; `npx tsx scripts/probar-indicadores.ts`; la carga inicial corrida dos veces sin duplicar; cada acción del servidor llamada con sesión de cliente responde «sin permiso»; el SQL de la migración leído.
+- v4. Abre un servicio de venta y uno de arriendo en la misma propiedad: avanzan por separado.
+- v5. En `/equipo/etapas`, agrega una etapa a Obra y renombra otra: aparecen al tiro; el historial viejo conserva el nombre anterior.
+- v6. Intenta borrar una etapa con servicios adentro: no deja, ofrece desactivarla.
+- v7. Registra una visita desde el celular: aparece en el panel del cliente, sin el teléfono del interesado.
+- v8. Baja un precio dos veces (una como propietario, otra como sugerido por Proges): el historial muestra los dos con quién lo fijó, y «días desde la última rebaja» vuelve a cero.
+- v9. Cuenta a mano los días publicada y las visitas: coinciden con los indicadores en la ficha y en el panel.
+- v10. Asigna un servicio a Leo y cancela otro con motivo: el primero aparece en «Operación» bajo Leo; el cancelado sale de los abiertos.
+- v11. Revisa «Operación» después de la carga inicial: los servicios deducidos aparecen «por confirmar».
+- v12. Toca el enlace al Drive y después mira `/equipo`: abre la carpeta; el cliente no tiene el enlace; queda el último ingreso.
+Claude: tipos, lint y build; `npx tsx scripts/probar-indicadores.ts`; la carga inicial dos veces sin duplicar; cada acción del servidor con sesión de cliente responde «sin permiso»; el SQL de la migración leído; `wc -l` de los archivos tocados.
 
-## Respuesta de Diego a la v2 (2026-11-18)
-```
-ok, con workflow
-Plan: etapa 1 de Proges, versión 2
+## Respuestas de Diego
+**A la v2 (2026-11-18):** «ok, con workflow», con d1 a, d2 b, d3 b, d4 a, d5 b (distinto de lo propuesto) y d6 b. Marcó falsos cuatro supuestos (etapa única y una sola gestión; datos de prueba que conviven; el precio lo decide el propietario; siete etapas consecutivas) y «no sé» el de separar por sociedad. No se ejecutó: las correcciones cambiaban el diseño. El texto completo está en el commit `2a0b1e9`.
 
-Decisiones:
-- ¿El cliente grande y el propietario chico son el mismo tipo de usuario? Sí: un solo rol «cliente», con su alcance
-- ¿Qué ve el cliente de cada visita? Fecha, quién la hizo, evaluación y comentario, sin datos del interesado
-- ¿Qué propiedades entran en la carga inicial? Las 42 sin las 20 posiblemente vendidas, después de que el equipo confirme la lista
-- ¿El cliente ve la información en vivo o un informe que el equipo publica? En vivo: lo que el equipo registra se ve al tiro
-- ¿Qué estados tiene un servicio en curso? Etapas propias por familia (ET, IRP, NV, RR, ADMP) (distinto de lo propuesto)
-- ¿Cómo se separa lo que ven los 3 a 5 usuarios de un mismo cliente? Por sociedad: cada usuario ve todo el grupo o solo algunas sociedades
-
-Supuestos que no son así:
-- Una propiedad está en una sola etapa del recorrido a la vez, y tiene a lo más una gestión abierta: o venta, o arriendo.
-- Los datos que hay hoy en el portal son de prueba o de tu patrimonio, y pueden convivir con los del cliente.
-- El precio lo decide el propietario: el equipo lo registra y recomienda.
-- Las etapas del recorrido son siete: evaluación, toma de posesión, papeles, reparación, venta o arriendo, administración y cerrada.
-
-Supuestos que no sé:
-- Si el cliente separa lo que ve su gente, lo hace por sociedad (no por zona ni por ejecutivo).
-```
-Diego agregó: las etapas no son consecutivas ni todas las propiedades requieren todos los servicios; una propiedad puede requerir solo papeles, solo toma de posesión, o solo venta o arriendo.
-
-**Qué cambia para la v3**
-- Quedan cerradas d1 (a), d2 (b), d3 (b), d4 (a) y d6 (b). El «con workflow» vale cuando apruebe la v3.
-- Se elimina la etapa única por propiedad (s9 y s2 falsos). La unidad pasa a ser el **servicio en curso**: una propiedad tiene los que necesita, en paralelo, y cada uno avanza por las etapas de su familia (d5 = b). La venta y el arriendo son servicios de la familia NV con sus fases, visitas, ofertas y precio.
-- Familias del catálogo (leído de la Sheet el 2026-11-18): ET evaluación comercial (1 servicio); IRP inspección, regularización y toma de posesión (acercamiento comercial, títulos, mercado, toma de posesión, recepción, trámites); NV negociación y venta (venta, visitas, preparación); RR renovaciones (lista de precios por m², partidas de obra); ADMP administración de patrimonio (mensual).
-
-**Estándares de construcción (pedido de Diego, 2026-11-18): la misma vara que el portal de RASA**
-- Ningún archivo pasa de ~800 líneas (regla de código 4): cada pestaña y cada formulario en su archivo; si uno existente va a crecer, primero se le saca una parte. Hoy el más largo propio es `resumen/page.tsx` (579).
-- Antes de las piezas, el coordinador deja dos cosas (chicas): un agente `implementador-proges` en `.claude/agents/` (adaptado del `implementador-portal` de RASA: lee `AGENTS.md` y la guía de Next en `node_modules/next/dist/docs/`, no toca archivos fuera del encargo, no devuelve hasta que pasan `npx tsc --noEmit && npm run lint && npm run build`, informe corto, sin commit) y una sección «Convenciones de frontend» en `AGENTS.md`, escrita desde lo que el código de Proges ya hace (shadcn primero, íconos lucide, colores por tokens en claro y oscuro, formularios con server actions y validación repetida en el servidor, fechas con `src/lib/fechas.ts`, textos en español sin jerga). Misma vara, no las mismas librerías: Proges ya usa zod y RASA no.
-- Un número vive en un solo lugar (`src/lib/gestion.ts`), errores explícitos, sin librerías nuevas fuera de Clerk.
-- Revisión antes de mezclar: `/code-review` y cierre contra el plan (regla 6).
-
-**Preguntas abiertas antes de escribir la v3**
-1. Las etapas de cada familia: cuáles son (se preguntó a Diego; propuesta de borrador en el chat).
-2. s4: qué datos hay hoy en el portal y por qué no pueden convivir con los del cliente.
-3. s7: quién decide el precio.
-4. s2: si una propiedad puede estar en venta y en arriendo a la vez.
+**A la v3:** (pendiente)
