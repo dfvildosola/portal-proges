@@ -2,7 +2,13 @@
 
 **Estado: plan v3 APROBADO por Diego el 2026-11-18 («ok, con workflow», d7 = a). En ejecución.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v3). Branch: `plan/etapa-1-dos-caras`.
 
-Paso siguiente: ver «Estado de la ejecución» más abajo.
+**Paso siguiente exacto (relevo del 2026-11-18, Diego hizo `/clear`):**
+1. Decirle a Diego en una línea en qué va (parte 1 hecha y guardada en `740d374`; falta la parte 2) y pedirle que escriba **«instala @clerk/nextjs»**: sin esas palabras en su último mensaje, el hook `librerias` frena agregar la librería.
+2. Con ese pedido: agregar la librería de Clerk a este repo (las llaves `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` y `CLERK_SECRET_KEY` ya están en `.env`), comprobar que tsc, lint y build siguen pasando, y commit.
+3. Escribir y lanzar el workflow de la parte 2 (Diego ya dio el «ok, con workflow» para todo el plan v3): primero A sola; después T, S, C, D y F a la vez. Los encargos salen de la sección 8 y de «Lo que dejó la parte 1». Sirve de molde el script de la parte 1 (mismo encabezado común, mismo informe estructurado, `model: 'sonnet'`): `~/.claude/projects/-Users-diegofigueroa-Code/956742f3-23e5-4d81-8d80-f74a1e5665a6/workflows/scripts/proges-etapa1-parte1-wf_449b9e1b-2b1.js`. En la ola de cinco, cada agente corre solo tsc y lint; el build lo corre el coordinador al final, porque dos builds a la vez se pisan.
+4. Al terminar: enchufar el componente de C en la página del servicio (de S), verificación completa, probar en el navegador, `revisor` enfocado (login, `src/lib/cliente.ts`, migración), cierre contra el plan y volver a publicar la página en estado de cierre (su fuente se recupera leyendo el artifact), ADR 0010 y 0011, `BRIEF.md`, `PENDIENTES.md`.
+
+Nada de esto se vuelve a planificar: el plan v3 está aprobado y las decisiones cerradas.
 
 ## Estado de la ejecución
 - Pieza 0 ✅ hecha (convenciones en `AGENTS.md`, catálogo en `prisma/datos/catalogo-servicios.csv`).
