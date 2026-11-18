@@ -1,8 +1,8 @@
 # TAREA — Etapa 1: el portal con dos caras (equipo Proges + cliente)
 
-**Estado: plan v2 escrito, esperando la aprobación de Diego.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v2). Branch: `plan/etapa-1-dos-caras`.
+**Estado: v2 respondida por Diego el 2026-11-18, pero NO se ejecuta: su respuesta cambia el diseño. Falta escribir la v3 y que la apruebe.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v2). Branch: `plan/etapa-1-dos-caras`.
 
-Paso siguiente: Diego recorre la página y pega su respuesta. Con el ok, se guarda la respuesta acá, se hace commit y se lanza el workflow (o subagentes sueltos si dice «sin workflow»).
+Paso siguiente: cerrar con Diego las cuatro preguntas de «Respuesta de Diego a la v2» (al final), reescribir el plano como v3 con el servicio en curso como unidad (sin etapa única por propiedad) y volver a publicar la página para que la apruebe.
 
 ## Lo que ya cerró Diego (2026-11-18)
 - Convecta no ha respondido. El plan no depende de Nexxos.
@@ -151,5 +151,37 @@ Diego:
 - v11. Entra como propietario piloto y después mira `/equipo`: ve solo su propiedad y queda su último ingreso.
 Claude: lint y build; `npx tsx scripts/probar-indicadores.ts`; la carga inicial corrida dos veces sin duplicar; cada acción del servidor llamada con sesión de cliente responde «sin permiso»; el SQL de la migración leído.
 
-## Respuesta de Diego
-(pendiente)
+## Respuesta de Diego a la v2 (2026-11-18)
+```
+ok, con workflow
+Plan: etapa 1 de Proges, versión 2
+
+Decisiones:
+- ¿El cliente grande y el propietario chico son el mismo tipo de usuario? Sí: un solo rol «cliente», con su alcance
+- ¿Qué ve el cliente de cada visita? Fecha, quién la hizo, evaluación y comentario, sin datos del interesado
+- ¿Qué propiedades entran en la carga inicial? Las 42 sin las 20 posiblemente vendidas, después de que el equipo confirme la lista
+- ¿El cliente ve la información en vivo o un informe que el equipo publica? En vivo: lo que el equipo registra se ve al tiro
+- ¿Qué estados tiene un servicio en curso? Etapas propias por familia (ET, IRP, NV, RR, ADMP) (distinto de lo propuesto)
+- ¿Cómo se separa lo que ven los 3 a 5 usuarios de un mismo cliente? Por sociedad: cada usuario ve todo el grupo o solo algunas sociedades
+
+Supuestos que no son así:
+- Una propiedad está en una sola etapa del recorrido a la vez, y tiene a lo más una gestión abierta: o venta, o arriendo.
+- Los datos que hay hoy en el portal son de prueba o de tu patrimonio, y pueden convivir con los del cliente.
+- El precio lo decide el propietario: el equipo lo registra y recomienda.
+- Las etapas del recorrido son siete: evaluación, toma de posesión, papeles, reparación, venta o arriendo, administración y cerrada.
+
+Supuestos que no sé:
+- Si el cliente separa lo que ve su gente, lo hace por sociedad (no por zona ni por ejecutivo).
+```
+Diego agregó: las etapas no son consecutivas ni todas las propiedades requieren todos los servicios; una propiedad puede requerir solo papeles, solo toma de posesión, o solo venta o arriendo.
+
+**Qué cambia para la v3**
+- Quedan cerradas d1 (a), d2 (b), d3 (b), d4 (a) y d6 (b). El «con workflow» vale cuando apruebe la v3.
+- Se elimina la etapa única por propiedad (s9 y s2 falsos). La unidad pasa a ser el **servicio en curso**: una propiedad tiene los que necesita, en paralelo, y cada uno avanza por las etapas de su familia (d5 = b). La venta y el arriendo son servicios de la familia NV con sus fases, visitas, ofertas y precio.
+- Familias del catálogo (leído de la Sheet el 2026-11-18): ET evaluación comercial (1 servicio); IRP inspección, regularización y toma de posesión (acercamiento comercial, títulos, mercado, toma de posesión, recepción, trámites); NV negociación y venta (venta, visitas, preparación); RR renovaciones (lista de precios por m², partidas de obra); ADMP administración de patrimonio (mensual).
+
+**Preguntas abiertas antes de escribir la v3**
+1. Las etapas de cada familia: cuáles son (se preguntó a Diego; propuesta de borrador en el chat).
+2. s4: qué datos hay hoy en el portal y por qué no pueden convivir con los del cliente.
+3. s7: quién decide el precio.
+4. s2: si una propiedad puede estar en venta y en arriendo a la vez.
