@@ -7,6 +7,16 @@
 2. Con eso, una maqueta en blanco como página (regla 2 y `~/Code/.claude/guias/paginas.md`): menú e inicio, ficha de la propiedad, página del proyecto, y lo que ve el dueño. Que diga qué de lo de antes queda, se esconde o se borra (Resumen, Cuentas, Pendientes, Dueños, Contactos, etapas, «por confirmar»).
 3. Diego la corrige hasta que le guste; recién ahí un plan para reordenar el portal según la maqueta.
 
+**Cómo es el día de cada uno, según Diego (2026-11-19), para el rediseño:**
+- En la mañana lo fundamental es **organizar las tareas y ver qué entró nuevo**.
+- **Álvaro** es gerencial: poco en el portal, quiere ver **resultados y analíticas**; decide plata, gastos y estrategia.
+- **Cecilia** reparte el trabajo pero está a la par de los demás, no como jefatura formal; tiene más confianza y también decide gastos.
+- **El equipo vive en terreno** (conservadores, notarías, propiedades, home center): la gestión tiene que ser **celular primero**; el computador se usa mucho menos. Cambiar el hábito va a costar: tendrán que entrar al portal varias veces al día.
+- **Los dueños preguntan** por: avance de las reparaciones, venta, administración, y el avance de los servicios contratados (toma de posesión, si los papeles están pedidos, si el conservador puso un reparo). Si el portal está bien armado, entrarán a mirar; o se consulta por API desde sus plataformas.
+- **Frente desde cero:** no considerar ninguna pantalla de hoy. Amigable, sencillo, directo, fluido; fácil de gestionar y con buena visibilidad de los datos. Pidió **2 o 3 alternativas de diseño**.
+
+**Maqueta v1 del rediseño (2026-11-19):** https://claude.ai/artifact/6oufJsWJ57469Ttg2X2RS8 — tres caminos: A «Mi día» (la lista de hoy manda; recomendado, sumando la ficha como línea de tiempo de B y el «esperando a…» de C), B «La propiedad manda», C «Seguimiento» (pasos por servicio y a quién se espera). Incluye qué queda de lo de antes y el nombre único (rec. «servicio»). **Paso siguiente:** esperar la respuesta que Diego copia de la página y armar la maqueta v2, todavía sin código.
+
 **Lo que Claude vio como confuso (2026-11-19):** la página del proyecto es una columna de ~12 secciones, con lo de la v4 (mover etapa, confirmar servicio, historial) abajo; arriba conviven cinco formas de decir en qué está («Obra · Abierto · Por cotizar · Por confirmar» y «Etapa actual»); el menú tiene 15 entradas en 4 grupos que mezclan lo nuevo y lo viejo; se dice «servicio» y «proyecto» para lo mismo.
 
 **Preguntas abiertas de antes (se cierran en el rediseño):** ¿el presupuesto del maestro con o sin IVA? (rec. sin IVA, leyendo el neto de Odoo); ¿la comisión de administración sobre el arriendo esperado o el pagado? (rec. el pagado). Pendiente técnico: `prisma/schema.prisma` pasó de 800 líneas (1.013): partirlo. Sin verificar: Drive (falta la cuenta de servicio), 390 px, acciones como cliente.
