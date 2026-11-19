@@ -54,6 +54,15 @@ export function esComercial(tipo: ServicioTipo): boolean {
   return tipo === "VENTA" || tipo === "ARRIENDO";
 }
 
+// Lo que se responde cuando alguien intenta cambiar algo de un proyecto que ya se cerró o canceló:
+// un proyecto cerrado queda como registro, no se le agregan avances, facturas ni tareas.
+export const PROYECTO_CERRADO = "Este proyecto ya está cerrado.";
+
+// Lo que se responde cuando se intenta cerrar o cancelar un proyecto que viene de un pedido del
+// cliente y todavía nadie revisó: primero se acepta o se rechaza el pedido.
+export const PROYECTO_POR_REVISAR =
+  "Este proyecto viene de un pedido: revísalo o recházalo en Trabajo del equipo.";
+
 export const NOMBRES_ESTADO: Record<ServicioEstado, string> = {
   ABIERTO: "Abierto",
   TERMINADO: "Terminado",

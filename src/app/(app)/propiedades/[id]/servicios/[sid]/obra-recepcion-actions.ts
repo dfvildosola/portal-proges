@@ -16,6 +16,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { espacioParaEscribirEn } from "@/lib/org";
+import { PROYECTO_CERRADO } from "@/lib/servicios";
 import { equipoEnAccion } from "@/lib/sesion";
 import { subirArchivo } from "@/lib/archivos";
 import { toFieldErrors } from "@/lib/form-helpers";
@@ -86,11 +87,12 @@ export async function recibirPartida(_prev: RecepcionFormState, formData: FormDa
       servicioEnCursoId: true,
       descripcion: true,
       quitadaEnOdoo: true,
-      servicioEnCurso: { select: { propertyId: true, property: { select: { driveCarpetaId: true } } } },
+      servicioEnCurso: { select: { estado: true, propertyId: true, property: { select: { driveCarpetaId: true } } } },
     },
   });
   if (!partida) return { error: "Esa partida no existe." };
   const orgId = await espacioParaEscribirEn(partida.organizationId);
+  if (partida.servicioEnCurso.estado !== "ABIERTO") return { error: PROYECTO_CERRADO };
   if (partida.quitadaEnOdoo) return { error: "Esa partida ya no está en la orden de Odoo." };
 
   // El responsable, si viene, tiene que ser alguien activo del equipo (el id viene del navegador).

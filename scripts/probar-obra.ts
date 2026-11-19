@@ -123,10 +123,10 @@ async function cuentas() {
     assert.equal(facturado([ESTE_PROYECTO[0]]) + facturado(EL_OTRO_PROYECTO), FACTURA_ODOO_6M.total);
   });
 
-  await caso("una factura de Odoo en borrador o anulada se factura pero no cuenta como pagada", () => {
+  await caso("una factura de Odoo en borrador se factura pero no cuenta como pagada; la anulada ni se factura ni se paga", () => {
     for (const estado of ["borrador", "anulada"] as const) {
       const f: FacturaCuenta = { origen: "odoo", montoAsignado: 1_000_000, total: 1_000_000, pendiente: 1_000_000, estado };
-      assert.equal(facturado([f]), 1_000_000, estado);
+      assert.equal(facturado([f]), estado === "borrador" ? 1_000_000 : 0, estado);
       assert.equal(pagado([f]), 0, estado);
     }
   });

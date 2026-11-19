@@ -502,6 +502,7 @@ async function main() {
     assert.equal(tarea.organizationId, idA);
     assert.equal(tarea.servicioEnCursoId, servicio.id);
     assert.match(tarea.que, /^Revisar y repartir/);
+    assert.equal(tarea.esRevision, true); // la revisión la reconoce por esta marca, no por el texto
   });
 
   await caso("el pedido de A no dejó nada en el espacio de B (proyectos, solicitudes, tareas, propiedades)", async () => {

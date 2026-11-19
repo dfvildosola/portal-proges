@@ -10,8 +10,9 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { espacioParaEscribirEn } from "@/lib/org";
+import { espacioParaEscribirEn, ORG_PROGES } from "@/lib/org";
 import { jefaturaEnAccion } from "@/lib/sesion";
+import { PROYECTO_CERRADO } from "@/lib/servicios";
 import { resumenRecepcion } from "@/lib/obra";
 import { toFieldErrors } from "@/lib/form-helpers";
 
@@ -32,7 +33,7 @@ const schema = z.object({
 });
 
 export async function cerrarObra(_prev: CierreFormState, formData: FormData): Promise<CierreFormState> {
-  await jefaturaEnAccion();
+  const usuario = await jefaturaEnAccion();
 
   const parsed = schema.safeParse({
     servicioEnCursoId: formData.get("servicioEnCursoId"),
@@ -44,14 +45,31 @@ export async function cerrarObra(_prev: CierreFormState, formData: FormData): Pr
 
   const servicio = await db.servicioEnCurso.findUnique({
     where: { id: parsed.data.servicioEnCursoId },
-    select: { id: true, organizationId: true, propertyId: true, estado: true, porRevisar: true },
+    select: {
+      id: true,
+      organizationId: true,
+      propertyId: true,
+      estado: true,
+      porRevisar: true,
+      tipo: true,
+      etapa: { select: { nombre: true } },
+    },
   });
   if (!servicio) return { error: "Ese proyecto no existe." };
   // Lanza «Sin permiso» si el proyecto es de un espacio que esta persona no puede escribir.
   const orgId = await espacioParaEscribirEn(servicio.organizationId);
 
-  if (servicio.estado !== "ABIERTO") return { error: "Este proyecto ya está cerrado." };
+  if (servicio.estado !== "ABIERTO") return { error: PROYECTO_CERRADO };
   if (servicio.porRevisar) return { error: "Este proyecto todavía está por revisar." };
+
+  // La etapa que cierra el servicio, para que el tablero y el historial muestren la obra en su
+  // última etapa y no dejen una obra TERMINADA parada en «En ejecución». Es la misma que usa
+  // moverEtapa (etapas de Proges de este tipo). Si el tipo no tiene una, solo cambia el estado.
+  const etapaDeCierre = await db.etapa.findFirst({
+    where: { organizationId: ORG_PROGES, tipo: servicio.tipo, activa: true, cierraServicio: true },
+    orderBy: { orden: "asc" },
+    select: { id: true, nombre: true },
+  });
 
   // Todo en una transacción: se cuentan las partidas y se cierra en el mismo paso, y el
   // `updateMany` con `estado: ABIERTO` evita cerrar dos veces si dos jefaturas aprietan a la vez.
@@ -73,11 +91,33 @@ export async function cerrarObra(_prev: CierreFormState, formData: FormData): Pr
         .join(" y ");
       return { error: `No se puede cerrar: quedan partidas ${faltan}.` };
     }
+    const ahora = new Date();
     const { count } = await tx.servicioEnCurso.updateMany({
       where: { id: servicio.id, organizationId: orgId, estado: "ABIERTO" },
-      data: { estado: "TERMINADO", cerradoEl: new Date(), motivoCierre: parsed.data.motivo },
+      data: {
+        estado: "TERMINADO",
+        cerradoEl: ahora,
+        motivoCierre: parsed.data.motivo,
+        ...(etapaDeCierre ? { etapaId: etapaDeCierre.id } : {}),
+      },
     });
-    if (count === 0) return { error: "Este proyecto ya está cerrado." };
+    if (count === 0) return { error: PROYECTO_CERRADO };
+    // El mismo Evento que deja moverEtapa, en la misma transacción: o quedan las dos cosas o ninguna.
+    if (etapaDeCierre) {
+      await tx.evento.create({
+        data: {
+          organizationId: orgId,
+          servicioEnCursoId: servicio.id,
+          tipo: "ETAPA",
+          etapaId: etapaDeCierre.id,
+          anterior: servicio.etapa.nombre,
+          nuevo: etapaDeCierre.nombre,
+          motivo: parsed.data.motivo,
+          autorId: usuario.id,
+          fecha: ahora,
+        },
+      });
+    }
     return { ok: true as const };
   });
   if ("error" in resultado) return { error: resultado.error };

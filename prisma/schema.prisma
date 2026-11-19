@@ -807,6 +807,9 @@ model Tarea {
   creadaPorId       String
   // Si la abrió una recepción observada: la partida que hay que corregir.
   partidaId         String?
+  // true en la tarea «Revisar y repartir» que abre un pedido del cliente: así se la reconoce
+  // sin depender de cómo empiece su texto (que cualquiera puede escribir igual a mano).
+  esRevision        Boolean   @default(false)
   createdAt         DateTime  @default(now())
 
   servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)

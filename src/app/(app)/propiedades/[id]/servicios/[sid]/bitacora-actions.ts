@@ -11,6 +11,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { espacioParaEscribirEn } from "@/lib/org";
+import { PROYECTO_CERRADO } from "@/lib/servicios";
 import { equipoEnAccion } from "@/lib/sesion";
 import { hoyChile } from "@/lib/fechas";
 import { idDeCarpeta, subirArchivo } from "@/lib/archivos";
@@ -66,10 +67,11 @@ export async function crearNota(_prev: BitacoraFormState, formData: FormData): P
 
   const servicio = await db.servicioEnCurso.findUnique({
     where: { id: servicioId },
-    select: { id: true, organizationId: true, propertyId: true, property: { select: { driveCarpetaId: true } } },
+    select: { id: true, organizationId: true, propertyId: true, estado: true, property: { select: { driveCarpetaId: true } } },
   });
   if (!servicio) return { error: "El proyecto no existe." };
   const orgId = await espacioParaEscribirEn(servicio.organizationId);
+  if (servicio.estado !== "ABIERTO") return { error: PROYECTO_CERRADO };
 
   // Una nota solo de fotos no tiene sentido si no hay dónde subirlas.
   if (texto === "" && !servicio.property.driveCarpetaId) {

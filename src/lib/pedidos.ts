@@ -19,8 +19,8 @@ import { ORG_PROGES } from "@/lib/org";
 import { familiasDelTipo } from "@/lib/servicios";
 import type { PropertyType, ServicioTipo } from "@/generated/prisma/enums";
 
-// La tarea que abre un pedido empieza siempre con este texto: así la revisión la reconoce y la
-// da por hecha sin necesitar un campo más en la tabla.
+// La tarea que abre un pedido empieza siempre con este texto, pero ya no se la reconoce por el
+// texto: se la marca con `esRevision` en la tabla (el texto lo puede editar o repetir cualquiera).
 export const PREFIJO_REVISION = "Revisar y repartir";
 
 // Si el mismo cliente manda el mismo pedido dos veces en este lapso (doble clic, conexión
@@ -195,6 +195,7 @@ export async function abrirPedido(datos: PedidoDatos): Promise<PedidoResultado> 
         organizationId: orgId,
         servicioEnCursoId: servicio.id,
         que: textoTareaDeRevision(descripcion),
+        esRevision: true,
         creadaPorId: usuarioId,
       },
       select: { id: true },
@@ -291,7 +292,7 @@ export async function aceptarRevision(datos: {
       data: { estado: "ACEPTADA", resueltaPorId: usuarioId, resueltaEl: ahora },
     });
     await tx.tarea.updateMany({
-      where: { servicioEnCursoId, hechaEl: null, que: { startsWith: PREFIJO_REVISION } },
+      where: { servicioEnCursoId, hechaEl: null, esRevision: true },
       data: { hechaEl: ahora, hechaPorId: usuarioId },
     });
     return true;
@@ -328,7 +329,7 @@ export async function rechazarRevision(datos: {
       data: { estado: "RECHAZADA", motivoRechazo: motivo, resueltaPorId: usuarioId, resueltaEl: ahora },
     });
     await tx.tarea.updateMany({
-      where: { servicioEnCursoId, hechaEl: null, que: { startsWith: PREFIJO_REVISION } },
+      where: { servicioEnCursoId, hechaEl: null, esRevision: true },
       data: { hechaEl: ahora, hechaPorId: usuarioId },
     });
     return true;

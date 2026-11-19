@@ -31,6 +31,8 @@ function trabajoVacio(): TrabajoDePropiedad {
   };
 }
 
+// Carga todo el trabajo en curso y su historial de una vez. Con cientos de propiedades no pesa;
+// si la lista se pone lenta, hay que agrupar en SQL por propiedad.
 async function trabajoPorPropiedad(orgIds: string[], hoy: Date) {
   const porPropiedad = new Map<string, TrabajoDePropiedad>();
   const de = (propertyId: string) => {

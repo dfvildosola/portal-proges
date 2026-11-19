@@ -20,7 +20,7 @@ import { espacioParaEscribirEnPropiedad, ORG_PROGES } from "@/lib/org";
 import { equipoEnAccion } from "@/lib/sesion";
 import { enumField, optionalText, toFieldErrors } from "@/lib/form-helpers";
 import { ServicioTipo } from "@/generated/prisma/enums";
-import { familiasDelTipo } from "@/lib/servicios";
+import { familiasDelTipo, PROYECTO_POR_REVISAR } from "@/lib/servicios";
 
 export type ServicioFormState = {
   error?: string;
@@ -204,11 +204,20 @@ export async function moverEtapa(
   });
   if (!nueva) return { error: "Esa etapa no existe o no es de este tipo de servicio." };
 
+  // Un proyecto que viene de un pedido sin revisar no se cierra: primero se acepta o se rechaza.
+  if (nueva.cierraServicio && servicio.porRevisar) return { error: PROYECTO_POR_REVISAR };
+
   // Una obra con partidas no se cierra moviendo la etapa: se cierra en «Cierre de la obra»,
   // que exige todas las partidas recibidas conformes y la marca de jefatura (d16, d14).
-  if (nueva.cierraServicio && servicio.tipo === "OBRA") {
+  // «Obra» es lo mismo que decide la página: el tipo OBRA, o cualquier proyecto con partidas
+  // con recinto (un servicio suelto, con partidas sin recinto, sí se cierra por etapa).
+  if (nueva.cierraServicio) {
     const partidas = await db.partida.count({
-      where: { servicioEnCursoId: servicio.id, quitadaEnOdoo: false },
+      where: {
+        servicioEnCursoId: servicio.id,
+        quitadaEnOdoo: false,
+        ...(servicio.tipo === "OBRA" ? {} : { recinto: { not: null } }),
+      },
     });
     if (partidas > 0) {
       return {
@@ -374,6 +383,9 @@ export async function cancelarServicio(
   if (!orgId) return { error: "Propiedad no encontrada." };
   const servicio = await buscarServicio(servicioId, propertyId, orgId);
   if (!servicio) return { error: "Servicio no encontrado." };
+  // Un pedido sin revisar se resuelve aceptándolo o rechazándolo (así el cliente y la solicitud
+  // quedan al día); cancelarlo por acá dejaría la solicitud y la tarea colgadas.
+  if (servicio.porRevisar) return { error: PROYECTO_POR_REVISAR };
 
   // `estado: ABIERTO` en el filtro: si otra persona lo cerró justo antes, no se pisa.
   const { count } = await db.servicioEnCurso.updateMany({

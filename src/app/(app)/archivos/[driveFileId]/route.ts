@@ -8,8 +8,9 @@
 //    Un id cualquiera de Drive (aunque la cuenta de servicio lo pueda abrir) da «No encontrado».
 //  - El espacio se comprueba con el organizationId del registro (exigirLectura), no con nada
 //    que mande el navegador.
-//  - Un CLIENTE solo ve fotos de notas marcadas para el dueño (d15); nunca las fotos de la
-//    recepción ni el PDF del presupuesto del maestro.
+//  - Un CLIENTE solo ve fotos de notas marcadas para el dueño (d15) Y de un proyecto que él
+//    puede ver (no cancelado, ni por confirmar, ni por revisar: las mismas reglas de
+//    servicioParaCliente); nunca las fotos de la recepción ni el PDF del presupuesto del maestro.
 //  - Todo lo que no se puede mostrar responde «No encontrado», para no confirmar que existe.
 //  - `?miniatura=1` entrega la miniatura que genera Drive (para las listas); si no la tiene
 //    todavía, entrega el original.
@@ -17,6 +18,7 @@ import { db } from "@/lib/db";
 import { exigirLectura } from "@/lib/org";
 import { exigirUsuario } from "@/lib/sesion";
 import { leerArchivo, miniatura } from "@/lib/archivos";
+import { ESTADOS_VISIBLES } from "@/lib/vista-cliente";
 
 const NO_ENCONTRADO = () => new Response("No encontrado", { status: 404 });
 
@@ -29,11 +31,24 @@ export async function GET(request: Request, ctx: { params: Promise<{ driveFileId
   let organizationId: string;
   const foto = await db.foto.findUnique({
     where: { driveFileId },
-    select: { organizationId: true, partidaId: true, nota: { select: { paraDueno: true } } },
+    select: {
+      organizationId: true,
+      nota: {
+        select: {
+          paraDueno: true,
+          servicioEnCurso: { select: { estado: true, porConfirmar: true, porRevisar: true } },
+        },
+      },
+    },
   });
   if (foto) {
-    // Un cliente: solo la foto de una nota marcada para él, o la de una partida.
-    if (esCliente && !foto.nota?.paraDueno) return NO_ENCONTRADO();
+    // Un cliente: solo la foto de una nota marcada para él, y de un proyecto que él ve. Una foto
+    // sin nota (la de una recepción) nunca es suya.
+    if (esCliente) {
+      const s = foto.nota?.servicioEnCurso;
+      const visible = s && ESTADOS_VISIBLES.includes(s.estado) && !s.porConfirmar && !s.porRevisar;
+      if (!foto.nota?.paraDueno || !visible) return NO_ENCONTRADO();
+    }
     organizationId = foto.organizationId;
   } else {
     // El PDF de un presupuesto es solo del equipo: trae el costo del maestro.

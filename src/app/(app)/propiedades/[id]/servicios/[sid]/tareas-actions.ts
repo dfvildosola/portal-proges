@@ -12,6 +12,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { espacioParaEscribirEn, ORG_PROGES } from "@/lib/org";
 import { equipoEnAccion } from "@/lib/sesion";
+import { PROYECTO_CERRADO } from "@/lib/servicios";
 import { optionalDateField, optionalText, toFieldErrors } from "@/lib/form-helpers";
 
 export type TareaFormState = {
@@ -90,7 +91,7 @@ export async function agregarTarea(
   });
   if (!proyecto) return { error: "El proyecto no existe." };
   const orgId = await espacioParaEscribirEn(proyecto.organizationId);
-  if (proyecto.estado !== "ABIERTO") return { error: "Este proyecto ya está cerrado." };
+  if (proyecto.estado !== "ABIERTO") return { error: PROYECTO_CERRADO };
 
   if (!(await responsableValido(responsableId))) {
     return {

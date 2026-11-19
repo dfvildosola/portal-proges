@@ -15,6 +15,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { ORG_PROGES, espacioParaEscribirEn } from "@/lib/org";
+import { PROYECTO_CERRADO } from "@/lib/servicios";
 import { equipoEnAccion, jefaturaEnAccion } from "@/lib/sesion";
 import { subirArchivo } from "@/lib/archivos";
 import { optionalDateField, optionalText, toFieldErrors } from "@/lib/form-helpers";
@@ -117,11 +118,13 @@ export async function cargarPresupuesto(
       id: true,
       propertyId: true,
       organizationId: true,
+      estado: true,
       property: { select: { driveCarpetaId: true } },
     },
   });
   if (!servicio) return { error: "Ese proyecto no existe." };
   const orgId = await espacioParaEscribirEn(servicio.organizationId);
+  if (servicio.estado !== "ABIERTO") return { error: PROYECTO_CERRADO };
 
   // El maestro vive en el espacio de Proges y tiene que estar activo.
   const maestro = await db.maestro.findFirst({
@@ -177,12 +180,13 @@ async function presupuestoParaResolver(id: string) {
       estado: true,
       nota: true,
       maestroId: true,
-      servicioEnCurso: { select: { propertyId: true } },
+      servicioEnCurso: { select: { propertyId: true, estado: true } },
       partidas: { select: { id: true, servicioEnCursoId: true } },
     },
   });
   if (!p) return { error: "Ese presupuesto no existe." } as const;
   await espacioParaEscribirEn(p.organizationId);
+  if (p.servicioEnCurso.estado !== "ABIERTO") return { error: PROYECTO_CERRADO } as const;
   if (p.estado !== "RECIBIDO") return { error: "Ese presupuesto ya fue resuelto." } as const;
   return { presupuesto: p } as const;
 }
@@ -292,10 +296,11 @@ export async function guardarFechasObra(
 
   const servicio = await db.servicioEnCurso.findUnique({
     where: { id: servicioEnCursoId },
-    select: { id: true, propertyId: true, organizationId: true },
+    select: { id: true, propertyId: true, organizationId: true, estado: true },
   });
   if (!servicio) return { error: "Ese proyecto no existe." };
   await espacioParaEscribirEn(servicio.organizationId);
+  if (servicio.estado !== "ABIERTO") return { error: PROYECTO_CERRADO };
 
   await db.servicioEnCurso.update({
     where: { id: servicio.id },

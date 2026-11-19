@@ -55,7 +55,7 @@ function espacioDe(usuario: Usuario): string | null {
 
 // Los servicios que un cliente puede ver: abiertos y terminados, y ninguno «por confirmar» ni
 // «por revisar». Los cancelados no se muestran.
-const ESTADOS_VISIBLES: ServicioEstado[] = ["ABIERTO", "TERMINADO"];
+export const ESTADOS_VISIBLES: ServicioEstado[] = ["ABIERTO", "TERMINADO"];
 
 // ---------------------------------------------------------------------------
 // Lo que entrega cada función

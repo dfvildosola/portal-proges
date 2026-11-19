@@ -22,6 +22,7 @@ import { ORG_PROGES, espacioParaEscribirEn } from "@/lib/org";
 import { equipoEnAccion } from "@/lib/sesion";
 import { facturasDeProveedor } from "@/lib/odoo";
 import { asignableRestante } from "@/lib/obra";
+import { PROYECTO_CERRADO } from "@/lib/servicios";
 import { dateField, optionalText, toFieldErrors } from "@/lib/form-helpers";
 
 export type FacturaFormState = {
@@ -69,10 +70,11 @@ export async function asignarFactura(_prev: FacturaFormState, formData: FormData
 
   const servicio = await db.servicioEnCurso.findUnique({
     where: { id: servicioEnCursoId },
-    select: { id: true, propertyId: true, organizationId: true },
+    select: { id: true, propertyId: true, organizationId: true, estado: true },
   });
   if (!servicio) return { error: "Ese proyecto no existe." };
   const orgId = await espacioParaEscribirEn(servicio.organizationId);
+  if (servicio.estado !== "ABIERTO") return { error: PROYECTO_CERRADO };
 
   // El maestro vive en el espacio de Proges.
   const maestro = await db.maestro.findFirst({
@@ -166,10 +168,11 @@ export async function anotarFacturaManual(_prev: FacturaFormState, formData: For
 
   const servicio = await db.servicioEnCurso.findUnique({
     where: { id: servicioEnCursoId },
-    select: { id: true, propertyId: true, organizationId: true },
+    select: { id: true, propertyId: true, organizationId: true, estado: true },
   });
   if (!servicio) return { error: "Ese proyecto no existe." };
   const orgId = await espacioParaEscribirEn(servicio.organizationId);
+  if (servicio.estado !== "ABIERTO") return { error: PROYECTO_CERRADO };
 
   const maestro = await db.maestro.findFirst({
     where: { id: maestroId, organizationId: ORG_PROGES, activo: true },
@@ -205,10 +208,11 @@ export async function quitarFactura(_prev: FacturaFormState, formData: FormData)
 
   const asignacion = await db.facturaMaestro.findUnique({
     where: { id },
-    select: { id: true, organizationId: true, servicioEnCurso: { select: { id: true, propertyId: true } } },
+    select: { id: true, organizationId: true, servicioEnCurso: { select: { id: true, propertyId: true, estado: true } } },
   });
   if (!asignacion) return { error: "Esa asignación ya no existe." };
   await espacioParaEscribirEn(asignacion.organizationId);
+  if (asignacion.servicioEnCurso.estado !== "ABIERTO") return { error: PROYECTO_CERRADO };
 
   await db.facturaMaestro.delete({ where: { id: asignacion.id } });
   recargar(asignacion.servicioEnCurso.propertyId, asignacion.servicioEnCurso.id);

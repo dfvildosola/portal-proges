@@ -13,6 +13,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { espacioParaEscribirEn } from "@/lib/org";
+import { PROYECTO_CERRADO } from "@/lib/servicios";
 import { equipoEnAccion } from "@/lib/sesion";
 
 export type AvanceFormState = {
@@ -41,10 +42,11 @@ export async function marcarAvanceRecinto(_prev: AvanceFormState, formData: Form
 
   const servicio = await db.servicioEnCurso.findUnique({
     where: { id: servicioId },
-    select: { id: true, propertyId: true, organizationId: true },
+    select: { id: true, propertyId: true, organizationId: true, estado: true },
   });
   if (!servicio) return { error: "Ese proyecto no existe." };
   const orgId = await espacioParaEscribirEn(servicio.organizationId);
+  if (servicio.estado !== "ABIERTO") return { error: PROYECTO_CERRADO };
 
   const { count } = await db.partida.updateMany({
     where: {
@@ -77,11 +79,12 @@ export async function marcarAvancePartida(_prev: AvanceFormState, formData: Form
       id: true,
       organizationId: true,
       quitadaEnOdoo: true,
-      servicioEnCurso: { select: { id: true, propertyId: true } },
+      servicioEnCurso: { select: { id: true, propertyId: true, estado: true } },
     },
   });
   if (!partida) return { error: "Esa partida no existe." };
   await espacioParaEscribirEn(partida.organizationId);
+  if (partida.servicioEnCurso.estado !== "ABIERTO") return { error: PROYECTO_CERRADO };
   if (partida.quitadaEnOdoo) return { error: "Esa partida ya no está en la orden de Odoo." };
 
   await db.partida.update({ where: { id: partida.id }, data: { avance: avance.data } });

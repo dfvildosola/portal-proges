@@ -17,6 +17,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { espacioParaEscribirEn } from "@/lib/org";
 import { equipoEnAccion } from "@/lib/sesion";
+import { PROYECTO_CERRADO } from "@/lib/servicios";
 import { toFieldErrors } from "@/lib/form-helpers";
 import { leerOrden, type OrdenOdoo } from "@/lib/odoo";
 import {
@@ -139,6 +140,7 @@ export async function revisarOrden(_prev: OrdenFormState, formData: FormData): P
   if (!parsed.success) return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
 
   const proyecto = await cargarProyecto(parsed.data.servicioId);
+  if (proyecto.estado !== "ABIERTO") return { error: PROYECTO_CERRADO };
   const leida = await traerOrden(parsed.data.numero);
   if ("error" in leida) return { error: leida.error, fieldErrors: { numero: leida.error } };
   const { orden } = leida;
@@ -195,6 +197,7 @@ export async function enlazarOrden(_prev: OrdenFormState, formData: FormData): P
   if (!parsed.success) return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
 
   const proyecto = await cargarProyecto(parsed.data.servicioId);
+  if (proyecto.estado !== "ABIERTO") return { error: PROYECTO_CERRADO };
   const leida = await traerOrden(parsed.data.numero);
   if ("error" in leida) return { error: leida.error };
   const { orden } = leida;
@@ -271,6 +274,7 @@ export async function volverATraerOrden(_prev: OrdenFormState, formData: FormDat
   if (!parsed.success) return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
 
   const proyecto = await cargarProyecto(parsed.data.servicioId);
+  if (proyecto.estado !== "ABIERTO") return { error: PROYECTO_CERRADO };
   if (!proyecto.orden) return { error: "Este proyecto todavía no tiene una orden enlazada." };
   const ordenId = proyecto.orden.id;
 

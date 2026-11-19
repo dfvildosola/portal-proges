@@ -58,9 +58,11 @@ export function adicionales(presupuestos: PresupuestoCuenta[]): number {
   return suma(presupuestos.filter((p) => p.estado === "APROBADO" && p.tipo === "ADICIONAL").map((p) => p.total));
 }
 
-// Lo que los maestros han facturado a este proyecto: la suma de lo asignado.
+// Lo que los maestros han facturado a este proyecto: la suma de lo asignado. Una factura que
+// Odoo marca anulada no se cobró nunca, así que no cuenta (si no, el costo real de la obra
+// saldría inflado). El borrador sí cuenta: todavía puede publicarse.
 export function facturado(facturas: FacturaCuenta[]): number {
-  return suma(facturas.map((f) => f.montoAsignado));
+  return suma(facturas.filter((f) => f.origen === "manual" || f.estado !== "anulada").map((f) => f.montoAsignado));
 }
 
 // Lo que ya se pagó. Solo cuenta lo que realmente se pagó:
