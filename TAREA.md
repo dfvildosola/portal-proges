@@ -2,7 +2,7 @@
 
 **Estado: plan v4 APROBADO por Diego el 2026-11-18 («ok, con workflow», con los ajustes de abajo). En ejecución.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v4). Branch: `plan/etapa-1-dos-caras` (sin mezclar).
 
-**Paso siguiente exacto:** las 7 piezas están hechas y probadas (commit `19ef648`). En curso: revisor sobre `a478988..HEAD`. Después: arreglar sus hallazgos, cierre contra el plan en la página y lista de revisión para Diego. **Base:** se probó en `proges_dev_v4`, una base nueva (Prisma no deja que un agente reinicie `proges_dev` sin el consentimiento de Diego en su propio mensaje). Falta que Diego elija: reiniciar `proges_dev` o pasar `.env` a `proges_dev_v4`.
+**Paso siguiente exacto:** construida, revisada y cerrada contra el plan (commits `19ef648` y `41f8bad`; la página v4 está en su estado de cierre). Falta lo de Diego: elegir la base local (reiniciar `proges_dev` o pasar `.env` a `proges_dev_v4`), recorrer «Qué revisar» en la página y pegar su resumen. Después: borrar este archivo, mezclar a `main` local y desarmar la branch. Subir solo cuando Diego lo pida (PENDIENTES §0).
 
 **Cambios del coordinador después del workflow:** `espacioDeEscritura()`, `SoloLecturaError`, `espacioParaLeer()` y `espacioParaEscribir()` viven en `src/lib/org.ts` (antes, 10 copias en las acciones); la cabecera de la ficha esconde editar, eliminar y el estado al equipo, y el Drive al cliente; `src/app/(app)/error.tsx` explica la solo lectura si el equipo aprieta un botón de la cartera (los botones de editar de las demás pantallas siguen visibles para el equipo); `PedirServicioBoton` enchufado; `seed-demo*.ts` escriben en `org_demo`; 5 casos más en `probar-espacios.ts` (cookie ajena, escritura).
 
