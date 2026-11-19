@@ -2,7 +2,7 @@
 
 **Estado: plan v6 APROBADO por Diego (2026-11-19, «ok, con workflow»); en construcción con workflow.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v6). Branch: `plan/etapa-1-dos-caras` (sin mezclar; la v4 está construida y cerrada, commits `19ef648` a `92bcc14`).
 
-**Paso siguiente exacto:** correr el workflow de la v6 sobre `proges_dev_v4` (olas [A, W] → [B, C, D, O] → [E, P, V, M] → [F, G]); al terminar, leer informes, verificar, probar en el navegador, commit y cierre contra el plan (regla 6). La cuenta de servicio de Google todavía no existe: la subida real al Drive se prueba cuando Diego la cree.
+**Paso siguiente exacto:** esperar el workflow `wf_f8d88587-03a` (corre de fondo; si la sesión se corta, relanzarlo con `resumeFromRunId`) de la v6 sobre `proges_dev_v4` (olas [A, W] → [B, C, D, O] → [E, P, V, M] → [F, G]); al terminar, leer informes, verificar, probar en el navegador, commit y cierre contra el plan (regla 6). La cuenta de servicio de Google todavía no existe: la subida real al Drive se prueba cuando Diego la cree.
 
 **Respuesta de Diego a la v6 (2026-11-19), tal cual:**
 
@@ -222,6 +222,8 @@ Olas: [A, W] → [B, C, D, O] → [E, P, V, M] → [F, G]. 12 agentes en Sonnet,
 - ◻️ M. Administración de arriendos: `src/lib/administracion.ts` (comisión del mes y atrasos, funciones puras); poner y sacar una propiedad de administración (desde, hasta, comisión); marcar el arriendo pagado (equipo o dueño) en la cobranza; vista de atrasados y comisiones del mes para facturar en Odoo; filtro «en administración» en Propiedades; estado y comisión en la vista del dueño. Verifica: un mes pagado y uno atrasado. Depende de A y W.
 - ◻️ F. Cierre con plan contra real, vista del dueño y página del proyecto reordenada. Depende de C y E.
 - ◻️ G. `scripts/probar-obra.ts`, `scripts/probar-administracion.ts` y `probar-espacios.ts` ampliado (el dueño edita su cartera pero no la obra; el pedido abre el proyecto en su espacio). Depende de W, B, E y M.
+
+**Cómo se lanzó (2026-11-19, workflow `wf_f8d88587-03a`):** en vez de olas fijas, cada pieza arranca cuando terminan las que necesita: A → W, C, D, O; W → B; D+O → E; W → M; W+M+B → P; W+B → V; B+C+E+V → F; F+P+M → G. Cambios de reparto respecto de la lista de arriba, para que dos agentes nunca toquen el mismo archivo: el lector de Odoo y las funciones nuevas de espacios (`espaciosQueLee`, `exigirLectura`, `espacioParaEscribirEn`, `jefaturaEnAccion`) van en A; W migra todo lo que usaba el cliente activo; la página del proyecto (`[sid]/page.tsx`) la arma solo F con las secciones que deja cada pieza; la tarjeta de administración la hace M y la pone P en la ficha. Los ADR los escribe la pieza que decide (A 0015, W 0010, B 0013, F 0014 y 0011). El build corre el coordinador al final, no por ola.
 
 **Antes de lanzar (Diego):** crear la cuenta de servicio de Google y dejar su llave en `.env` (Claude lo guía paso a paso). Si no está, el workflow construye igual y la subida real al Drive se prueba cuando esté la llave (se dice en el cierre).
 
