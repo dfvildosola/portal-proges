@@ -2,7 +2,9 @@
 
 **Estado: plan v6 APROBADO (2026-11-19) y CONSTRUIDO: las 12 piezas hechas (commit `679c99b`, arreglos `10477e0`); falta revisión y cierre contra el plan.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v6). Branch: `plan/etapa-1-dos-caras` (sin mezclar; la v4 está construida y cerrada, commits `19ef648` a `92bcc14`).
 
-**Paso siguiente exacto:** terminar la revisión de código (`/code-review high` sobre `92bcc14..HEAD`), arreglar o anotar cada hallazgo, cerrar contra el plan (regla 6) y publicar la página en estado de cierre. Verificado: tsc, lint, build y las 4 pruebas (36, 23, 30 y 19 casos); en el navegador, Mi trabajo, Trabajo del equipo, Propiedades, la página de un proyecto, enlazar la S00047 real (61 partidas, 14 recintos), una tarea y una nota. Sin verificar: Drive (falta la cuenta de servicio), la vista a 390 px y las acciones como cliente.
+**Paso siguiente exacto:** Diego responde dos preguntas (¿presupuesto del maestro con o sin IVA? —rec. sin IVA, leyendo el neto de Odoo—; ¿comisión sobre lo esperado o lo pagado? —rec. lo pagado—); se ajusta; después, cierre contra el plan (regla 6): página en estado de cierre con la evidencia y la lista v8–v21 para Diego.
+
+**Revisión (`/code-review high`, 2026-11-19):** 10 hallazgos. Arreglados 7 (commit `685a630`): cierre por etapa de cualquier proyecto con recintos; facturas anuladas fuera de lo facturado; `cerrarObra` mueve a la etapa de cierre con su evento; no se cierra ni cancela un proyecto por revisar; tarea de revisión con campo `esRevision` (migración `20261119211217`); acciones de la obra niegan un proyecto cerrado; el dueño solo baja fotos de proyectos que ve. Descartados 3: solicitudes NUEVA anteriores (la v4 nunca llegó a producción, no hay); /propiedades carga todo el historial (con cientos de propiedades no pesa; comentario junto al código); parseo de pesos copiado dos veces (regla de tres). Pendiente aparte: `prisma/schema.prisma` pasó de 800 líneas (1.013): partirlo en varios archivos.
 
 **Respuesta de Diego a la v6 (2026-11-19), tal cual:**
 
