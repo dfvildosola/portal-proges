@@ -3,7 +3,7 @@
 // de la tabla Etapa y se ajustan acá, sin tocar código.
 
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { ORG_PROGES } from "@/lib/org";
 import { exigirAdmin } from "@/lib/sesion";
 import { TIPOS_SERVICIO } from "@/lib/servicios";
 import type { ServicioTipo } from "@/generated/prisma/enums";
@@ -14,17 +14,18 @@ import type { EtapaFilaDatos } from "./etapa-fila";
 
 export default async function EtapasPage() {
   await exigirAdmin();
-  const orgId = await getOrgId();
 
   const [etapas, abiertosPorEtapa] = await Promise.all([
     db.etapa.findMany({
-      where: { organizationId: orgId },
+      // Las etapas son de Proges y valen para todos los clientes.
+      where: { organizationId: ORG_PROGES },
       orderBy: [{ orden: "asc" }, { createdAt: "asc" }, { id: "asc" }],
     }),
-    // Cuántos servicios abiertos hay hoy en cada etapa.
+    // Cuántos servicios abiertos hay hoy en cada etapa, sumando TODOS los clientes
+    // (por eso aquí no se filtra por organizationId: la etapa es una sola para todos).
     db.servicioEnCurso.groupBy({
       by: ["etapaId"],
-      where: { organizationId: orgId, estado: "ABIERTO" },
+      where: { estado: "ABIERTO" },
       _count: { _all: true },
     }),
   ]);

@@ -10,7 +10,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { ORG_PROGES } from "@/lib/org";
 import { adminEnAccion } from "@/lib/sesion";
 import { enumField, toFieldErrors } from "@/lib/form-helpers";
 import { esComercial } from "@/lib/servicios";
@@ -38,7 +38,7 @@ function recargar() {
   revalidatePath("/equipo/etapas");
 }
 
-// Busca la etapa y confirma que es de la organización. Devuelve null si no.
+// Busca la etapa y confirma que es del espacio de Proges. Devuelve null si no.
 async function etapaDeLaOrg(id: string, orgId: string) {
   return db.etapa.findFirst({ where: { id, organizationId: orgId } });
 }
@@ -72,7 +72,7 @@ export async function agregarEtapa(
   formData: FormData,
 ): Promise<EtapaFormState> {
   await adminEnAccion();
-  const orgId = await getOrgId();
+  const orgId = ORG_PROGES; // las etapas son de Proges, comunes a todos los clientes
 
   const parsed = agregarSchema.safeParse({
     tipo: formData.get("tipo"),
@@ -131,7 +131,7 @@ export async function editarEtapa(
   formData: FormData,
 ): Promise<EtapaFormState> {
   await adminEnAccion();
-  const orgId = await getOrgId();
+  const orgId = ORG_PROGES; // las etapas son de Proges, comunes a todos los clientes
 
   const parsed = editarSchema.safeParse({
     id: formData.get("id"),
@@ -184,7 +184,7 @@ export async function moverEtapa(
   formData: FormData,
 ): Promise<EtapaFormState> {
   await adminEnAccion();
-  const orgId = await getOrgId();
+  const orgId = ORG_PROGES; // las etapas son de Proges, comunes a todos los clientes
 
   const parsed = moverSchema.safeParse({
     id: formData.get("id"),
@@ -239,7 +239,7 @@ export async function cambiarActivaEtapa(
   formData: FormData,
 ): Promise<EtapaFormState> {
   await adminEnAccion();
-  const orgId = await getOrgId();
+  const orgId = ORG_PROGES; // las etapas son de Proges, comunes a todos los clientes
 
   const parsed = activaSchema.safeParse({
     id: formData.get("id"),
@@ -275,7 +275,7 @@ export async function borrarEtapa(
   formData: FormData,
 ): Promise<EtapaFormState> {
   await adminEnAccion();
-  const orgId = await getOrgId();
+  const orgId = ORG_PROGES; // las etapas son de Proges, comunes a todos los clientes
 
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "No se entendió qué etapa borrar." };

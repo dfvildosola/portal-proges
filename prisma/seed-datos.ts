@@ -10,7 +10,6 @@ import type { PropertyType } from "../src/generated/prisma/enums";
 
 export type Moneda = "CLP" | "UF";
 
-export const ORG = "org_proges";
 
 // «Hoy» de todos los datos del guion: 2026-10-01. Nada usa la fecha real del
 // computador, así los datos son los mismos cada vez que se corre.

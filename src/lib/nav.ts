@@ -13,15 +13,19 @@ import {
   Receipt,
   UserCog,
   ClipboardList,
+  ClipboardCheck,
   type LucideIcon,
 } from "lucide-react";
 
+// Cada ítem dice quién lo ve. Sin marca, lo ven todos (equipo y cliente).
 export type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
-  badge?: boolean; // muestra el contador de pendientes
-  soloAdmin?: boolean; // solo lo ve quien tiene la marca de admin
+  contador?: "pendientes" | "solicitudes"; // número rojo al lado del nombre (el valor lo calcula el layout)
+  soloEquipo?: boolean; // solo el equipo de Proges
+  soloCliente?: boolean; // solo los usuarios de un cliente
+  soloAdmin?: boolean; // solo el equipo con la marca de admin
 };
 
 export type NavGroup = {
@@ -34,8 +38,9 @@ export const navGroups: NavGroup[] = [
     label: "Trabajo diario",
     items: [
       { href: "/", label: "Inicio", icon: Home },
-      { href: "/pendientes", label: "Pendientes", icon: Bell, badge: true },
-      { href: "/operacion", label: "Operación", icon: ClipboardList },
+      { href: "/pendientes", label: "Pendientes", icon: Bell, contador: "pendientes" },
+      { href: "/operacion", label: "Operación", icon: ClipboardList, contador: "solicitudes", soloEquipo: true },
+      { href: "/servicios", label: "Mis servicios", icon: ClipboardCheck, soloCliente: true },
       { href: "/cobranza", label: "Cobranza", icon: Wallet },
       { href: "/cuentas", label: "Cuentas", icon: Receipt },
     ],
@@ -52,6 +57,6 @@ export const navGroups: NavGroup[] = [
   },
   {
     label: "Administración",
-    items: [{ href: "/equipo", label: "Equipo", icon: UserCog, soloAdmin: true }],
+    items: [{ href: "/equipo", label: "Equipo", icon: UserCog, soloEquipo: true, soloAdmin: true }],
   },
 ];

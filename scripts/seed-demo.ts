@@ -3,13 +3,14 @@
 import "dotenv/config";
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { DEFAULT_ORG_ID } from "@/lib/org";
+// Los datos de demostración van al cliente de mentira «Demo» (lo crea prisma/seed.ts).
+const ORG_DEMO = "org_demo";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const db = new PrismaClient({ adapter });
 
 async function main() {
-  const orgId = DEFAULT_ORG_ID;
+  const orgId = ORG_DEMO;
   const rolSII = "12345-6";
 
   // Idempotencia: borra una corrida previa con el mismo ROL.

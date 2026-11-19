@@ -4,8 +4,9 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
 import { toFieldErrors } from "@/lib/form-helpers";
+
 
 export type TenantFormState = {
   error?: string;
@@ -47,7 +48,9 @@ export async function createTenant(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const orgId = await getOrgId();
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const orgId = espacio.orgId;
   await db.tenant.create({
     data: { ...parsed.data, organizationId: orgId },
   });
@@ -68,7 +71,9 @@ export async function updateTenant(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const orgId = await getOrgId();
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const orgId = espacio.orgId;
   const res = await db.tenant.updateMany({
     where: { id, organizationId: orgId },
     data: parsed.data,
@@ -83,7 +88,7 @@ export async function deleteTenant(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   // onDelete: Restrict en LeaseContract impide borrar un arrendatario con contratos;
   // lo verificamos antes para dar un mensaje claro en vez de un error de FK.
   const conContratos = await db.leaseContract.count({

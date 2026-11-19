@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { navGroups } from "@/lib/nav";
+import { navGroups, type NavItem } from "@/lib/nav";
 import {
   Sidebar,
   SidebarContent,
@@ -16,12 +16,16 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 
+type Contadores = Partial<Record<NonNullable<NavItem["contador"]>, number>>;
+
 export function AppSidebar({
-  pendientes = 0,
+  rol,
   esAdmin = false,
+  contadores = {},
 }: {
-  pendientes?: number;
+  rol: "EQUIPO" | "CLIENTE";
   esAdmin?: boolean;
+  contadores?: Contadores;
 }) {
   const pathname = usePathname();
 
@@ -29,10 +33,15 @@ export function AppSidebar({
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  // Lo marcado soloAdmin (como «Equipo») no se muestra a los demás. El permiso real
-  // se exige igual en el servidor: esto solo evita mostrar un enlace que no les sirve.
+  // Cada rol ve su menú: lo marcado soloEquipo, soloCliente o soloAdmin no se muestra a los
+  // demás. El permiso real se exige igual en el servidor: esto solo evita mostrar un enlace
+  // que no les sirve.
+  const visible = (i: NavItem) =>
+    (!i.soloEquipo || rol === "EQUIPO") &&
+    (!i.soloCliente || rol === "CLIENTE") &&
+    (!i.soloAdmin || esAdmin);
   const gruposVisibles = navGroups
-    .map((g) => ({ ...g, items: g.items.filter((i) => !i.soloAdmin || esAdmin) }))
+    .map((g) => ({ ...g, items: g.items.filter(visible) }))
     .filter((g) => g.items.length > 0);
 
   return (
@@ -71,6 +80,7 @@ export function AppSidebar({
             <SidebarMenu>
               {group.items.map((item) => {
                 const Icon = item.icon;
+                const cuenta = item.contador ? (contadores[item.contador] ?? 0) : 0;
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
@@ -80,9 +90,9 @@ export function AppSidebar({
                     >
                       <Icon />
                       <span>{item.label}</span>
-                      {item.badge && pendientes > 0 && (
+                      {cuenta > 0 && (
                         <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground tabular-nums">
-                          {pendientes > 99 ? "99+" : pendientes}
+                          {cuenta > 99 ? "99+" : cuenta}
                         </span>
                       )}
                     </SidebarMenuButton>

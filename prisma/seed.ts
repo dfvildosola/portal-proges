@@ -3,7 +3,8 @@
 // arrendatarios, contratos, cobros, gastos, contribuciones, cuentas y valores UF.
 // «Hoy» es 2026-10-01 (HOY_FICHA en `seed-datos.ts`).
 //
-// Cada vez que corre, BORRA todo lo de la organización y lo vuelve a crear.
+// Los datos son de un cliente de mentira, «Demo» (id `org_demo`), que el guion crea si falta.
+// Cada vez que corre, BORRA todo lo de ese cliente y lo vuelve a crear.
 // Los datos de cada propiedad se arman en `seed-propiedades.ts` (45 reales desde
 // `prisma/datos-reales.json`, que no va a GitHub, y 35 inventadas); las listas de
 // nombres y comunas están en `seed-datos.ts`.
@@ -25,12 +26,18 @@ import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { GRUPOS, OWNERS, TENANTS, ETIQUETAS, ORG, UF_HOY, date } from "./seed-datos";
+import { GRUPOS, OWNERS, TENANTS, ETIQUETAS, UF_HOY, date } from "./seed-datos";
 import { armarPropiedades } from "./seed-propiedades";
 import { plazoEnMeses } from "../src/lib/contratos";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const db = new PrismaClient({ adapter });
+
+// Los datos inventados viven en un cliente de mentira, «Demo», con su propio espacio. Así no
+// se mezclan con el espacio de Proges (`org_proges`: catálogo y etapas, que no es un cliente) ni
+// con el de un cliente real como NPL.
+const ORG = "org_demo";
+const ORG_NOMBRE = "Demo";
 
 // ---------------------------------------------------------------------------
 // Freno de seguridad
@@ -117,6 +124,13 @@ async function main() {
       await tx.grupo.deleteMany({ where: { organizationId: ORG } });
       await tx.propertyTag.deleteMany({ where: { organizationId: ORG } });
       await tx.currencyValue.deleteMany();
+
+      // El cliente «Demo»: su espacio tiene que existir antes que sus datos.
+      await tx.organizacion.upsert({
+        where: { id: ORG },
+        create: { id: ORG, nombre: ORG_NOMBRE, tipo: "CLIENTE" },
+        update: { nombre: ORG_NOMBRE, tipo: "CLIENTE", activa: true },
+      });
 
       // -----------------------------------------------------------------------
       // Etiquetas, grupos económicos y dueños. El grupo reúne varias sociedades de

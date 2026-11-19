@@ -13,16 +13,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { UsuarioForm, type GrupoOpcion, type UsuarioValores } from "./usuario-form";
+import { UsuarioForm, type ClienteOpcion, type UsuarioValores } from "./usuario-form";
 
 export function UsuarioDialogo({
   usuario,
-  grupos,
   esYo = false,
+  clientes,
 }: {
   usuario?: UsuarioValores;
-  grupos: GrupoOpcion[];
   esYo?: boolean;
+  clientes: ClienteOpcion[];
 }) {
   const [abierto, setAbierto] = useState(false);
   const cerrar = useCallback(() => setAbierto(false), []);
@@ -56,8 +56,8 @@ export function UsuarioDialogo({
         </DialogHeader>
         <UsuarioForm
           usuario={usuario}
-          grupos={grupos}
           esYo={esYo}
+          clientes={clientes}
           onListo={cerrar}
         />
       </DialogContent>

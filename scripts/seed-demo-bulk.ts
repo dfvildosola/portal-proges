@@ -3,7 +3,8 @@
 import "dotenv/config";
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { DEFAULT_ORG_ID } from "@/lib/org";
+// Los datos de demostración van al cliente de mentira «Demo» (lo crea prisma/seed.ts).
+const ORG_DEMO = "org_demo";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const db = new PrismaClient({ adapter });
@@ -43,7 +44,7 @@ const CALLES = [
 ];
 
 async function main() {
-  const orgId = DEFAULT_ORG_ID;
+  const orgId = ORG_DEMO;
   await db.property.deleteMany({
     where: { organizationId: orgId, rolSII: { startsWith: "DEMO-" } },
   });

@@ -3,12 +3,12 @@
 // «Por confirmar»: los servicios que la carga inicial dedujo del Drive y que el
 // equipo tiene que revisar. Puede haber decenas, por eso lleva búsqueda y orden.
 
-import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
 import { sortHeader } from "@/components/ui/data-table-helpers";
 import { TIPOS_SERVICIO } from "@/lib/servicios";
+import { AbrirEnCliente, useAbrirEnCliente } from "./abrir-en-cliente";
 import { enlaceServicio, type FilaServicio } from "./filas";
 
 const columnas: ColumnDef<FilaServicio>[] = [
@@ -24,6 +24,11 @@ const columnas: ColumnDef<FilaServicio>[] = [
         </span>
       </div>
     ),
+  },
+  {
+    accessorKey: "cliente",
+    header: sortHeader("Cliente"),
+    size: 150,
   },
   {
     id: "servicio",
@@ -49,19 +54,32 @@ const columnas: ColumnDef<FilaServicio>[] = [
     // Se ordena por los días (número) y se muestra el texto ya armado.
     cell: ({ row }) => row.original.desde,
   },
+  {
+    id: "abrir",
+    header: "",
+    size: 100,
+    enableSorting: false,
+    cell: ({ row }) => (
+      <AbrirEnCliente
+        clienteId={row.original.clienteId}
+        href={enlaceServicio(row.original.propertyId, row.original.id)}
+      />
+    ),
+  },
 ];
 
 export function PorConfirmarTabla({ data }: { data: FilaServicio[] }) {
-  const router = useRouter();
+  // La fila entera también abre el servicio, pero antes cambia al cliente dueño.
+  const { abrir } = useAbrirEnCliente();
   return (
     <DataTable
       columns={columnas}
       data={data}
-      onRowClick={(f) => router.push(enlaceServicio(f.propertyId, f.id))}
+      onRowClick={(f) => abrir(f.clienteId, enlaceServicio(f.propertyId, f.id))}
       initialSorting={[{ id: "direccion", desc: false }]}
       toolbar={(table) => (
         <Input
-          placeholder="Buscar propiedad o servicio…"
+          placeholder="Buscar propiedad, cliente o servicio…"
           value={table.getState().globalFilter ?? ""}
           onChange={(e) => table.setGlobalFilter(e.target.value)}
           className="h-8 w-full max-w-xs"

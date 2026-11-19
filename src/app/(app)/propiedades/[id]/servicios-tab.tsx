@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ChevronRight, ClipboardList, UserRound } from "lucide-react";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { getOrgId, ORG_PROGES } from "@/lib/org";
+import { usuarioActual } from "@/lib/sesion";
 import { formatDate } from "@/lib/format";
 import { NOMBRES_ESTADO, TIPOS_SERVICIO, diaChile } from "@/lib/servicios";
 import type { ServicioEstado } from "@/generated/prisma/enums";
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { AbrirServicioDialogo } from "./servicios-form";
+import { ServiciosTabCliente } from "./servicios-tab-cliente";
 
 // Un servicio en la lista. Lo que se muestra de cada uno vive en esta forma.
 type ServicioFila = {
@@ -25,7 +27,15 @@ type ServicioFila = {
 
 // Pestaña «Servicios» de la ficha: los servicios abiertos de la propiedad arriba y
 // los cerrados abajo, plegados. Busca sus propios datos para no engordar la página.
+// Tiene dos caras: el EQUIPO gestiona (en el cliente activo) y el CLIENTE solo lee, con
+// lo que le deja ver `src/lib/vista-cliente.ts`.
 export async function ServiciosTab({ propertyId }: { propertyId: string }) {
+  const usuario = await usuarioActual();
+  if (!usuario) throw new Error("Sin permiso");
+  if (usuario.rol === "CLIENTE") {
+    return <ServiciosTabCliente usuario={usuario} propertyId={propertyId} />;
+  }
+
   const orgId = await getOrgId();
 
   const [servicios, catalogo, responsables] = await Promise.all([
@@ -45,13 +55,15 @@ export async function ServiciosTab({ propertyId }: { propertyId: string }) {
       },
     }),
     // El catálogo completo de servicios activos: el formulario lo filtra por tipo.
+    // El catálogo es de Proges (común a todos los clientes), no del cliente activo.
     db.servicio.findMany({
-      where: { organizationId: orgId, activo: true },
+      where: { organizationId: ORG_PROGES, activo: true },
       orderBy: [{ codigo: "asc" }, { nombre: "asc" }],
       select: { id: true, codigo: true, nombre: true, familia: true },
     }),
+    // El equipo vive en el espacio de Proges.
     db.usuario.findMany({
-      where: { organizationId: orgId, rol: "EQUIPO", activo: true },
+      where: { organizationId: ORG_PROGES, rol: "EQUIPO", activo: true },
       orderBy: { nombre: "asc" },
       select: { id: true, nombre: true },
     }),

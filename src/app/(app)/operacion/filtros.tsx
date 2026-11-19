@@ -1,22 +1,18 @@
-// Filtros de Operación: dos filas de botones que cambian la dirección
-// (`?tipo=VENTA&responsable=sin`). El filtro vive en la URL, así que se puede
+// Filtros de Operación: tres filas de botones que cambian la dirección
+// (`?cliente=…&tipo=VENTA&responsable=sin`). El filtro vive en la URL, así que se puede
 // copiar el enlace y compartirlo; la página lo lee en el servidor.
 
 import Link from "next/link";
 import type { ServicioTipo } from "@/generated/prisma/enums";
+import { SIN_RESPONSABLE, type FiltroOperacion } from "@/lib/operacion";
 import { TIPOS_SERVICIO } from "@/lib/servicios";
 import { Button } from "@/components/ui/button";
 
-export type Filtro = {
-  tipo: ServicioTipo | null;
-  // Un id de usuario, «sin» (sin responsable) o null (todos).
-  responsable: string | null;
-};
-
-export const SIN_RESPONSABLE = "sin";
+export type Filtro = FiltroOperacion;
 
 function enlace(filtro: Filtro): string {
   const partes = new URLSearchParams();
+  if (filtro.cliente) partes.set("cliente", filtro.cliente);
   if (filtro.tipo) partes.set("tipo", filtro.tipo);
   if (filtro.responsable) partes.set("responsable", filtro.responsable);
   const texto = partes.toString();
@@ -46,13 +42,30 @@ function Opcion({
 
 export function Filtros({
   filtro,
+  clientes,
   responsables,
 }: {
   filtro: Filtro;
+  clientes: { id: string; nombre: string }[];
   responsables: { id: string; nombre: string }[];
 }) {
   return (
     <div className="mb-6 space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="w-24 text-sm text-muted-foreground">Cliente</span>
+        <Opcion activo={filtro.cliente === null} href={enlace({ ...filtro, cliente: null })}>
+          Todos
+        </Opcion>
+        {clientes.map((c) => (
+          <Opcion
+            key={c.id}
+            activo={filtro.cliente === c.id}
+            href={enlace({ ...filtro, cliente: c.id })}
+          >
+            {c.nombre}
+          </Opcion>
+        ))}
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <span className="w-24 text-sm text-muted-foreground">Tipo</span>
         <Opcion activo={filtro.tipo === null} href={enlace({ ...filtro, tipo: null })}>

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
-import { getOrgId } from "@/lib/org";
+import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
 import {
   assertProperty,
   enumField,
@@ -15,6 +15,7 @@ import {
 } from "@/lib/form-helpers";
 import { OwnerType, PropertyUnitType } from "@/generated/prisma/enums";
 import type { PropertyFormState } from "./actions";
+
 
 // ---------------------------------------------------------------------------
 // Dueños (copropiedad) y etiquetas
@@ -53,7 +54,9 @@ export async function addOwner(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(porcentaje.error) };
   }
 
-  const orgId = await getOrgId();
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const orgId = espacio.orgId;
   if (!(await assertProperty(propertyId, orgId)))
     return { error: "Propiedad no encontrada." };
 
@@ -107,7 +110,7 @@ export async function removeOwner(formData: FormData): Promise<void> {
   const propertyId = String(formData.get("propertyId") ?? "");
   if (!propertyOwnerId) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   await db.propertyOwner.deleteMany({
     where: { id: propertyOwnerId, organizationId: orgId },
   });
@@ -130,7 +133,9 @@ export async function addTag(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const orgId = await getOrgId();
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const orgId = espacio.orgId;
   if (!(await assertProperty(propertyId, orgId)))
     return { error: "Propiedad no encontrada." };
 
@@ -156,7 +161,7 @@ export async function removeTag(formData: FormData): Promise<void> {
   const tagId = String(formData.get("tagId") ?? "");
   if (!propertyId || !tagId) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   if (!(await assertProperty(propertyId, orgId))) return;
 
   await db.property.update({
@@ -194,7 +199,9 @@ export async function addUnit(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const orgId = await getOrgId();
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const orgId = espacio.orgId;
   if (!(await assertProperty(propertyId, orgId)))
     return { error: "Propiedad no encontrada." };
 
@@ -211,7 +218,7 @@ export async function removeUnit(formData: FormData): Promise<void> {
   const propertyId = String(formData.get("propertyId") ?? "");
   if (!unitId) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   await db.propertyUnit.deleteMany({
     where: { id: unitId, organizationId: orgId },
   });
@@ -249,7 +256,9 @@ export async function addAssessment(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const orgId = await getOrgId();
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const orgId = espacio.orgId;
   if (!(await assertProperty(propertyId, orgId)))
     return { error: "Propiedad no encontrada." };
 
@@ -279,7 +288,7 @@ export async function removeAssessment(formData: FormData): Promise<void> {
   const propertyId = String(formData.get("propertyId") ?? "");
   if (!assessmentId) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   await db.propertyAssessment.deleteMany({
     where: { id: assessmentId, organizationId: orgId },
   });

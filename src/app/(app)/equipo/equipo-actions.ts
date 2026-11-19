@@ -2,11 +2,14 @@
 
 // Crear y editar usuarios del portal. Solo el admin (adminEnAccion).
 // Un usuario nunca se borra: se desactiva, para que su historial siga teniendo autor.
+//
+// El rol decide el espacio del usuario: un EQUIPO vive en org_proges y puede ser admin;
+// un CLIENTE vive en el espacio de su cliente (organizationId = id del cliente) y nunca es admin.
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { ORG_PROGES } from "@/lib/org";
 import { adminEnAccion } from "@/lib/sesion";
 import { toFieldErrors } from "@/lib/form-helpers";
 
@@ -26,11 +29,9 @@ const usuarioSchema = z.object({
     .toLowerCase()
     .regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/, "Correo inválido"),
   rol: z.enum(["EQUIPO", "CLIENTE"], { message: "Elige el rol" }),
+  clienteId: z.string().optional(), // obligatorio solo si el rol es CLIENTE (se comprueba abajo)
   admin: z.boolean(),
   activo: z.boolean(),
-  grupoId: z.string(),
-  alcance: z.enum(["GRUPO", "SOCIEDADES"]),
-  sociedades: z.array(z.string()),
 });
 
 export async function guardarUsuario(
@@ -38,19 +39,17 @@ export async function guardarUsuario(
   formData: FormData,
 ): Promise<UsuarioFormState> {
   const admin = await adminEnAccion();
-  const orgId = await getOrgId();
 
   const parsed = usuarioSchema.safeParse({
     id: formData.get("id") || undefined,
     nombre: formData.get("nombre"),
     email: formData.get("email"),
     rol: formData.get("rol"),
-    admin: formData.get("admin") === "on",
+    clienteId: formData.get("clienteId") || undefined,
+    // Un cliente nunca es admin, aunque el formulario lo mande.
+    admin: formData.get("rol") === "EQUIPO" && formData.get("admin") === "on",
     // Al crear no hay casilla «activo»: nace activo.
     activo: formData.has("id") ? formData.get("activo") === "on" : true,
-    grupoId: String(formData.get("grupoId") ?? ""),
-    alcance: formData.get("alcance") ?? "GRUPO",
-    sociedades: formData.getAll("sociedades").map(String),
   });
   if (!parsed.success) {
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
@@ -66,13 +65,29 @@ export async function guardarUsuario(
     if (!datos.activo) return { error: "No puedes desactivarte a ti mismo." };
   }
 
-  // Si es de edición, el usuario tiene que ser de la organización.
-  if (datos.id) {
-    const existe = await db.usuario.findFirst({
-      where: { id: datos.id, organizationId: orgId },
-      select: { id: true },
+  // Si se edita, el usuario tiene que existir (sea de Proges o de un cliente).
+  const actual = datos.id
+    ? await db.usuario.findUnique({
+        where: { id: datos.id },
+        select: { id: true, organizationId: true },
+      })
+    : null;
+  if (datos.id && !actual) return { error: "Ese usuario no existe." };
+
+  // El espacio del usuario: el del cliente si es CLIENTE, el de Proges si es EQUIPO.
+  let organizationId = ORG_PROGES;
+  if (datos.rol === "CLIENTE") {
+    if (!datos.clienteId) return { fieldErrors: { clienteId: "Elige el cliente." } };
+    const cliente = await db.organizacion.findFirst({
+      where: { id: datos.clienteId, tipo: "CLIENTE" },
+      select: { id: true, activa: true },
     });
-    if (!existe) return { error: "Ese usuario no existe." };
+    if (!cliente) return { fieldErrors: { clienteId: "Ese cliente no existe." } };
+    // A un cliente desactivado no se le suman usuarios; el que ya está ahí puede seguir.
+    if (!cliente.activa && cliente.id !== actual?.organizationId) {
+      return { fieldErrors: { clienteId: "Ese cliente está desactivado." } };
+    }
+    organizationId = cliente.id;
   }
 
   // El correo es único en todo el portal.
@@ -84,62 +99,20 @@ export async function guardarUsuario(
     return { fieldErrors: { email: "Ya existe un usuario con ese correo." } };
   }
 
-  // Lo que depende del rol. Un EQUIPO no lleva grupo ni alcance; un CLIENTE no es admin.
-  const esCliente = datos.rol === "CLIENTE";
-  let grupoId: string | null = null;
-  let sociedades: string[] = [];
-  if (esCliente) {
-    if (!datos.grupoId) return { fieldErrors: { grupoId: "Elige el grupo del cliente." } };
-    const grupo = await db.grupo.findFirst({
-      where: { id: datos.grupoId, organizationId: orgId },
-      select: { id: true },
-    });
-    if (!grupo) return { fieldErrors: { grupoId: "Ese grupo no existe." } };
-    grupoId = grupo.id;
-
-    if (datos.alcance === "SOCIEDADES") {
-      if (datos.sociedades.length === 0) {
-        return { fieldErrors: { sociedades: "Marca al menos una sociedad." } };
-      }
-      // Cada sociedad marcada tiene que ser de ese grupo: si no, un cliente podría
-      // ver propiedades de otro grupo.
-      const validas = await db.owner.findMany({
-        where: { id: { in: datos.sociedades }, grupoId: grupo.id, organizationId: orgId },
-        select: { id: true },
-      });
-      if (validas.length !== new Set(datos.sociedades).size) {
-        return { fieldErrors: { sociedades: "Hay una sociedad que no es de ese grupo." } };
-      }
-      sociedades = validas.map((o) => o.id);
-    }
-  }
-
   const valores = {
     nombre: datos.nombre,
     email: datos.email,
     rol: datos.rol,
-    admin: esCliente ? false : datos.admin,
+    organizationId,
+    admin: datos.admin,
     activo: datos.activo,
-    grupoId,
-    alcance: esCliente ? datos.alcance : ("GRUPO" as const),
   };
 
-  // Todo o nada: el usuario y sus sociedades se guardan juntos.
-  await db.$transaction(async (tx) => {
-    const usuario = datos.id
-      ? await tx.usuario.update({ where: { id: datos.id }, data: valores })
-      : await tx.usuario.create({ data: { ...valores, organizationId: orgId } });
-    await tx.usuarioSociedad.deleteMany({ where: { usuarioId: usuario.id } });
-    if (sociedades.length > 0) {
-      await tx.usuarioSociedad.createMany({
-        data: sociedades.map((ownerId) => ({
-          organizationId: orgId,
-          usuarioId: usuario.id,
-          ownerId,
-        })),
-      });
-    }
-  });
+  if (datos.id) {
+    await db.usuario.update({ where: { id: datos.id }, data: valores });
+  } else {
+    await db.usuario.create({ data: valores });
+  }
 
   revalidatePath("/equipo");
   return { ok: true };

@@ -4,7 +4,7 @@
 // aviso, visitas, ofertas y recomendación.
 //
 // Todas parten igual: comprueban que quien llama es del equipo (equipoEnAccion)
-// y que el servicio es de la organización, es comercial y sigue ABIERTO. Es la
+// y que el servicio es del cliente activo, es comercial y sigue ABIERTO. Es la
 // cerradura del servidor: aunque alguien llame la acción a mano, sin pasar por
 // la pantalla, no puede tocar un servicio cerrado ni de otro tipo.
 
@@ -13,7 +13,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { Currency, OfertaEstado, PrecioOrigen } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
-import { getOrgId } from "@/lib/org";
+import { getOrgId, ORG_PROGES } from "@/lib/org";
 import { equipoEnAccion } from "@/lib/sesion";
 import { hoyChile } from "@/lib/fechas";
 import { esComercial } from "@/lib/servicios";
@@ -263,7 +263,7 @@ export async function registrarVisita(
   const persona = await db.usuario.findFirst({
     where: {
       id: parsed.data.realizadaPorId,
-      organizationId: orgId,
+      organizationId: ORG_PROGES, // el equipo vive en el espacio de Proges
       rol: "EQUIPO",
       activo: true,
     },

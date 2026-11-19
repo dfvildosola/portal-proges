@@ -3,16 +3,20 @@ import { FolderOpen, Pencil } from "lucide-react";
 import type { Property } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { propertyTypeLabels, propertyGoalLabels } from "@/lib/domain";
+import { propertyTypeLabels, propertyGoalLabels, propertyStatusLabels } from "@/lib/domain";
 import { formatM2 } from "@/lib/format";
 import { DeletePropertyButton } from "./delete-button";
 import { StatusQuickEdit } from "./status-quick-edit";
 
 // Encabezado de la ficha: la dirección es el título; debajo, tipo · comuna · m² ·
 // ROL; a la derecha, el estado (editable), el objetivo y las acciones.
+// El cliente edita su propiedad; el equipo la ve en solo lectura (ADR 0010) y es el único
+// que ve el enlace a la carpeta del Drive de Proges.
 export function PropertyHeader({
   property,
+  esEquipo,
 }: {
+  esEquipo: boolean;
   property: Pick<
     Property,
     | "id"
@@ -53,11 +57,15 @@ export function PropertyHeader({
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <StatusQuickEdit propertyId={property.id} current={property.estado} />
+        {esEquipo ? (
+          <Badge variant="outline">{propertyStatusLabels[property.estado]}</Badge>
+        ) : (
+          <StatusQuickEdit propertyId={property.id} current={property.estado} />
+        )}
         <Badge variant="outline">
           Objetivo: {propertyGoalLabels[property.objetivo]}
         </Badge>
-        {property.driveCarpetaId && (
+        {esEquipo && property.driveCarpetaId && (
           // Se abre en otra pestaña: cada persona del equipo entra con su propia cuenta de Google.
           <Button
             variant="outline"
@@ -74,6 +82,8 @@ export function PropertyHeader({
             Carpeta en Drive
           </Button>
         )}
+        {!esEquipo && (
+          <>
         <Button
           variant="outline"
           nativeButton={false}
@@ -83,6 +93,8 @@ export function PropertyHeader({
           Editar
         </Button>
         <DeletePropertyButton id={property.id} />
+          </>
+        )}
       </div>
     </div>
   );

@@ -11,8 +11,13 @@
 // (decisión de Diego: se archivan, no se cargan) y las carpetas sin comuna, que no
 // son propiedades (hoy solo «DOCUMENTOS VARIOS (FORMATOS Y LEGALES)», la carpeta de formatos).
 //
-// Uso:  npx tsx scripts/carga-inicial.ts [--grupo "Nombre"] [--simular]
-//   --grupo    grupo económico donde quedan las propiedades (por defecto «Cartera por confirmar»)
+// Cada cliente tiene su propio espacio (una Organizacion). Las propiedades entran al espacio
+// del cliente que se indica; el catálogo de servicios y las etapas, en cambio, son de Proges
+// y se leen siempre de su espacio (ORG_PROGES). Hasta que se sepa qué sociedad es dueña de
+// cada propiedad, todas quedan con la «Sociedad por confirmar» de ese cliente.
+//
+// Uso:  npx tsx scripts/carga-inicial.ts --cliente "Nombre" [--simular]
+//   --cliente  obligatorio: el cliente dueño de la cartera (si no existe, se crea)
 //   --simular  no escribe nada: solo cuenta e imprime lo que haría
 
 import "dotenv/config";
@@ -21,11 +26,9 @@ import { resolve } from "node:path";
 import { PrismaClient, type Prisma } from "../src/generated/prisma/client";
 import type { PropertyType, ServicioTipo } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { DEFAULT_ORG_ID } from "../src/lib/org";
+import { ORG_PROGES } from "../src/lib/org";
 
-const ORG = DEFAULT_ORG_ID;
 const ARCHIVO = resolve(process.cwd(), "docs/inventario-drive/inventario.csv");
-const GRUPO_POR_DEFECTO = "Cartera por confirmar";
 const SOCIEDAD_NOMBRE = "Sociedad por confirmar";
 const SOCIEDAD_RUT = "SIN-RUT";
 const MOTIVO = "Carga inicial desde el inventario del Drive";
@@ -163,56 +166,81 @@ function leerInventario(): Propiedad[] {
 // Programa
 // ---------------------------------------------------------------------------
 
-function leerArgumentos(): { grupo: string; simular: boolean } {
+function leerArgumentos(): { cliente: string; simular: boolean } {
   const args = process.argv.slice(2);
   const simular = args.includes("--simular");
-  let grupo = GRUPO_POR_DEFECTO;
-  const i = args.indexOf("--grupo");
-  if (i !== -1) {
-    const valor = args[i + 1];
-    if (!valor || valor.startsWith("--")) throw new Error('--grupo necesita un nombre: --grupo "Nombre del grupo".');
-    grupo = valor;
+  const i = args.indexOf("--cliente");
+  const cliente = i === -1 ? undefined : args[i + 1]?.trim();
+  if (!cliente || cliente.startsWith("--")) {
+    throw new Error('Falta el cliente. Uso: npx tsx scripts/carga-inicial.ts --cliente "Nombre del cliente" [--simular]');
   }
-  return { grupo, simular };
+  return { cliente, simular };
+}
+
+// El id del espacio de un cliente sale de su nombre: «NPL» → org_npl. Sin tildes ni espacios.
+function idDeCliente(nombre: string): string {
+  const base = normalizar(nombre).replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+  if (!base) throw new Error(`El nombre de cliente «${nombre}» no tiene letras ni números.`);
+  return `org_${base}`;
+}
+
+// Busca el espacio del cliente por nombre; si no existe, lo crea (salvo en simulación).
+// Devuelve el id del espacio.
+async function asegurarCliente(db: PrismaClient, nombre: string, simular: boolean): Promise<string> {
+  const existente = await db.organizacion.findFirst({ where: { nombre, tipo: "CLIENTE" } });
+  if (existente) {
+    if (!existente.activa) throw new Error(`El cliente «${nombre}» existe pero está desactivado.`);
+    return existente.id;
+  }
+  const id = idDeCliente(nombre);
+  if (simular) {
+    console.log(`[simular] Se crearía el cliente «${nombre}» (${id}).`);
+    return id;
+  }
+  const choca = await db.organizacion.findUnique({ where: { id } });
+  if (choca) throw new Error(`Ya existe el espacio ${id} y no es un cliente llamado «${nombre}» (es «${choca.nombre}», ${choca.tipo}).`);
+  await db.organizacion.create({ data: { id, nombre, tipo: "CLIENTE" } });
+  console.log(`Cliente «${nombre}» creado (${id}).`);
+  return id;
 }
 
 async function main() {
-  const { grupo: nombreGrupo, simular } = leerArgumentos();
+  const { cliente: nombreCliente, simular } = leerArgumentos();
   const inventario = leerInventario();
   const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
   const db = new PrismaClient({ adapter });
 
   try {
-    // Los servicios del catálogo se buscan una vez, por código. Si falta alguno,
+    // El espacio del cliente dueño de la cartera.
+    const orgCliente = await asegurarCliente(db, nombreCliente, simular);
+
+    // Los servicios del catálogo (de Proges) se buscan una vez, por código. Si falta alguno,
     // se avisa antes de crear nada.
     const codigos = [...new Set(DEDUCCIONES.flatMap((d) => (d.servicio ? [d.servicio.codigo] : [])))];
     const catalogo = new Map<string, string>(); // código -> id del servicio
     for (const codigo of codigos) {
-      const s = await db.servicio.findFirst({ where: { organizationId: ORG, codigo, activo: true }, orderBy: { nombre: "asc" } });
+      const s = await db.servicio.findFirst({ where: { organizationId: ORG_PROGES, codigo, activo: true }, orderBy: { nombre: "asc" } });
       if (!s) throw new Error(`No está el servicio ${codigo} en el catálogo: falta cargar el catálogo: npx tsx scripts/cargar-catalogo.ts`);
       catalogo.set(codigo, s.id);
     }
 
-    // La primera etapa activa de cada tipo, y la etapa «Con oferta» de ventas.
-    const etapas = await db.etapa.findMany({ where: { organizationId: ORG, activa: true }, orderBy: [{ tipo: "asc" }, { orden: "asc" }] });
+    // La primera etapa activa de cada tipo (también de Proges), y la etapa «Con oferta» de ventas.
+    const etapas = await db.etapa.findMany({ where: { organizationId: ORG_PROGES, activa: true }, orderBy: [{ tipo: "asc" }, { orden: "asc" }] });
     const etapaDe = (tipo: ServicioTipo, nombre?: string) => {
       const e = nombre ? etapas.find((x) => x.tipo === tipo && x.nombre === nombre) : etapas.find((x) => x.tipo === tipo);
       if (!e) throw new Error(`No hay etapa ${nombre ? `«${nombre}» ` : ""}activa para servicios de tipo ${tipo}: revisa las etapas del portal.`);
       return e;
     };
 
-    // Grupo y sociedad provisorios (en simulación no se crean: solo se informa).
+    // Sociedad provisoria del cliente (en simulación no se crea: solo se informa).
     let ownerId: string | null = null;
     if (simular) {
-      console.log(`[simular] Se aseguraría el grupo «${nombreGrupo}» y la sociedad «${SOCIEDAD_NOMBRE}» (${SOCIEDAD_RUT}).`);
+      console.log(`[simular] Se aseguraría la sociedad «${SOCIEDAD_NOMBRE}» (${SOCIEDAD_RUT}) de «${nombreCliente}».`);
     } else {
-      const grupo =
-        (await db.grupo.findFirst({ where: { organizationId: ORG, nombre: nombreGrupo } })) ??
-        (await db.grupo.create({ data: { organizationId: ORG, nombre: nombreGrupo } }));
       const owner =
-        (await db.owner.findFirst({ where: { organizationId: ORG, nombre: SOCIEDAD_NOMBRE, rut: SOCIEDAD_RUT, grupoId: grupo.id } })) ??
+        (await db.owner.findFirst({ where: { organizationId: orgCliente, nombre: SOCIEDAD_NOMBRE, rut: SOCIEDAD_RUT } })) ??
         (await db.owner.create({
-          data: { organizationId: ORG, nombre: SOCIEDAD_NOMBRE, rut: SOCIEDAD_RUT, tipo: "SOCIEDAD", grupoId: grupo.id },
+          data: { organizationId: orgCliente, nombre: SOCIEDAD_NOMBRE, rut: SOCIEDAD_RUT, tipo: "SOCIEDAD" },
         }));
       ownerId = owner.id;
     }
@@ -236,7 +264,7 @@ async function main() {
         noPropiedades.push(`fila ${p.linea} «${p.carpeta}»`);
         continue;
       }
-      if (idsVistos.has(p.id) || (await db.property.findFirst({ where: { organizationId: ORG, driveCarpetaId: p.id }, select: { id: true } }))) {
+      if (idsVistos.has(p.id) || (await db.property.findFirst({ where: { organizationId: orgCliente, driveCarpetaId: p.id }, select: { id: true } }))) {
         existian++;
         idsVistos.add(p.id);
         continue;
@@ -258,7 +286,7 @@ async function main() {
           await db.$transaction(async (tx: Prisma.TransactionClient) => {
             const propiedad = await tx.property.create({
               data: {
-                organizationId: ORG,
+                organizationId: orgCliente,
                 direccion: p.direccion,
                 comuna: p.comuna,
                 region: "Por confirmar",
@@ -268,13 +296,13 @@ async function main() {
               },
             });
             await tx.propertyOwner.create({
-              data: { organizationId: ORG, propertyId: propiedad.id, ownerId: ownerId!, porcentaje: 100 },
+              data: { organizationId: orgCliente, propertyId: propiedad.id, ownerId: ownerId!, porcentaje: 100 },
             });
             if (servicio) {
               const etapa = etapaDe(servicio.tipo, servicio.etapa);
               const enCurso = await tx.servicioEnCurso.create({
                 data: {
-                  organizationId: ORG,
+                  organizationId: orgCliente,
                   propertyId: propiedad.id,
                   servicioId: catalogo.get(servicio.codigo)!,
                   tipo: servicio.tipo,
@@ -285,7 +313,7 @@ async function main() {
               });
               await tx.evento.create({
                 data: {
-                  organizationId: ORG,
+                  organizationId: orgCliente,
                   servicioEnCursoId: enCurso.id,
                   tipo: "ETAPA",
                   etapaId: etapa.id,
@@ -306,7 +334,7 @@ async function main() {
 
     // Resumen.
     const verbo = simular ? "se crearían" : "creadas";
-    console.log(`\nResumen${simular ? " (simulación: no se escribió nada)" : ""}`);
+    console.log(`\nResumen para «${nombreCliente}»${simular ? " (simulación: no se escribió nada)" : ""}`);
     console.log(`  Filas en el inventario: ${inventario.length}`);
     console.log(`  Propiedades ${verbo}: ${creadas}`);
     console.log(`  Propiedades que ya existían: ${existian}`);

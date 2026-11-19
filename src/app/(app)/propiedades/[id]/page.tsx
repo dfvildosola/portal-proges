@@ -3,6 +3,7 @@ import { hoyChile } from "@/lib/fechas";
 import { estaVigente } from "@/lib/contratos";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/org";
+import { usuarioActual } from "@/lib/sesion";
 import { agenda } from "@/lib/agenda";
 import { getLatestUf, toCLP } from "@/lib/currency";
 import {
@@ -52,6 +53,7 @@ export default async function PropiedadDetallePage({
   const { pestana } = await searchParams;
   const pestanaInicial = TABS.some((t) => t.value === pestana) ? String(pestana) : "resumen";
   const orgId = await getOrgId();
+  const esEquipo = (await usuarioActual())?.rol === "EQUIPO";
 
   const [p, uf, entidades, items] = await Promise.all([
     db.property.findFirst({
@@ -141,7 +143,7 @@ export default async function PropiedadDetallePage({
     <>
       <BackLink href="/propiedades">Propiedades</BackLink>
 
-      <PropertyHeader property={p} />
+      <PropertyHeader property={p} esEquipo={esEquipo} />
       <AttentionStrip items={pendientes} />
 
       <Tabs defaultValue={pestanaInicial}>

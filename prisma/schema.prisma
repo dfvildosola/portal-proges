@@ -2,7 +2,7 @@
 // Modelo de gestión de patrimonio inmobiliario. Ver PLAN.md §2.
 //
 // Convenciones:
-// - Toda tabla de negocio lleva `organizationId` (aislamiento futuro; hoy valor fijo).
+// - Toda tabla de negocio lleva `organizationId`: el id del cliente dueño de esos datos.
 // - Montos y porcentajes en Decimal (precisión exacta; nunca float para dinero).
 // - Multimoneda: cada monto guarda su `moneda` (CLP/UF); se convierte en lectura.
 // - Archivos nunca en la DB: Document guarda metadatos + `blobKey` (binario en Blob).
@@ -202,6 +202,7 @@ model Property {
   taxes       PropertyTax[]
   bills       PropertyBill[]
   servicios   ServicioEnCurso[]
+  solicitudes Solicitud[]
 
   @@index([organizationId])
 }
@@ -263,8 +264,7 @@ model Grupo {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  owners   Owner[]
-  usuarios Usuario[]
+  owners Owner[]
 
   @@index([organizationId])
 }
@@ -272,15 +272,14 @@ model Grupo {
 // Entidad legal dueña de propiedades: persona natural o sociedad. Reutilizable
 // entre propiedades (una misma entidad participa en varias vía PropertyOwner).
 model Owner {
-  id             String            @id @default(cuid())
+  id             String          @id @default(cuid())
   organizationId String
   nombre         String
   rut            String
-  tipo           OwnerType         @default(PERSONA)
+  tipo           OwnerType       @default(PERSONA)
   grupoId        String?
-  grupo          Grupo?            @relation(fields: [grupoId], references: [id], onDelete: SetNull)
+  grupo          Grupo?          @relation(fields: [grupoId], references: [id], onDelete: SetNull)
   properties     PropertyOwner[]
-  usuarios       UsuarioSociedad[]
 
   @@index([organizationId])
   @@index([grupoId])
@@ -487,10 +486,17 @@ enum UsuarioRol {
   CLIENTE
 }
 
-// Qué ve un cliente: todo su grupo, o solo las sociedades que se le marcan.
-enum UsuarioAlcance {
-  GRUPO
-  SOCIEDADES
+// Un espacio es de Proges (catálogo y etapas, comunes a todos) o de un cliente (su cartera).
+enum OrganizacionTipo {
+  PROGES
+  CLIENTE
+}
+
+// Cómo va un pedido de servicio: llega NUEVA; el equipo la acepta (abre un servicio) o la rechaza.
+enum SolicitudEstado {
+  NUEVA
+  ACEPTADA
+  RECHAZADA
 }
 
 // Los seis tipos de servicio están fijos en el código; sus etapas son filas
@@ -528,42 +534,40 @@ enum OfertaEstado {
   CAIDA
 }
 
-// Persona que entra al portal. El correo (en minúsculas) la une con Clerk.
-// Rol EQUIPO ve y edita todo; CLIENTE solo lee dentro de su alcance.
-model Usuario {
-  id             String         @id @default(cuid())
-  organizationId String
-  email          String         @unique // siempre en minúsculas
-  nombre         String
-  rol            UsuarioRol
-  admin          Boolean        @default(false) // crea usuarios y edita etapas
-  grupoId        String? // solo para clientes: su grupo
-  alcance        UsuarioAlcance @default(GRUPO)
-  activo         Boolean        @default(true)
-  ultimoIngreso  DateTime?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-
-  grupo       Grupo?            @relation(fields: [grupoId], references: [id], onDelete: SetNull)
-  sociedades  UsuarioSociedad[]
-  responsable ServicioEnCurso[]
-  eventos     Evento[]
-  visitas     Visita[]
-
-  @@index([organizationId])
+// Un espacio de trabajo. Cada cliente es uno (su cartera vive ahí) y Proges tiene el suyo
+// (`org_proges`: el catálogo y las etapas, comunes a todos los clientes). Es la «carpeta» que
+// todas las tablas de negocio nombran en su columna `organizationId`; esa columna es texto
+// simple, sin relación con esta tabla, para no tocar las tablas que ya existían.
+model Organizacion {
+  id        String           @id
+  nombre    String
+  tipo      OrganizacionTipo
+  activa    Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 }
 
-// Sociedades que ve un cliente con alcance SOCIEDADES.
-model UsuarioSociedad {
-  id             String @id @default(cuid())
+// Persona que entra al portal. El correo (en minúsculas) la une con Clerk.
+// Rol EQUIPO (organizationId = org_proges) trabaja para Proges; rol CLIENTE
+// (organizationId = su cliente) administra la cartera de su espacio.
+model Usuario {
+  id             String     @id @default(cuid())
   organizationId String
-  usuarioId      String
-  ownerId        String
+  email          String     @unique // siempre en minúsculas
+  nombre         String
+  rol            UsuarioRol
+  admin          Boolean    @default(false) // crea clientes y usuarios y edita etapas
+  activo         Boolean    @default(true)
+  ultimoIngreso  DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  owner   Owner   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  responsable          ServicioEnCurso[]
+  eventos              Evento[]
+  visitas              Visita[]
+  solicitudesPedidas   Solicitud[]       @relation("SolicitudPedidaPor")
+  solicitudesResueltas Solicitud[]       @relation("SolicitudResueltaPor")
 
-  @@unique([usuarioId, ownerId])
   @@index([organizationId])
 }
 
@@ -631,13 +635,14 @@ model ServicioEnCurso {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  servicio    Servicio @relation(fields: [servicioId], references: [id], onDelete: Restrict)
-  etapa       Etapa    @relation(fields: [etapaId], references: [id], onDelete: Restrict)
-  responsable Usuario? @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+  property    Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  servicio    Servicio   @relation(fields: [servicioId], references: [id], onDelete: Restrict)
+  etapa       Etapa      @relation(fields: [etapaId], references: [id], onDelete: Restrict)
+  responsable Usuario?   @relation(fields: [responsableId], references: [id], onDelete: SetNull)
   eventos     Evento[]
   visitas     Visita[]
   ofertas     Oferta[]
+  solicitud   Solicitud? // el pedido del cliente que abrió este servicio, si lo hubo
 
   @@index([propertyId])
   @@index([organizationId, estado])
@@ -699,4 +704,30 @@ model Oferta {
   servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
 
   @@index([servicioEnCursoId])
+}
+
+// Un pedido de servicio de un cliente sobre una de sus propiedades. Llega NUEVA; el equipo
+// la acepta (abre el servicio y queda enlazado en `servicioEnCursoId`) o la rechaza con motivo.
+// No lleva precio: se cotiza después, fuera del portal.
+model Solicitud {
+  id                String          @id @default(cuid())
+  organizationId    String // el cliente que la pidió
+  propertyId        String
+  tipo              ServicioTipo
+  descripcion       String // qué necesita, en texto libre
+  pedidaPorId       String
+  estado            SolicitudEstado @default(NUEVA)
+  motivoRechazo     String?
+  resueltaPorId     String?
+  resueltaEl        DateTime?
+  servicioEnCursoId String?         @unique
+  createdAt         DateTime        @default(now())
+
+  property        Property         @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  pedidaPor       Usuario          @relation("SolicitudPedidaPor", fields: [pedidaPorId], references: [id], onDelete: Restrict)
+  resueltaPor     Usuario?         @relation("SolicitudResueltaPor", fields: [resueltaPorId], references: [id], onDelete: SetNull)
+  servicioEnCurso ServicioEnCurso? @relation(fields: [servicioEnCursoId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, estado])
+  @@index([propertyId])
 }

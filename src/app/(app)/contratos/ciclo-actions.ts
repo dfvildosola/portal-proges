@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { espacioDeEscritura } from "@/lib/org";
 import { hoyChile, mesActual } from "@/lib/fechas";
 import { formatDate } from "@/lib/format";
 import {
@@ -23,8 +23,9 @@ export type CicloFormState = {
 // Cobros sin ningún pago: no hay plata de por medio, se pueden borrar o repreciar.
 const SIN_PAGO = { montoPagado: null, estado: { not: "PAGADO" } } as const;
 
-async function cargarContrato(id: string) {
-  const orgId = await getOrgId();
+
+// Busca el contrato para modificarlo, así que lo busca en el espacio de escritura.
+async function cargarContrato(id: string, orgId: string) {
   const c = await db.leaseContract.findFirst({
     where: { id, organizationId: orgId },
   });
@@ -46,7 +47,9 @@ function revalidar(id: string, propertyId: string) {
 }
 
 export async function renovarContrato(id: string): Promise<CicloFormState> {
-  const cargado = await cargarContrato(id);
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const cargado = await cargarContrato(id, espacio.orgId);
   if (!cargado) return NO_ENCONTRADO;
   const { c, orgId } = cargado;
   const hoy = hoyChile();
@@ -82,7 +85,9 @@ export async function terminarContrato(
   }
   const { fechaSalida } = parsed.data;
 
-  const cargado = await cargarContrato(id);
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const cargado = await cargarContrato(id, espacio.orgId);
   if (!cargado) return NO_ENCONTRADO;
   const { c, orgId } = cargado;
   if (c.fechaSalida) {
@@ -137,7 +142,9 @@ export async function reajustarContrato(
   }
   const { porcentaje, fechaEfectiva } = parsed.data;
 
-  const cargado = await cargarContrato(id);
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const cargado = await cargarContrato(id, espacio.orgId);
   if (!cargado) return NO_ENCONTRADO;
   const { c, orgId } = cargado;
   if (!c.aplicaReajuste) {

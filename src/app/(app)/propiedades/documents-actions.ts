@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { put, del } from "@vercel/blob";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
 import { assertProperty, optionalDateField } from "@/lib/form-helpers";
 import { DocumentType, Papel } from "@/generated/prisma/enums";
 import { PAPEL_CATEGORIA } from "@/lib/papeles";
+
 
 // ---------------------------------------------------------------------------
 // Documentos (Vercel Blob + metadatos en DB)
@@ -67,7 +68,9 @@ export async function uploadDocument(
   const fechaEmision = emisionParsed.data;
   const fechaVencimiento = vencimientoParsed.data;
 
-  const orgId = await getOrgId();
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const orgId = espacio.orgId;
   if (!(await assertProperty(propertyId, orgId))) return { error: "Propiedad no encontrada." };
 
   const ext = file.name.includes(".") ? file.name.split(".").pop() : "";
@@ -98,7 +101,7 @@ export async function deleteDocument(formData: FormData): Promise<void> {
   const propertyId = String(formData.get("propertyId") ?? "");
   if (!documentId) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   const doc = await db.document.findFirst({
     where: { id: documentId, organizationId: orgId },
     select: { id: true, blobKey: true },

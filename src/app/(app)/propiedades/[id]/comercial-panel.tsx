@@ -6,7 +6,7 @@
 // mismo cálculo que usa el panel del cliente), no se calculan acá.
 
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { getOrgId, ORG_PROGES } from "@/lib/org";
 import { usuarioActual } from "@/lib/sesion";
 import { hoyChile } from "@/lib/fechas";
 import { toDateInputValue } from "@/lib/format";
@@ -96,7 +96,8 @@ export async function ComercialPanel({ servicioId }: { servicioId: string }) {
   // Las personas que pueden figurar como quien hizo la visita.
   const equipo = abierto
     ? await db.usuario.findMany({
-        where: { organizationId: orgId, rol: "EQUIPO", activo: true },
+        // El equipo vive en el espacio de Proges, no en el del cliente.
+        where: { organizationId: ORG_PROGES, rol: "EQUIPO", activo: true },
         orderBy: { nombre: "asc" },
         select: { id: true, nombre: true },
       })

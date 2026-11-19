@@ -19,47 +19,43 @@ import {
 } from "@/components/ui/select";
 import { guardarUsuario } from "./equipo-actions";
 
-export type GrupoOpcion = {
-  id: string;
-  nombre: string;
-  sociedades: { id: string; nombre: string }[];
-};
-
 export type UsuarioValores = {
   id: string;
   nombre: string;
   email: string;
   rol: "EQUIPO" | "CLIENTE";
+  clienteId: string | null; // el cliente al que pertenece (solo si el rol es CLIENTE)
   admin: boolean;
   activo: boolean;
-  grupoId: string | null;
-  alcance: "GRUPO" | "SOCIEDADES";
-  sociedadIds: string[];
 };
 
+export type ClienteOpcion = { id: string; nombre: string; activa: boolean };
+
 const ROLES = { EQUIPO: "Equipo Proges", CLIENTE: "Cliente" };
-const ALCANCES = { GRUPO: "Todo el grupo", SOCIEDADES: "Solo algunas sociedades" };
 
 export function UsuarioForm({
   usuario,
-  grupos,
   esYo,
+  clientes,
   onListo,
 }: {
   usuario?: UsuarioValores;
-  grupos: GrupoOpcion[];
   esYo: boolean; // el admin que se edita a sí mismo no puede quitarse el admin ni desactivarse
+  clientes: ClienteOpcion[];
   onListo: () => void;
 }) {
   const [state, formProps, pending] = useFormAction(guardarUsuario, {});
   const err = (f: string) => state?.fieldErrors?.[f];
 
   const [rol, setRol] = useState<string>(usuario?.rol ?? "EQUIPO");
+  const [clienteId, setClienteId] = useState<string>(usuario?.clienteId ?? "");
   const [admin, setAdmin] = useState(usuario?.admin ?? false);
   const [activo, setActivo] = useState(usuario?.activo ?? true);
-  const [grupoId, setGrupoId] = useState(usuario?.grupoId ?? "");
-  const [alcance, setAlcance] = useState<string>(usuario?.alcance ?? "GRUPO");
-  const [sociedadIds, setSociedadIds] = useState<string[]>(usuario?.sociedadIds ?? []);
+
+  // Solo se ofrecen los clientes activos; si el usuario ya está en uno desactivado, ese también
+  // aparece, para que se pueda guardar sin moverlo.
+  const opciones = clientes.filter((c) => c.activa || c.id === usuario?.clienteId);
+  const itemsClientes = Object.fromEntries(opciones.map((c) => [c.id, c.nombre]));
 
   // Cuando el servidor confirma que guardó, se avisa al diálogo para que se cierre.
   const guardado = state?.ok === true;
@@ -67,34 +63,13 @@ export function UsuarioForm({
     if (guardado) onListo();
   }, [guardado, onListo]);
 
-  const grupo = grupos.find((g) => g.id === grupoId);
-  const itemsGrupo = Object.fromEntries(grupos.map((g) => [g.id, g.nombre]));
-
-  function cambiarGrupo(id: string) {
-    setGrupoId(id);
-    setSociedadIds([]); // las sociedades marcadas eran del grupo anterior
-  }
-
-  function marcarSociedad(id: string, marcada: boolean) {
-    setSociedadIds((ids) => (marcada ? [...ids, id] : ids.filter((x) => x !== id)));
-  }
-
   return (
     <form {...formProps} className="flex flex-col gap-4">
       {usuario && <input type="hidden" name="id" value={usuario.id} />}
       <input type="hidden" name="rol" value={rol} />
+      {rol === "CLIENTE" && <input type="hidden" name="clienteId" value={clienteId} />}
       {rol === "EQUIPO" && admin && <input type="hidden" name="admin" value="on" />}
       {usuario && activo && <input type="hidden" name="activo" value="on" />}
-      {rol === "CLIENTE" && (
-        <>
-          <input type="hidden" name="grupoId" value={grupoId} />
-          <input type="hidden" name="alcance" value={alcance} />
-          {alcance === "SOCIEDADES" &&
-            sociedadIds.map((id) => (
-              <input key={id} type="hidden" name="sociedades" value={id} />
-            ))}
-        </>
-      )}
 
       <Field label="Nombre" htmlFor="nombre" error={err("nombre")}>
         <Input id="nombre" name="nombre" defaultValue={usuario?.nombre} placeholder="Ana Pérez" />
@@ -130,73 +105,40 @@ export function UsuarioForm({
         </Select>
       </Field>
 
+      {rol === "CLIENTE" && (
+        <Field
+          label="Cliente"
+          error={err("clienteId")}
+          hint={
+            opciones.length === 0
+              ? "Primero crea un cliente en el bloque «Clientes»."
+              : "El espacio al que pertenece: solo verá la cartera de este cliente."
+          }
+        >
+          <Select
+            items={itemsClientes}
+            value={clienteId || null}
+            onValueChange={(v) => setClienteId(v ?? "")}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Elige el cliente" />
+            </SelectTrigger>
+            <SelectContent>
+              {opciones.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      )}
+
       {rol === "EQUIPO" && (
         <div className="flex items-center gap-2">
           <Checkbox id="admin" checked={admin} onCheckedChange={setAdmin} disabled={esYo} />
           <Label htmlFor="admin">Admin (crea usuarios y edita las etapas)</Label>
         </div>
-      )}
-
-      {rol === "CLIENTE" && (
-        <>
-          <Field
-            label="Grupo del cliente"
-            error={err("grupoId")}
-            hint={grupos.length === 0 ? "Todavía no hay grupos: créalos en Dueños." : undefined}
-          >
-            <Select
-              items={itemsGrupo}
-              value={grupoId || null}
-              onValueChange={(v) => cambiarGrupo(v ?? "")}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Elige un grupo" />
-              </SelectTrigger>
-              <SelectContent>
-                {grupos.map((g) => (
-                  <SelectItem key={g.id} value={g.id}>
-                    {g.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-
-          <Field label="Qué ve">
-            <Select items={ALCANCES} value={alcance} onValueChange={(v) => setAlcance(v ?? "GRUPO")}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="GRUPO">{ALCANCES.GRUPO}</SelectItem>
-                <SelectItem value="SOCIEDADES">{ALCANCES.SOCIEDADES}</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-
-          {alcance === "SOCIEDADES" && (
-            <Field label="Sociedades que puede ver" error={err("sociedades")}>
-              {!grupo ? (
-                <p className="text-sm text-muted-foreground">Elige primero el grupo.</p>
-              ) : grupo.sociedades.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Ese grupo no tiene sociedades.</p>
-              ) : (
-                <div className="flex max-h-48 flex-col gap-2 overflow-y-auto rounded-lg border p-3">
-                  {grupo.sociedades.map((s) => (
-                    <div key={s.id} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`soc-${s.id}`}
-                        checked={sociedadIds.includes(s.id)}
-                        onCheckedChange={(v) => marcarSociedad(s.id, v)}
-                      />
-                      <Label htmlFor={`soc-${s.id}`}>{s.nombre}</Label>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Field>
-          )}
-        </>
       )}
 
       {usuario && (

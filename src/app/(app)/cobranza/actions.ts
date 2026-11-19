@@ -4,13 +4,14 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
 import { vencimientoDelMes } from "@/lib/fechas";
 import { saldoCobro } from "@/lib/cobros";
 import { whereCubreMes } from "@/lib/contratos";
 import { ChargeStatus } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import { dateField, toFieldErrors } from "@/lib/form-helpers";
+
 
 export type ChargeFormState = {
   error?: string;
@@ -47,7 +48,7 @@ export async function generateMonthCharges(formData: FormData): Promise<void> {
   const mes = String(formData.get("mes") ?? "");
   if (!/^\d{4}-\d{2}$/.test(mes)) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   const contracts = await db.leaseContract.findMany({
     where: { organizationId: orgId, ...whereCubreMes(mes) },
     select: { id: true, monto: true, moneda: true, diaPago: true },
@@ -90,7 +91,9 @@ export async function registerPayment(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const orgId = await getOrgId();
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const orgId = espacio.orgId;
   const { notas } = parsed.data;
 
   // Dos abonos a la vez (o un reintento) no se pueden pisar: la transacción
@@ -147,7 +150,7 @@ export async function updateChargeStatus(formData: FormData): Promise<void> {
   const estado = String(formData.get("estado") ?? "");
   if (!id || !["PENDIENTE", "ATRASADO"].includes(estado)) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   await db.rentCharge.updateMany({
     where: { id, organizationId: orgId },
     data:
@@ -169,7 +172,7 @@ export async function deleteCharge(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   await db.rentCharge.deleteMany({ where: { id, organizationId: orgId } });
 
   revalidatePath("/cobranza");

@@ -3,7 +3,9 @@ import { ComercialPanel } from "../../comercial-panel";
 import { notFound } from "next/navigation";
 import { UserRound } from "lucide-react";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { getOrgId, ORG_PROGES } from "@/lib/org";
+import { usuarioActual } from "@/lib/sesion";
+import { servicioParaCliente } from "@/lib/vista-cliente";
 import { formatDate } from "@/lib/format";
 import { NOMBRES_ESTADO, TIPOS_SERVICIO, diaChile, esComercial } from "@/lib/servicios";
 import { BackLink } from "@/components/back-link";
@@ -13,13 +15,25 @@ import { MoverEtapaForm } from "./servicio-mover";
 import { ConfirmarBoton, DetalleForm } from "./servicio-detalle";
 import { CancelarDialogo } from "./servicio-cancelar";
 import { ServicioHistorial } from "./servicio-historial";
+import { ServicioCliente } from "./servicio-cliente";
 
-// Página de un servicio en curso: su encabezado, las acciones del equipo (mientras
-// está abierto) y su historial de cambios.
+// Página de un servicio en curso. El EQUIPO ve su encabezado, las acciones (mientras está
+// abierto) y su historial de cambios, en el cliente activo. El CLIENTE ve una versión de solo
+// lectura con lo que deja ver `src/lib/vista-cliente.ts`.
 export default async function ServicioPage({
   params,
 }: PageProps<"/propiedades/[id]/servicios/[sid]">) {
   const { id, sid } = await params;
+  const usuario = await usuarioActual();
+  if (!usuario) throw new Error("Sin permiso");
+
+  if (usuario.rol === "CLIENTE") {
+    const delCliente = await servicioParaCliente(usuario, sid);
+    // Si el servicio no es suyo, o no es de esa propiedad, responde como si no existiera.
+    if (!delCliente || delCliente.propiedad.id !== id) notFound();
+    return <ServicioCliente servicio={delCliente} />;
+  }
+
   const orgId = await getOrgId();
 
   // Se busca por id, propiedad y organización: un servicio de otra propiedad da 404.
@@ -54,12 +68,14 @@ export default async function ServicioPage({
   const [etapas, responsables] = abierto
     ? await Promise.all([
         db.etapa.findMany({
-          where: { organizationId: orgId, tipo: s.tipo, activa: true },
+          // Las etapas son de Proges, comunes a todos los clientes.
+          where: { organizationId: ORG_PROGES, tipo: s.tipo, activa: true },
           orderBy: { orden: "asc" },
           select: { id: true, nombre: true, cierraServicio: true },
         }),
         db.usuario.findMany({
-          where: { organizationId: orgId, rol: "EQUIPO", activo: true },
+          // El equipo vive en el espacio de Proges.
+          where: { organizationId: ORG_PROGES, rol: "EQUIPO", activo: true },
           orderBy: { nombre: "asc" },
           select: { id: true, nombre: true },
         }),

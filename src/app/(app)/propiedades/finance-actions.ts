@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
-import { getOrgId } from "@/lib/org";
+import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
 import {
   assertProperty,
   dateField,
@@ -19,6 +19,7 @@ import {
   MovementCategory,
   TaxStatus,
 } from "@/generated/prisma/enums";
+
 
 // ---------------------------------------------------------------------------
 // Movimientos (ingresos / gastos)
@@ -57,7 +58,9 @@ export async function addMovement(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const orgId = await getOrgId();
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const orgId = espacio.orgId;
   if (!(await assertProperty(propertyId, orgId)))
     return { error: "Propiedad no encontrada." };
 
@@ -83,7 +86,7 @@ export async function removeMovement(formData: FormData): Promise<void> {
   const propertyId = String(formData.get("propertyId") ?? "");
   if (!movementId) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   await db.movement.deleteMany({
     where: { id: movementId, organizationId: orgId },
   });
@@ -150,7 +153,9 @@ export async function addTax(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const orgId = await getOrgId();
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const orgId = espacio.orgId;
   if (!(await assertProperty(propertyId, orgId)))
     return { error: "Propiedad no encontrada." };
 
@@ -188,7 +193,7 @@ export async function generateYearTaxes(formData: FormData): Promise<void> {
   const anio = Number(anioStr);
   if (!Number.isInteger(anio) || anio < 2000 || anio > 2100) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   if (!(await assertProperty(propertyId, orgId))) return;
 
   for (const cuota of [1, 2, 3, 4]) {
@@ -216,7 +221,7 @@ export async function updateTaxMonto(formData: FormData): Promise<void> {
   const montoStr = String(formData.get("monto") ?? "");
   if (!taxId || !montoStr || Number.isNaN(Number(montoStr)) || Number(montoStr) < 0) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   await db.propertyTax.updateMany({
     where: { id: taxId, organizationId: orgId },
     data: { monto: montoStr },
@@ -233,7 +238,7 @@ export async function markTaxPaid(formData: FormData): Promise<void> {
   const fechaPago = new Date(`${fechaPagoStr}T00:00:00Z`);
   if (Number.isNaN(fechaPago.getTime())) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   await db.propertyTax.updateMany({
     where: { id: taxId, organizationId: orgId },
     data: { estado: TaxStatus.PAGADA, fechaPago },
@@ -246,7 +251,7 @@ export async function removeTax(formData: FormData): Promise<void> {
   const propertyId = String(formData.get("propertyId") ?? "");
   if (!taxId) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   await db.propertyTax.deleteMany({
     where: { id: taxId, organizationId: orgId },
   });

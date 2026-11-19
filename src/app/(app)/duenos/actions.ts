@@ -3,9 +3,10 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
 import { toFieldErrors } from "@/lib/form-helpers";
 import { OwnerType } from "@/generated/prisma/enums";
+
 
 export type DuenosState = {
   error?: string;
@@ -33,7 +34,9 @@ export async function createGrupo(
   if (!parsed.success)
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
 
-  const orgId = await getOrgId();
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const orgId = espacio.orgId;
   await db.grupo.create({
     data: { organizationId: orgId, nombre: parsed.data.nombre, rut: parsed.data.rut },
   });
@@ -45,7 +48,7 @@ export async function createGrupo(
 export async function deleteGrupo(formData: FormData): Promise<void> {
   const grupoId = String(formData.get("grupoId") ?? "");
   if (!grupoId) return;
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   await db.grupo.deleteMany({ where: { id: grupoId, organizationId: orgId } });
   revalidatePath("/duenos");
 }
@@ -55,7 +58,7 @@ export async function setOwnerGrupo(formData: FormData): Promise<void> {
   const ownerId = String(formData.get("ownerId") ?? "");
   if (!ownerId) return;
   const grupoIdRaw = String(formData.get("grupoId") ?? "");
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
 
   let grupoId: string | null = null;
   if (grupoIdRaw) {
@@ -100,7 +103,9 @@ export async function createOwner(
   if (!parsed.success)
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
 
-  const orgId = await getOrgId();
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const orgId = espacio.orgId;
   let grupoId: string | null = null;
   if (parsed.data.grupoId) {
     const grupo = await db.grupo.findFirst({

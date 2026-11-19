@@ -12,9 +12,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { ORG_PROGES } from "../src/lib/org";
 
-// Mismo valor fijo que usa el resto del portal (src/lib/org.ts).
-const ORG = "org_proges";
+// El catálogo es de Proges y vale para todos los clientes: vive en el espacio de Proges.
+const ORG = ORG_PROGES;
 const ARCHIVO = resolve(process.cwd(), "prisma/datos/catalogo-servicios.csv");
 
 type Fila = { codigo: string; familia: string; nombre: string; unidad: string | null };

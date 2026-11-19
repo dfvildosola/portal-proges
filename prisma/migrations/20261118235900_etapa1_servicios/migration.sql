@@ -2,7 +2,10 @@
 CREATE TYPE "UsuarioRol" AS ENUM ('EQUIPO', 'CLIENTE');
 
 -- CreateEnum
-CREATE TYPE "UsuarioAlcance" AS ENUM ('GRUPO', 'SOCIEDADES');
+CREATE TYPE "OrganizacionTipo" AS ENUM ('PROGES', 'CLIENTE');
+
+-- CreateEnum
+CREATE TYPE "SolicitudEstado" AS ENUM ('NUEVA', 'ACEPTADA', 'RECHAZADA');
 
 -- CreateEnum
 CREATE TYPE "ServicioTipo" AS ENUM ('EVALUACION', 'INSPECCION', 'VENTA', 'ARRIENDO', 'OBRA', 'ADMINISTRACION');
@@ -24,6 +27,18 @@ ALTER TABLE "Property" ADD COLUMN     "driveCarpetaId" TEXT,
 ALTER COLUMN "rolSII" DROP NOT NULL;
 
 -- CreateTable
+CREATE TABLE "Organizacion" (
+    "id" TEXT NOT NULL,
+    "nombre" TEXT NOT NULL,
+    "tipo" "OrganizacionTipo" NOT NULL,
+    "activa" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Organizacion_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Usuario" (
     "id" TEXT NOT NULL,
     "organizationId" TEXT NOT NULL,
@@ -31,24 +46,12 @@ CREATE TABLE "Usuario" (
     "nombre" TEXT NOT NULL,
     "rol" "UsuarioRol" NOT NULL,
     "admin" BOOLEAN NOT NULL DEFAULT false,
-    "grupoId" TEXT,
-    "alcance" "UsuarioAlcance" NOT NULL DEFAULT 'GRUPO',
     "activo" BOOLEAN NOT NULL DEFAULT true,
     "ultimoIngreso" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Usuario_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "UsuarioSociedad" (
-    "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
-    "usuarioId" TEXT NOT NULL,
-    "ownerId" TEXT NOT NULL,
-
-    CONSTRAINT "UsuarioSociedad_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -157,17 +160,29 @@ CREATE TABLE "Oferta" (
     CONSTRAINT "Oferta_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Solicitud" (
+    "id" TEXT NOT NULL,
+    "organizationId" TEXT NOT NULL,
+    "propertyId" TEXT NOT NULL,
+    "tipo" "ServicioTipo" NOT NULL,
+    "descripcion" TEXT NOT NULL,
+    "pedidaPorId" TEXT NOT NULL,
+    "estado" "SolicitudEstado" NOT NULL DEFAULT 'NUEVA',
+    "motivoRechazo" TEXT,
+    "resueltaPorId" TEXT,
+    "resueltaEl" TIMESTAMP(3),
+    "servicioEnCursoId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Solicitud_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Usuario_email_key" ON "Usuario"("email");
 
 -- CreateIndex
 CREATE INDEX "Usuario_organizationId_idx" ON "Usuario"("organizationId");
-
--- CreateIndex
-CREATE INDEX "UsuarioSociedad_organizationId_idx" ON "UsuarioSociedad"("organizationId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "UsuarioSociedad_usuarioId_ownerId_key" ON "UsuarioSociedad"("usuarioId", "ownerId");
 
 -- CreateIndex
 CREATE INDEX "Etapa_organizationId_tipo_idx" ON "Etapa"("organizationId", "tipo");
@@ -193,14 +208,14 @@ CREATE INDEX "Visita_servicioEnCursoId_idx" ON "Visita"("servicioEnCursoId");
 -- CreateIndex
 CREATE INDEX "Oferta_servicioEnCursoId_idx" ON "Oferta"("servicioEnCursoId");
 
--- AddForeignKey
-ALTER TABLE "Usuario" ADD CONSTRAINT "Usuario_grupoId_fkey" FOREIGN KEY ("grupoId") REFERENCES "Grupo"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- CreateIndex
+CREATE UNIQUE INDEX "Solicitud_servicioEnCursoId_key" ON "Solicitud"("servicioEnCursoId");
 
--- AddForeignKey
-ALTER TABLE "UsuarioSociedad" ADD CONSTRAINT "UsuarioSociedad_usuarioId_fkey" FOREIGN KEY ("usuarioId") REFERENCES "Usuario"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- CreateIndex
+CREATE INDEX "Solicitud_organizationId_estado_idx" ON "Solicitud"("organizationId", "estado");
 
--- AddForeignKey
-ALTER TABLE "UsuarioSociedad" ADD CONSTRAINT "UsuarioSociedad_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "Owner"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- CreateIndex
+CREATE INDEX "Solicitud_propertyId_idx" ON "Solicitud"("propertyId");
 
 -- AddForeignKey
 ALTER TABLE "ServicioEnCurso" ADD CONSTRAINT "ServicioEnCurso_propertyId_fkey" FOREIGN KEY ("propertyId") REFERENCES "Property"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -231,6 +246,23 @@ ALTER TABLE "Visita" ADD CONSTRAINT "Visita_realizadaPorId_fkey" FOREIGN KEY ("r
 
 -- AddForeignKey
 ALTER TABLE "Oferta" ADD CONSTRAINT "Oferta_servicioEnCursoId_fkey" FOREIGN KEY ("servicioEnCursoId") REFERENCES "ServicioEnCurso"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Solicitud" ADD CONSTRAINT "Solicitud_propertyId_fkey" FOREIGN KEY ("propertyId") REFERENCES "Property"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Solicitud" ADD CONSTRAINT "Solicitud_pedidaPorId_fkey" FOREIGN KEY ("pedidaPorId") REFERENCES "Usuario"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Solicitud" ADD CONSTRAINT "Solicitud_resueltaPorId_fkey" FOREIGN KEY ("resueltaPorId") REFERENCES "Usuario"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Solicitud" ADD CONSTRAINT "Solicitud_servicioEnCursoId_fkey" FOREIGN KEY ("servicioEnCursoId") REFERENCES "ServicioEnCurso"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- El espacio de Proges: ahí viven el catálogo de servicios y las etapas, comunes a todos los clientes.
+INSERT INTO "Organizacion" ("id", "nombre", "tipo", "activa", "createdAt", "updatedAt") VALUES
+  ('org_proges', 'Proges', 'PROGES', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT DO NOTHING;
 
 
 -- Etapas iniciales de cada tipo de servicio (después se editan desde el portal).

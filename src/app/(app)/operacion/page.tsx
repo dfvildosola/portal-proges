@@ -1,20 +1,33 @@
-// Operación: todo el trabajo abierto de la cartera en una pantalla.
-// La página solo carga los datos (una consulta por bloque, ninguna dentro de
-// un bucle) y los reparte a sus bloques, cada uno en su archivo.
+// Operación: el trabajo de Proges con TODOS los clientes en una pantalla.
+// Arriba, la bandeja de solicitudes nuevas; después, lo abierto por tipo y etapa, por
+// responsable, lo que falta confirmar y las visitas de la semana.
+// La página solo carga los datos (una consulta por bloque, ninguna dentro de un bucle,
+// todas desde `src/lib/operacion.ts`, que es lo único que cruza clientes) y los reparte
+// a sus bloques, cada uno en su archivo.
 
-import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
-import { hoyChile, sumarDias } from "@/lib/fechas";
+import { exigirEquipo } from "@/lib/sesion";
+import {
+  SIN_RESPONSABLE,
+  catalogoParaAceptar,
+  clientesDeOperacion,
+  equipoActivo,
+  etapasDeProges,
+  serviciosAbiertos,
+  solicitudesNuevas,
+  visitasDeLaSemana,
+} from "@/lib/operacion";
+import { hoyChile } from "@/lib/fechas";
 import { formatDate } from "@/lib/format";
 import { TIPOS_SERVICIO, visitasUltimaSemana } from "@/lib/servicios";
 import type { ServicioTipo } from "@/generated/prisma/enums";
 import { PageHeader } from "@/components/page-header";
 import { Cifras } from "./cifras";
 import { desdeCuando, type FilaServicio, type FilaVisita } from "./filas";
-import { Filtros, SIN_RESPONSABLE, type Filtro } from "./filtros";
+import { Filtros, type Filtro } from "./filtros";
 import { PorConfirmarTabla } from "./por-confirmar-tabla";
 import { PorResponsable, type CuentaResponsable } from "./por-responsable";
 import { PorTipoYEtapa } from "./por-tipo-y-etapa";
+import { SolicitudesBandeja } from "./solicitudes-bandeja";
 import { VisitasSemana } from "./visitas-semana";
 
 function Seccion({
@@ -46,6 +59,9 @@ export default async function OperacionPage({
 }: {
   searchParams: Promise<{ [clave: string]: string | string[] | undefined }>;
 }) {
+  // Solo el equipo entra acá: un cliente vuelve al inicio.
+  await exigirEquipo();
+
   const sp = await searchParams;
   // Un tipo que no existe se ignora en vez de romper la página.
   const tipoPedido = primero(sp.tipo);
@@ -53,76 +69,25 @@ export default async function OperacionPage({
     tipoPedido && tipoPedido in TIPOS_SERVICIO
       ? (tipoPedido as ServicioTipo)
       : null;
-  const filtro: Filtro = { tipo, responsable: primero(sp.responsable) };
-
-  const orgId = await getOrgId();
-  const hoy = hoyChile();
-
-  // Lo que filtra por tipo y responsable, igual para los servicios y las visitas.
-  const delServicio = {
-    ...(filtro.tipo ? { tipo: filtro.tipo } : {}),
-    ...(filtro.responsable
-      ? {
-          responsableId:
-            filtro.responsable === SIN_RESPONSABLE ? null : filtro.responsable,
-        }
-      : {}),
+  const filtro: Filtro = {
+    tipo,
+    responsable: primero(sp.responsable),
+    cliente: primero(sp.cliente),
   };
 
-  const [servicios, etapas, equipo, visitas] = await Promise.all([
-    db.servicioEnCurso.findMany({
-      where: { organizationId: orgId, estado: "ABIERTO", ...delServicio },
-      select: {
-        id: true,
-        tipo: true,
-        porConfirmar: true,
-        abiertoEl: true,
-        property: { select: { id: true, direccion: true, rolSII: true } },
-        servicio: { select: { nombre: true } },
-        etapa: { select: { id: true, nombre: true } },
-        responsable: { select: { id: true, nombre: true } },
-        // Desde cuándo está en su etapa: el último cambio de etapa.
-        eventos: {
-          where: { tipo: "ETAPA" },
-          orderBy: { fecha: "desc" },
-          take: 1,
-          select: { fecha: true },
-        },
-      },
-    }),
-    db.etapa.findMany({
-      where: { organizationId: orgId },
-      orderBy: [{ tipo: "asc" }, { orden: "asc" }],
-      select: { id: true, tipo: true, nombre: true, activa: true },
-    }),
-    db.usuario.findMany({
-      where: { organizationId: orgId, rol: "EQUIPO", activo: true },
-      orderBy: { nombre: "asc" },
-      select: { id: true, nombre: true },
-    }),
-    // Los últimos 7 días contando hoy (de hoy-6 a hoy): la misma ventana que usa
-    // `visitasUltimaSemana`, que es la que cuenta la cifra de arriba.
-    db.visita.findMany({
-      where: {
-        organizationId: orgId,
-        fecha: { gte: sumarDias(hoy, -6), lte: hoy },
-        servicioEnCurso: delServicio,
-      },
-      orderBy: { fecha: "desc" },
-      select: {
-        id: true,
-        fecha: true,
-        evaluacion: true,
-        realizadaPor: { select: { nombre: true } },
-        servicioEnCurso: {
-          select: {
-            id: true,
-            tipo: true,
-            property: { select: { id: true, direccion: true } },
-          },
-        },
-      },
-    }),
+  const hoy = hoyChile();
+  const clientes = await clientesDeOperacion();
+  // Un cliente del filtro que no existe o está desactivado se ignora.
+  if (filtro.cliente && !clientes.some((c) => c.id === filtro.cliente)) filtro.cliente = null;
+  const nombreCliente = new Map(clientes.map((c) => [c.id, c.nombre]));
+
+  const [solicitudes, catalogo, servicios, etapas, equipo, visitas] = await Promise.all([
+    solicitudesNuevas(),
+    catalogoParaAceptar(),
+    serviciosAbiertos(filtro, clientes),
+    etapasDeProges(),
+    equipoActivo(),
+    visitasDeLaSemana(filtro, clientes, hoy),
   ]);
 
   const filas: FilaServicio[] = servicios
@@ -131,6 +96,8 @@ export default async function OperacionPage({
       const desde = desdeCuando(s.eventos[0]?.fecha ?? s.abiertoEl, hoy);
       return {
         id: s.id,
+        clienteId: s.organizationId,
+        cliente: nombreCliente.get(s.organizationId) ?? "",
         propertyId: s.property.id,
         direccion: s.property.direccion,
         rol: s.property.rolSII,
@@ -151,6 +118,8 @@ export default async function OperacionPage({
   const filasVisita: FilaVisita[] = visitas.map((v) => ({
     id: v.id,
     fecha: formatDate(v.fecha),
+    clienteId: v.organizationId,
+    cliente: nombreCliente.get(v.organizationId) ?? "",
     propertyId: v.servicioEnCurso.property.id,
     servicioId: v.servicioEnCurso.id,
     direccion: v.servicioEnCurso.property.direccion,
@@ -188,10 +157,21 @@ export default async function OperacionPage({
     <>
       <PageHeader
         title="Operación"
-        description="Todo el trabajo abierto de la cartera: por tipo y etapa, por responsable y lo que falta confirmar."
+        description="El trabajo de todos los clientes: las solicitudes nuevas, y lo abierto por tipo y etapa, por responsable y lo que falta confirmar."
       />
 
-      <Filtros filtro={filtro} responsables={equipo} />
+      <Seccion
+        titulo="Solicitudes nuevas"
+        ayuda="Pedidos de los clientes que esperan respuesta. Aceptar abre el servicio en la cartera del cliente; rechazar pide un motivo."
+      >
+        <SolicitudesBandeja
+          solicitudes={solicitudes}
+          catalogo={catalogo}
+          responsables={equipo}
+        />
+      </Seccion>
+
+      <Filtros filtro={filtro} clientes={clientes} responsables={equipo} />
 
       <Cifras
         abiertos={filas.length}

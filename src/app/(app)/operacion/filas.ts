@@ -11,6 +11,8 @@ import { diaChile } from "@/lib/servicios";
 // Un servicio abierto, listo para mostrar en una tabla.
 export type FilaServicio = {
   id: string; // id del servicio en curso (sirve de enlace)
+  clienteId: string; // el espacio del cliente dueño de la propiedad
+  cliente: string; // su nombre, para saber de quién es cada servicio
   propertyId: string;
   direccion: string;
   rol: string | null; // el ROL es opcional: la carga inicial no lo trae
@@ -29,6 +31,8 @@ export type FilaServicio = {
 export type FilaVisita = {
   id: string;
   fecha: string; // ya formateada (dd-mm-aaaa)
+  clienteId: string;
+  cliente: string;
   propertyId: string;
   servicioId: string;
   direccion: string;
@@ -37,7 +41,8 @@ export type FilaVisita = {
   evaluacion: number | null; // 1 a 5
 };
 
-// Enlace a la página de un servicio.
+// Enlace a la página de un servicio. Solo abre si el cliente activo es el dueño de la
+// propiedad: por eso junto a cada servicio va el botón «Abrir», que primero cambia de cliente.
 export function enlaceServicio(propertyId: string, servicioId: string): string {
   return `/propiedades/${propertyId}/servicios/${servicioId}`;
 }

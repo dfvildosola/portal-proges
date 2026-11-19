@@ -4,9 +4,10 @@
 // mover de etapa, confirmar, cambiar responsable y nota, y cancelar.
 //
 // Cada acción parte pidiendo un integrante activo del EQUIPO (equipoEnAccion)
-// y vuelve a comprobar en el servidor que la propiedad, el servicio, la etapa y
-// el responsable son de la organización: lo que llega del formulario nunca se
-// da por bueno.
+// y vuelve a comprobar en el servidor cada id que llega del formulario: la propiedad y el
+// servicio en curso contra el cliente activo (getOrgId), y la etapa, el catálogo y el
+// responsable contra el espacio de Proges (ORG_PROGES), donde viven comunes a todos los
+// clientes. Lo que llega del formulario nunca se da por bueno.
 //
 // Cada cambio de etapa deja un Evento (el historial). Cancelar NO es una etapa:
 // es una salida, y por eso no crea Evento de etapa.
@@ -14,7 +15,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { getOrgId, ORG_PROGES } from "@/lib/org";
 import { equipoEnAccion } from "@/lib/sesion";
 import { assertProperty, enumField, optionalText, toFieldErrors } from "@/lib/form-helpers";
 import { ServicioTipo } from "@/generated/prisma/enums";
@@ -44,18 +45,19 @@ function revalidar(propertyId: string, servicioId: string) {
   revalidatePath(`/propiedades/${propertyId}/servicios/${servicioId}`);
 }
 
-// Confirma que el responsable elegido es un integrante activo del equipo de la
-// organización. Devuelve el mensaje de error, o null si está bien.
-async function errorDeResponsable(responsableId: string | null, orgId: string) {
+// Confirma que el responsable elegido es un integrante activo del equipo de Proges
+// (el equipo vive en ORG_PROGES, no en el espacio del cliente). Devuelve el mensaje de
+// error, o null si está bien.
+async function errorDeResponsable(responsableId: string | null) {
   if (responsableId === null) return null;
   const usuario = await db.usuario.findFirst({
-    where: { id: responsableId, organizationId: orgId, rol: "EQUIPO", activo: true },
+    where: { id: responsableId, organizationId: ORG_PROGES, rol: "EQUIPO", activo: true },
     select: { id: true },
   });
   return usuario ? null : "El responsable no es del equipo.";
 }
 
-// El servicio de la propiedad, siempre dentro de la organización.
+// El servicio de la propiedad, siempre dentro del espacio del cliente activo.
 async function buscarServicio(servicioId: string, propertyId: string, orgId: string) {
   return db.servicioEnCurso.findFirst({
     where: { id: servicioId, propertyId, organizationId: orgId },
@@ -99,9 +101,9 @@ export async function abrirServicio(
 
   if (!(await assertProperty(propertyId, orgId))) return { error: "Propiedad no encontrada." };
 
-  // El servicio del catálogo debe estar activo y ser de una familia que ese tipo ofrece.
+  // El servicio del catálogo (de Proges) debe estar activo y ser de una familia que ese tipo ofrece.
   const catalogo = await db.servicio.findFirst({
-    where: { id: servicioId, organizationId: orgId, activo: true },
+    where: { id: servicioId, organizationId: ORG_PROGES, activo: true },
     select: { id: true, familia: true },
   });
   if (!catalogo) return { error: "El servicio elegido no existe en el catálogo." };
@@ -112,11 +114,11 @@ export async function abrirServicio(
     };
   }
 
-  const errorResp = await errorDeResponsable(responsableId, orgId);
+  const errorResp = await errorDeResponsable(responsableId);
   if (errorResp) return { error: errorResp, fieldErrors: { responsableId: errorResp } };
 
   const primeraEtapa = await db.etapa.findFirst({
-    where: { organizationId: orgId, tipo, activa: true },
+    where: { organizationId: ORG_PROGES, tipo, activa: true },
     orderBy: { orden: "asc" },
     select: { id: true, nombre: true },
   });
@@ -192,9 +194,9 @@ export async function moverEtapa(
     return { error: "El servicio ya está en esa etapa.", fieldErrors: { etapaId: "Ya está ahí" } };
   }
 
-  // La etapa debe ser de la organización, del mismo tipo que el servicio y estar activa.
+  // La etapa debe ser de Proges (ORG_PROGES), del mismo tipo que el servicio y estar activa.
   const nueva = await db.etapa.findFirst({
-    where: { id: etapaId, organizationId: orgId, tipo: servicio.tipo, activa: true },
+    where: { id: etapaId, organizationId: ORG_PROGES, tipo: servicio.tipo, activa: true },
     select: { id: true, nombre: true, cierraServicio: true },
   });
   if (!nueva) return { error: "Esa etapa no existe o no es de este tipo de servicio." };
@@ -309,7 +311,7 @@ export async function cambiarDetalle(
   if (!servicio) return { error: "Servicio no encontrado." };
   if (servicio.estado !== "ABIERTO") return { error: "Este servicio ya está cerrado." };
 
-  const errorResp = await errorDeResponsable(responsableId, orgId);
+  const errorResp = await errorDeResponsable(responsableId);
   if (errorResp) return { error: errorResp, fieldErrors: { responsableId: errorResp } };
 
   await db.servicioEnCurso.update({

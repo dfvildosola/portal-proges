@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
 import {
   dateField,
   enumField,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/form-helpers";
 import { plazoEnMeses } from "@/lib/contratos";
 import { Currency, AdjustmentType } from "@/generated/prisma/enums";
+
 
 export type ContractFormState = {
   error?: string;
@@ -174,7 +175,9 @@ export async function createContract(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const orgId = await getOrgId();
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const orgId = espacio.orgId;
   if (!(await assertRefs(parsed.data.propertyId, parsed.data.tenantId, orgId))) {
     return { error: "Propiedad o arrendatario no encontrado." };
   }
@@ -200,7 +203,9 @@ export async function updateContract(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const orgId = await getOrgId();
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const orgId = espacio.orgId;
   if (!(await assertRefs(parsed.data.propertyId, parsed.data.tenantId, orgId))) {
     return { error: "Propiedad o arrendatario no encontrado." };
   }
@@ -228,7 +233,7 @@ export async function deleteContract(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   await db.leaseContract.deleteMany({ where: { id, organizationId: orgId } });
 
   revalidatePath("/contratos");

@@ -3,9 +3,10 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
 import { assertProperty, dateField, toFieldErrors } from "@/lib/form-helpers";
 import { BillStatus, BillType, Currency } from "@/generated/prisma/enums";
+
 
 export type BillFormState = {
   error?: string;
@@ -60,7 +61,9 @@ export async function addBill(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const orgId = await getOrgId();
+  const espacio = await espacioDeEscritura();
+  if ("error" in espacio) return { error: espacio.error };
+  const orgId = espacio.orgId;
   if (!(await assertProperty(propertyId, orgId)))
     return { error: "Propiedad no encontrada." };
 
@@ -96,7 +99,7 @@ export async function markBillPaid(formData: FormData): Promise<void> {
   const fechaPago = new Date(`${fechaPagoStr}T00:00:00Z`);
   if (Number.isNaN(fechaPago.getTime())) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   const bill = await db.propertyBill.findFirst({
     where: { id: billId, organizationId: orgId },
     select: { propertyId: true },
@@ -116,7 +119,7 @@ export async function removeBill(formData: FormData): Promise<void> {
   const billId = String(formData.get("billId") ?? "");
   if (!billId) return;
 
-  const orgId = await getOrgId();
+  const orgId = await orgParaEscribir();
   const bill = await db.propertyBill.findFirst({
     where: { id: billId, organizationId: orgId },
     select: { propertyId: true },

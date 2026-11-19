@@ -1,7 +1,6 @@
 // Tabla simple de servicios abiertos. La usa «Por tipo y etapa», donde cada
 // lista es corta. «Por confirmar» usa la tabla con búsqueda y orden.
 
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -11,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AbrirEnCliente } from "./abrir-en-cliente";
 import { enlaceServicio, type FilaServicio } from "./filas";
 
 export function TablaServicios({ filas }: { filas: FilaServicio[] }) {
@@ -21,31 +21,32 @@ export function TablaServicios({ filas }: { filas: FilaServicio[] }) {
           <TableHead>Propiedad</TableHead>
           <TableHead>Responsable</TableHead>
           <TableHead>En esta etapa desde</TableHead>
+          <TableHead className="w-24" />
         </TableRow>
       </TableHeader>
       <TableBody>
         {filas.map((f) => (
           <TableRow key={f.id}>
             <TableCell className="whitespace-normal">
-              <Link
-                href={enlaceServicio(f.propertyId, f.id)}
-                className="font-medium hover:underline"
-              >
-                {f.direccion}
-              </Link>
+              <span className="font-medium">{f.direccion}</span>
               <span className="block text-xs text-muted-foreground">
                 {f.servicio}
               </span>
-              {f.porConfirmar && (
-                <Badge variant="warning" className="mt-1">
-                  Por confirmar
-                </Badge>
-              )}
+              <span className="mt-1 flex flex-wrap gap-1">
+                <Badge variant="outline">{f.cliente}</Badge>
+                {f.porConfirmar && <Badge variant="warning">Por confirmar</Badge>}
+              </span>
             </TableCell>
             <TableCell className="text-muted-foreground">
               {f.responsable ?? "Sin responsable"}
             </TableCell>
             <TableCell className="text-muted-foreground">{f.desde}</TableCell>
+            <TableCell className="text-right">
+              <AbrirEnCliente
+                clienteId={f.clienteId}
+                href={enlaceServicio(f.propertyId, f.id)}
+              />
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>
