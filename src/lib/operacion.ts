@@ -44,6 +44,12 @@ export async function clientesDeOperacion(): Promise<{ id: string; nombre: strin
   });
 }
 
+// Los ids de los clientes activos. Las solicitudes de un cliente desactivado no se cuentan:
+// sus usuarios ya no entran, y un servicio abierto ahí quedaría fuera de Operación.
+async function idsClientesActivos(): Promise<string[]> {
+  return (await clientesDeOperacion()).map((c) => c.id);
+}
+
 // Qué espacios se consultan: el cliente elegido en el filtro, o todos los activos.
 // Un cliente que no existe o está desactivado se ignora (no rompe la página).
 function espaciosAConsultar(
@@ -71,7 +77,7 @@ function delServicio(filtro: FiltroOperacion) {
 // Cuántas solicitudes esperan respuesta: el número rojo del menú.
 export async function contarSolicitudesNuevas(): Promise<number> {
   await exigirEquipo();
-  return db.solicitud.count({ where: { estado: "NUEVA" } });
+  return db.solicitud.count({ where: { estado: "NUEVA", organizationId: { in: await idsClientesActivos() } } });
 }
 
 // Las solicitudes NUEVA de todos los clientes, las más antiguas primero (llevan más esperando).
@@ -79,7 +85,7 @@ export async function solicitudesNuevas() {
   await exigirEquipo();
   const [solicitudes, clientes] = await Promise.all([
     db.solicitud.findMany({
-      where: { estado: "NUEVA" },
+      where: { estado: "NUEVA", organizationId: { in: await idsClientesActivos() } },
       orderBy: { createdAt: "asc" },
       select: {
         id: true,

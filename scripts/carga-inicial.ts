@@ -187,7 +187,10 @@ function idDeCliente(nombre: string): string {
 // Busca el espacio del cliente por nombre; si no existe, lo crea (salvo en simulación).
 // Devuelve el id del espacio.
 async function asegurarCliente(db: PrismaClient, nombre: string, simular: boolean): Promise<string> {
-  const existente = await db.organizacion.findFirst({ where: { nombre, tipo: "CLIENTE" } });
+  const existente = await db.organizacion.findFirst({
+    // Sin distinguir mayúsculas, igual que /equipo: «npl» es el mismo cliente que «NPL».
+    where: { nombre: { equals: nombre, mode: "insensitive" }, tipo: "CLIENTE" },
+  });
   if (existente) {
     if (!existente.activa) throw new Error(`El cliente «${nombre}» existe pero está desactivado.`);
     return existente.id;

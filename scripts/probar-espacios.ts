@@ -278,6 +278,15 @@ async function caso(nombre: string, prueba: () => Promise<void> | void) {
 // ---------------------------------------------------------------------------
 
 async function main() {
+  // Lo que se haya creado a mano en estos dos clientes (por ejemplo, al probar en el
+  // navegador) se borra antes, para que cada corrida parta del mismo punto.
+  const espaciosDePrueba = ["org_prueba_espacios_a", "org_prueba_espacios_b"];
+  await db.solicitud.deleteMany({
+    where: { organizationId: { in: espaciosDePrueba }, NOT: { id: { startsWith: "prueba_espacios_" } } },
+  });
+  await db.servicioEnCurso.deleteMany({
+    where: { organizationId: { in: espaciosDePrueba }, NOT: { id: { startsWith: "prueba_espacios_" } } },
+  });
   const catalogo = await catalogoYEtapaDeVenta();
   const a = await armarEspacio("A", catalogo);
   const b = await armarEspacio("B", catalogo);

@@ -2,7 +2,9 @@
 
 **Estado: plan v4 APROBADO por Diego el 2026-11-18 («ok, con workflow», con los ajustes de abajo). En ejecución.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v4). Branch: `plan/etapa-1-dos-caras` (sin mezclar).
 
-**Paso siguiente exacto:** workflow de la v4 en curso (M → W, U, S, P, O → X). Al terminar: enchufar `PedirServicioBoton` (P) en la pestaña Servicios (S), reiniciar `proges_dev` con seed + catálogo + carga NPL, build, prueba en el navegador, `revisor`, cierre contra el plan.
+**Paso siguiente exacto:** las 7 piezas están hechas y probadas (commit `19ef648`). En curso: revisor sobre `a478988..HEAD`. Después: arreglar sus hallazgos, cierre contra el plan en la página y lista de revisión para Diego. **Base:** se probó en `proges_dev_v4`, una base nueva (Prisma no deja que un agente reinicie `proges_dev` sin el consentimiento de Diego en su propio mensaje). Falta que Diego elija: reiniciar `proges_dev` o pasar `.env` a `proges_dev_v4`.
+
+**Cambios del coordinador después del workflow:** `espacioDeEscritura()`, `SoloLecturaError`, `espacioParaLeer()` y `espacioParaEscribir()` viven en `src/lib/org.ts` (antes, 10 copias en las acciones); la cabecera de la ficha esconde editar, eliminar y el estado al equipo, y el Drive al cliente; `src/app/(app)/error.tsx` explica la solo lectura si el equipo aprieta un botón de la cartera (los botones de editar de las demás pantallas siguen visibles para el equipo); `PedirServicioBoton` enchufado; `seed-demo*.ts` escriben en `org_demo`; 5 casos más en `probar-espacios.ts` (cookie ajena, escritura).
 
 ## Respuesta de Diego a la v4 (2026-11-18), tal cual
 ```
@@ -134,13 +136,13 @@ De Claude:
 
 ## 8. Piezas y orden
 Olas: [M] → [W, U, S, P, O] → [X]. 7 agentes en Sonnet. Verificación común: `npx tsc --noEmit && npm run lint`; el build lo corre el coordinador al final de cada ola.
-- ◻️ M. Espacios y sesión. `prisma/schema.prisma`, la migración de etapa 1 rehecha (más `Organizacion` y `Solicitud`), `src/lib/sesion.ts`, `src/lib/org.ts`, selector de cliente en `src/components/app-header.tsx`, menú por rol en `src/lib/nav.ts` y `src/components/app-sidebar.tsx`, `scripts/carga-inicial.ts` (`--cliente`), `scripts/crear-usuario.ts`, `prisma/seed.ts` (los inventados a «Demo»). Verifica: migración aplica en `proges_dev` desde cero, la carga entra a NPL dos veces sin duplicar, común y build.
-- ◻️ W. Escritura protegida. Las 9 carpetas de acciones que ya existen: `getOrgId()` → `orgParaEscribir()` al escribir, y los botones de editar se esconden a quien mira. Depende de M.
-- ◻️ U. Clientes y usuarios. `src/app/(app)/equipo/` (crear cliente, usuarios con cliente y permiso). Depende de M.
-- ◻️ S. Servicios del lado del cliente. `src/lib/vista-cliente.ts`, la vista de lectura de la pestaña «Servicios» y de la página del servicio, `src/app/(app)/servicios/` («Mis servicios»). Depende de M.
-- ◻️ P. Pedir un servicio. Formulario en la ficha y en «Mis servicios», `solicitud-actions.ts`, el estado de cada solicitud para el cliente. Depende de M.
-- ◻️ O. Operación de Proges. `src/lib/operacion.ts`, `src/app/(app)/operacion/` con todos los clientes y la bandeja (aceptar abre el servicio, rechazar pide motivo), contador en el menú. Depende de M.
-- ◻️ X. Quitar la vitrina y probar los espacios. Borra `src/app/cliente/` y `scripts/probar-alcance.ts`; escribe `scripts/probar-espacios.ts`. Depende de W, S y O.
+- ✅ M. Espacios y sesión. `prisma/schema.prisma`, la migración de etapa 1 rehecha (más `Organizacion` y `Solicitud`), `src/lib/sesion.ts`, `src/lib/org.ts`, selector de cliente en `src/components/app-header.tsx`, menú por rol en `src/lib/nav.ts` y `src/components/app-sidebar.tsx`, `scripts/carga-inicial.ts` (`--cliente`), `scripts/crear-usuario.ts`, `prisma/seed.ts` (los inventados a «Demo»). Verifica: migración aplica en `proges_dev` desde cero, la carga entra a NPL dos veces sin duplicar, común y build.
+- ✅ W. Escritura protegida. Las 9 carpetas de acciones que ya existen: `getOrgId()` → `orgParaEscribir()` al escribir, y los botones de editar se esconden a quien mira. Depende de M.
+- ✅ U. Clientes y usuarios. `src/app/(app)/equipo/` (crear cliente, usuarios con cliente y permiso). Depende de M.
+- ✅ S. Servicios del lado del cliente. `src/lib/vista-cliente.ts`, la vista de lectura de la pestaña «Servicios» y de la página del servicio, `src/app/(app)/servicios/` («Mis servicios»). Depende de M.
+- ✅ P. Pedir un servicio. Formulario en la ficha y en «Mis servicios», `solicitud-actions.ts`, el estado de cada solicitud para el cliente. Depende de M.
+- ✅ O. Operación de Proges. `src/lib/operacion.ts`, `src/app/(app)/operacion/` con todos los clientes y la bandeja (aceptar abre el servicio, rechazar pide motivo), contador en el menú. Depende de M.
+- ✅ X. Quitar la vitrina y probar los espacios. Borra `src/app/cliente/` y `scripts/probar-alcance.ts`; escribe `scripts/probar-espacios.ts`. Depende de W, S y O.
 
 ## 9. Riesgos
 - R1. Un dato cruza de un cliente a otro (p 2, i 3; datos). Un solo punto de lectura y uno de escritura; prueba con dos clientes; revisor.

@@ -38,6 +38,15 @@ const buscarSesion = cache(async (): Promise<Sesion> => {
 
   const usuario = await db.usuario.findUnique({ where: { email: correo } });
   if (!usuario || !usuario.activo) return { hayClerk: true, usuario: null };
+  // Un cliente desactivado en /equipo deja de entrar con todos sus usuarios: es como
+  // devolver las llaves del departamento, no solo sacarlo del selector del equipo.
+  if (usuario.rol === "CLIENTE") {
+    const cliente = await db.organizacion.findUnique({
+      where: { id: usuario.organizationId },
+      select: { activa: true },
+    });
+    if (!cliente?.activa) return { hayClerk: true, usuario: null };
+  }
 
   const ahora = new Date();
   if (!usuario.ultimoIngreso || ahora.getTime() - usuario.ultimoIngreso.getTime() > UNA_HORA_MS) {

@@ -49,6 +49,8 @@ Los clientes de hoy:
 
 - `scripts/probar-espacios.ts` prueba con dos clientes que nadie ve lo ajeno, que la cookie no le sirve a un cliente, que el equipo no escribe la cartera y que no sale ningún dato interno. Se corre antes de mezclar un cambio en `src/lib/org.ts`, `src/lib/sesion.ts`, `src/lib/vista-cliente.ts` o `src/lib/operacion.ts`.
 - **El comentario de una visita lo lee el cliente.** Es texto libre: el formulario lo advierte para que no se escriban ahí datos del interesado.
+- **El equipo ve los botones de editar la cartera en las listas y formularios** (contratos, cobranza, dueños…), aunque no pueda usarlos: el servidor responde «La cartera la edita el cliente» y, en las acciones sin formulario, la pantalla de error lo explica. Solo la cabecera de la ficha los esconde. Esconderlos en todas partes se hace si molesta con el uso.
+- **Desactivar un cliente le corta la entrada a todos sus usuarios** y saca sus solicitudes de la bandeja; sus datos quedan intactos y se puede reactivar.
 - El primer admin no puede crearse desde `/equipo` (todavía no hay quien entre): se crea con `npx tsx scripts/crear-usuario.ts --email … --nombre … --admin`.
 - Local y producción usan instancias distintas de Clerk (llaves `pk_test` y `pk_live`); hay que revisarlas en Vercel antes de subir.
 - Los datos inventados de antes quedan en `org_proges`, que no es un cliente y no aparece en el selector: en producción no los ve nadie y se borran.
