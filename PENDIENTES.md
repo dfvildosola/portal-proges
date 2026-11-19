@@ -1,6 +1,20 @@
 # Pendientes — Proges
 
-Ordenados por prioridad el 2026-10-06 con Diego. El login no es prioridad por ahora.
+Ordenados por prioridad el 2026-10-06 con Diego.
+
+## 0. Poner en uso la etapa 1 (en este orden)
+
+Etapa 1 «dos caras» (ADR 0010 y 0011), construida en `plan/etapa-1-dos-caras`. Los datos de producción no se tocan hasta el paso 3.
+
+1. [diego] **Llaves de Clerk.** `.env` las tiene vacías: copiar las de desarrollo (`pk_test_…`, `sk_test_…`) desde dashboard.clerk.com → API Keys y revisar que Vercel tenga las de producción (`pk_live_…`). Sin ellas el portal local no abre. (2026-11-18)
+2. [diego] **Probar en local y mezclar.** Crear el primer admin (`npx tsx scripts/crear-usuario.ts --email … --nombre … --admin`), recorrer la lista «Qué revisar» de la página del plan y subir. Al subir, producción queda con login: antes, crear el usuario de Diego también en producción. (2026-11-18)
+3. [diego] **Crear los usuarios del equipo** en `/equipo` (correos `@progesspa.cl`). (2026-11-18)
+4. [diego] **Revisar las etapas con Leo, François y Cecilia** en `/equipo/etapas` antes de la carga real. (2026-11-18)
+5. [diego] **Borrar los datos inventados de producción, confirmar con el equipo la lista de las 42 y cargarlas** (`scripts/carga-inicial.ts`, después `scripts/cargar-catalogo.ts`). En `proges_dev` quedan además los datos de `scripts/probar-alcance.ts` (correos `@proges.test`). (2026-11-18)
+6. [diego] **Revisar en «Operación» los servicios «por confirmar»** y los tipos de propiedad supuestos; resolver los posibles duplicados (Mirador 1851, unidades de Agustinas 715 y Monjitas 550). El cliente no ve un servicio hasta que se confirma. (2026-11-18)
+7. [diego] **Conversar con el equipo el registro de visitas** y después abrirle el panel al cliente (3 a 5 personas) y al piloto. Antes de abrirlo al cliente real: `/code-review` completo de la etapa 1 (decisión d7). (2026-11-18)
+
+- [diego] **Respuesta de Convecta.** No ha respondido; el plan no depende de Nexxos. (2026-11-18)
 
 ## 1. Lo que hace Diego (no es código)
 
@@ -14,7 +28,10 @@ Ordenados por prioridad el 2026-10-06 con Diego. El login no es prioridad por ah
 
 - [grande] **Llevar la obra en el portal.** Pedido de Diego (2026-11-18): una vez aprobado el presupuesto, planificar la obra y controlarla en el portal, con hitos y avance en % por tarea o etapa; sencillo y directo; que se arme desde el presupuesto aprobado en Odoo (ejemplo: orden S00047, secciones por recinto con partidas RR y anticipos). Las tareas cuelgan del servicio en curso de tipo OBRA (ADR 0011). Antes de planificar: preguntarle a Leo cómo lleva hoy una obra (regla 8) y decidir cómo llega la orden de Odoo (conexión o pegar la orden). Se retoma cuando la etapa 1 esté en uso. (2026-11-18)
 
-## 2. Siguiente tarea grande: cobrar según cada contrato
+## 2. En espera: cobrar según cada contrato
+
+Pausada por Diego el 2026-11-18, mientras corre la etapa 1.
+
 
 - **Cobrar según lo que dice cada contrato.** Pedido de Diego (2026-10-05). Al registrar un pago, el formulario muestra las condiciones del contrato y propone el total: arriendo, días de atraso, multa e interés según ese contrato, y la UF usada (valor, fecha y conversión a pesos). La multa se muestra aunque después el dueño la perdone. Tarea grande: plan por etapas y aprobación antes de construir, en una branch nueva después de mezclar `contratos-cobranza`. Ya decidido:
   - **No hay una regla común: cada contrato trae sus condiciones.** Unos cobran interés y otros no; unos tienen multa diaria, otros multa única o ninguna; el arriendo puede ser en UF o en pesos; el día de pago cambia (el 5, el 30). Moneda y día de pago ya están en el contrato; faltan las condiciones de atraso (días de gracia, multa con su tipo y monto o porcentaje, interés).
@@ -61,7 +78,6 @@ Va al final porque necesita los campos de la tarea 2 y que funcione la subida de
 
 ## Sin prioridad por ahora
 
-- **Producción es pública: falta el login.** Desde el 2026-10-02, `proges.vercel.app` funciona con su base (ADR 0005), pero no hay login: no hay middleware ni Clerk en el código, y `getOrgId()` (`src/lib/org.ts`) devuelve siempre `org_proges`. Cualquiera con la dirección puede ver, crear y borrar datos. **No cargar datos reales en producción hasta tener login.** Las llaves de Clerk ya están en Vercel. Mientras tanto, una opción rápida es activar la protección de Vercel (Deployment Protection) también para producción. 2026-10-02.
 - **Abonos que cruzan de mes se cuentan dos veces en el ingreso.** Un cobro guarda un solo total pagado y la fecha del último abono, así que si se abona una parte en septiembre y el resto en octubre, Inicio y el Resumen cuentan lo de septiembre otra vez en octubre (ADR 0006, consecuencias). Si pasa seguido, pasar a una tabla de abonos (un pago por fila, con su fecha). 2026-10-05.
 - **La agenda se calcula entera en cada página.** El menú muestra el contador de Pendientes, así que cada página (incluidas Contratos y Cuentas) calcula la agenda de toda la cartera: unas 8 consultas que traen todas las propiedades con sus contratos y documentos. La ficha también la calcula entera para mostrar solo sus ítems. Con 80 propiedades no se nota. Si la app se pone lenta con carteras grandes, darle al contador una consulta más liviana y filtrar la agenda por propiedad en la base. De paso: Inicio pide la última UF dos veces (la agenda ya la trae) y la agenda carga los contratos dos veces. 2026-10-05.
 - **Filtro por dueño o sociedad, y por objetivo, en todos los paneles.** Un inversionista con varias sociedades u objetivos distintos (renta, plusvalía) quiere mirar cada grupo por separado. 2026-10-04.

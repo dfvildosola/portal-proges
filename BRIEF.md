@@ -11,11 +11,12 @@ Excel con el que hoy se gestionan propiedades, arriendos y cobranza — y, sobre
 ---
 
 ## 1. Usuario y objetivo
-- **Usuario:** un candidato concreto (sin compromiso aún) con un patrimonio real.
-  Construimos *para él*, no para un mercado abstracto.
-- **Objetivo del arranque:** que ese candidato pueda dejar el Excel y administrar su
-  cartera con propiedades + contratos + cobranza + alertas. Algo demostrable en
-  semanas, no en 3 meses.
+- **Usuarios (desde la etapa 1, 2026-11-18):** el equipo de Proges (Álvaro, Cecilia,
+  Leo, François, Diego), que gestiona la cartera, y el cliente que compra cartera de
+  deuda (unas 80 propiedades, 20 a 25 activas), que mira la suya en vivo en `/cliente`
+  en vez del Word semanal. Después, el piloto de propietarios (Diego y un amigo).
+- **Objetivo de la etapa 1:** que el equipo registre en el portal cada servicio que
+  lleva en cada propiedad (ADR 0011) y que el cliente vea su avance sin pedirlo (ADR 0010).
 
 ## 2. El núcleo (lo que justifica existir)
 **Autocontrol + cobranza son un solo producto:** el sistema cruza contratos con pagos y
@@ -61,4 +62,7 @@ contratos cargados. Lo documental, en cambio, no saca a nadie del Excel → se d
 
 ## 7. Lo que NO hacemos ahora
 Pasarela de pago · auto-registro · portal de arrendatarios · RAG/OCR de documentos ·
-mora automática · boleta/factura SII · conciliación bancaria · multi-rol.
+mora automática · boleta/factura SII · conciliación bancaria · roles por sección ·
+que el cliente administre a sus usuarios · pedir un servicio desde el panel ·
+costos y resultado por propiedad · leer Nexxos · escribir en Odoo · DuckDB y dbt
+(hasta que entre Odoo) · correo semanal al cliente · API para clientes grandes.

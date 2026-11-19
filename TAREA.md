@@ -2,7 +2,7 @@
 
 **Estado: plan v3 APROBADO por Diego el 2026-11-18 («ok, con workflow», d7 = a). En ejecución.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v3). Branch: `plan/etapa-1-dos-caras`.
 
-**Paso siguiente exacto:** el workflow de la parte 2 (run `wf_923d53be-386`, script en `~/.claude/projects/-Users-diegofigueroa-Code/6d01402a-ffd5-4528-a638-dead11bb388b/workflows/scripts/proges-etapa1-parte2-wf_923d53be-386.js`) está corriendo: A, después T, S, C, D y F. Al terminar: leer los informes, enchufar `ComercialPanel` (C) en el hueco `COMERCIAL` de `servicios/[sid]/page.tsx` (S), build, crear el primer admin con `scripts/crear-usuario.ts`, probar en el navegador, `revisor` enfocado, cierre contra el plan, ADR 0010 y 0011, `BRIEF.md`, `PENDIENTES.md`.
+**Paso siguiente exacto:** parte 2 construida y guardada (`86e01fd`); ADR 0010 y 0011, `BRIEF.md` y `PENDIENTES.md` escritos. Falta: (1) los hallazgos del `revisor` enfocado; (2) que Diego ponga las llaves de Clerk de desarrollo en `.env` (están vacías); (3) crear su admin con `scripts/crear-usuario.ts`, probar en el navegador con un EQUIPO y los clientes de `scripts/probar-alcance.ts`; (4) cierre contra el plan y volver a publicar la página en estado de cierre.
 
 Nada de esto se vuelve a planificar: el plan v3 está aprobado y las decisiones cerradas.
 
@@ -10,7 +10,7 @@ Nada de esto se vuelve a planificar: el plan v3 está aprobado y las decisiones 
 - Pieza 0 ✅ hecha (convenciones en `AGENTS.md`, catálogo en `prisma/datos/catalogo-servicios.csv`).
 - El workflow va en dos partes, porque el hook `librerias` frena la instalación de `@clerk/nextjs` hasta que Diego escriba «instala @clerk/nextjs» (un subagente no puede recibir ese pedido):
   - **Parte 1** (no necesita Clerk): B → E y G. ✅ hecha y verificada por el coordinador el 2026-11-18 (tsc, lint, build, 19 casos de indicadores con TZ=UTC y TZ=America/Santiago, SQL de la migración leído: solo crea, agrega y quita el NOT NULL del ROL).
-  - **Parte 2:** ⏳ en curso. `@clerk/nextjs` instalado a pedido de Diego (`bb6869d`, 2026-11-18); workflow lanzado: A → T, S, C, D y F. En la ola de cinco, cada agente corre solo tsc y lint (dos builds a la vez se pisan); el build lo corre el coordinador al final.
+  - **Parte 2:** ✅ construida (`86e01fd`), sin probar en el navegador. `@clerk/nextjs` instalado a pedido de Diego (`bb6869d`, 2026-11-18); workflow lanzado: A → T, S, C, D y F. En la ola de cinco, cada agente corre solo tsc y lint (dos builds a la vez se pisan); el build lo corre el coordinador al final.
 - Después: enchufar el componente de C en la página del servicio (S), verificación del repo, prueba en el navegador, `revisor` enfocado (login, `src/lib/cliente.ts`, migración), cierre contra el plan, ADR 0010 y 0011, `BRIEF.md`, `PENDIENTES.md`.
 
 ## Lo que dejó la parte 1 (para los encargos de la parte 2)
