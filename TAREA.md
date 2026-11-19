@@ -34,9 +34,10 @@ Después de ver el mockup (https://claude.ai/artifact/7HVjcQdkz3etLXvdEGkFdB), D
 2. Cada uno ve lo suyo en «Mi trabajo». Pieza B.
 3. En terreno, anota en la bitácora con fotos. Pieza C.
 4. Marca la tarea hecha; la jefatura lo ve en «Trabajo del equipo». Pieza B.
-5. (Obra) Carga el presupuesto del maestro por partidas, con el PDF. Pieza D.
+5. (Obra) Carga el presupuesto del maestro: qué partidas de la orden cubre, su total, el PDF y el plazo. Pieza D.
 6. (Obra) Jefatura lo aprueba: queda como el plan de costo y plazo. Pieza D.
-7. (Obra) Anota el presupuesto aprobado por el dueño (d13) y la fecha de inicio. Pieza D.
+4b. (Obra) Trae la orden aprobada por el dueño desde Odoo por su número (d13) y elige la propiedad: cada recinto y sus líneas quedan como las partidas de la obra; los anticipos, como lo facturado al dueño. Pieza O.
+7. (Obra) Anota la fecha de inicio. Pieza D.
 8. (Obra) Durante el trabajo: avance por partida, adicionales aprobados, pagos al maestro, todo con su nota. Pieza E.
 9. (Obra) Recepción partida por partida, con fotos: conforme u observada; una observada abre una tarea para corregirla. Pieza E.
 10. (Obra) Cierre: lo planificado contra lo real. Pieza F.
@@ -47,7 +48,7 @@ Después de ver el mockup (https://claude.ai/artifact/7HVjcQdkz3etLXvdEGkFdB), D
   - `Tarea` (servicio en curso, qué, responsable, vence, hecha el, hecha por, creada por).
   - `Nota` (servicio en curso, autor, texto, fecha, la ve el dueño sí/no, tarea opcional) y `Foto` (nota, archivo, nombre).
   - `Maestro` (en `org_proges`: nombre, especialidad, teléfono, RUT, activo). Son proveedores de Proges, no del cliente.
-  - `PresupuestoMaestro` (servicio OBRA, maestro, tipo ORIGINAL o ADICIONAL, plazo en días, PDF, estado RECIBIDO/APROBADO/RECHAZADO, quién y cuándo) con sus `Partida` (descripción, monto, avance %, recepción: pendiente/conforme/observada, observación).
+  - `PresupuestoMaestro` (servicio OBRA, maestro, tipo ORIGINAL o ADICIONAL, plazo en días, PDF, estado RECIBIDO/APROBADO/RECHAZADO, quién y cuándo) que cubre partidas. `OrdenDueno` (número de Odoo, total, facturado) con sus `Partida` (recinto, código, descripción, cantidad, unidad, precio al dueño, línea de Odoo, maestro, avance %, recepción: pendiente/conforme/observada, observación).
   - `PagoMaestro` (presupuesto, monto, fecha, concepto, comprobante opcional).
   - En `ServicioEnCurso` (obra): presupuesto al dueño (monto y moneda, número de Odoo), fecha de inicio y fecha comprometida.
 - Fotos y PDF: según d12.
@@ -65,7 +66,7 @@ Después de ver el mockup (https://claude.ai/artifact/7HVjcQdkz3etLXvdEGkFdB), D
 ## 5. Decisiones
 De Diego:
 - **d12. Dónde se guardan las fotos y los PDF:** (a) un almacén privado nuevo en Vercel Blob, solo para el portal [rec.]; (b) en la carpeta del Drive de la propiedad.
-- **d13. El presupuesto al dueño:** (a) se anota solo el total aprobado y el número de la cotización de Odoo [rec.]; (b) se arma en el portal, partida por partida con margen.
+- **d13. Cómo entra la orden del dueño (Odoo):** (a) el portal la lee de Odoo por su número [rec., si el Odoo de Proges permite conectarse]; (b) se sube el PDF y el portal lo lee; (c) solo el total y el número. Cambió el 2026-11-19 al ver la orden S00047 (14 recintos, 61 líneas, $22.764.048 neto, 3 anticipos).
 - **d14. Quién aprueba el presupuesto del maestro:** (a) Cecilia y Álvaro, con una marca «jefatura» [rec.]; (b) cualquiera del equipo; (c) solo el admin.
 - **d15. Qué ve el dueño de la bitácora:** (a) solo las notas que el equipo marca para él [rec.]; (b) todas, menos los montos; (c) nada, solo el avance.
 - **d17. Qué hace el dueño en su portal ahora que el equipo edita:** (a) mira su cartera y sus servicios, y pide servicios; no edita [rec.]; (b) también edita, igual que el equipo.
@@ -95,6 +96,9 @@ De Claude:
 - t16. El equipo anota desde el celular en terreno.
 - t18. El equipo es el único que carga propiedades, contratos y pagos; el dueño no necesita corregir nada él mismo (si d17 a).
 - t19. Cada propiedad tiene un solo cliente.
+- t20. Toda reparación tiene su orden en Odoo, ordenada por recintos como la S00047.
+- t21. Las líneas «Anticipo» son lo ya facturado al dueño, no trabajo.
+- t22. La orden no dice la propiedad: se elige al traerla.
 - t17. Un cambio de alcance durante la obra se maneja como presupuesto adicional que se aprueba igual que el original.
 
 ## 7. Lo que no debe pasar
@@ -110,13 +114,15 @@ De Claude:
 - Un archivo pasa de 800 líneas. Cómo: `wc -l`.
 
 ## 8. Piezas y orden
-Olas: [A, W] → [B, C, D] → [E, P] → [F, G]. 8 agentes en Sonnet. Verificación común: `npx tsc --noEmit && npm run lint`; build al final de cada ola.
+Olas: [A, W] → [B, C, D, O] → [E, P, V] → [F, G]. 10 agentes en Sonnet. Verificación común: `npx tsc --noEmit && npm run lint`; build al final de cada ola.
 - ◻️ A. Modelo, archivos y cuentas. `prisma/schema.prisma` y una migración nueva; `src/lib/archivos.ts` (según d12); `src/lib/obra.ts` (cuentas, funciones puras); marca de jefatura en `/equipo`.
 - ◻️ W. El equipo en todos los clientes. `src/lib/org.ts` y `src/lib/sesion.ts` (`espaciosQueLee()`, escritura del equipo, el cliente solo mira según d17); quitar el selector de cliente activo; las ~23 pantallas y ~10 archivos de acciones de la cartera; crear propiedad eligiendo el cliente.
 - ◻️ B. Menú, inicio, tareas, Mi trabajo y Trabajo del equipo. Depende de A y W.
 - ◻️ C. Bitácora con fotos, pensada para el celular. Depende de A.
 - ◻️ D. Maestros y presupuestos. Depende de A.
-- ◻️ E. Avance, pagos y recepción de la obra. Depende de D.
+- ◻️ O. Traer la orden de Odoo (`src/lib/odoo.ts`, según d13): recintos → partidas, anticipos → facturado; volver a traerla sin perder avance. Verifica: la S00047 cuadra 14 recintos y $22.764.048. Depende de A.
+- ◻️ E. Avance (por recinto, y por línea si hace falta), pagos y recepción de la obra. Depende de D y O.
+- ◻️ V. La página de la venta: resumen arriba, registrar visita en el celular con oferta y tarea de seguimiento (visitas, ofertas y precio ya existen). Depende de B y C.
 - ◻️ P. Propiedades del equipo: listado con trabajo en curso e historial de cada propiedad. Depende de B y C.
 - ◻️ F. Cierre con plan contra real, vista del dueño y página del servicio reordenada. Depende de C y E.
 - ◻️ G. `scripts/probar-obra.ts` y `probar-espacios.ts` ampliado. Depende de W y E.
