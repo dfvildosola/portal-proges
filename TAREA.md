@@ -98,7 +98,10 @@ De Claude:
 - t19. Cada propiedad tiene un solo cliente.
 - t20. Toda reparación tiene su orden en Odoo, ordenada por recintos como la S00047.
 - t21. Las líneas «Anticipo» son lo ya facturado al dueño, no trabajo.
-- t22. La orden no dice la propiedad: se elige al traerla.
+- t22. Cada propiedad del portal se enlaza una vez con su cuenta analítica de Odoo (el campo «Propiedad» de la orden de venta apunta a una cuenta analítica; hay 100, algunas duplicadas como «Jose de Moraleda» y «José de Moraleda 4551»). Desde entonces la orden trae su propiedad sola.
+- t23. Los costos de los maestros hoy no están en Odoo (467 facturas de proveedor en borrador, ninguna publicada desde septiembre; la cuenta analítica de José de Moraleda tiene $0 de costo): se registran en el portal.
+
+**Lo que se vio en Odoo (2026-11-19, `scripts/leer-odoo.ts`):** Odoo 19 Enterprise, la API funciona (d13 a). La S00047 trae 14 recintos, 61 líneas, notas por línea y los 3 anticipos con sus facturas. En la app Proyectos intentaron llevar las obras (José de Moraleda: 12 tareas de cotizaciones a maestros, anticipos y saldos; Avenida Portales Oriente: 25 tareas por fase), pero no hay tareas nuevas desde el 2026-08-25: falta saber por qué se dejó (pregunta a Diego antes de aprobar).
 - t17. Un cambio de alcance durante la obra se maneja como presupuesto adicional que se aprueba igual que el original.
 
 ## 7. Lo que no debe pasar
@@ -120,7 +123,7 @@ Olas: [A, W] → [B, C, D, O] → [E, P, V] → [F, G]. 10 agentes en Sonnet. Ve
 - ◻️ B. Menú, inicio, tareas, Mi trabajo y Trabajo del equipo. Depende de A y W.
 - ◻️ C. Bitácora con fotos, pensada para el celular. Depende de A.
 - ◻️ D. Maestros y presupuestos. Depende de A.
-- ◻️ O. Traer la orden de Odoo (`src/lib/odoo.ts`, según d13): recintos → partidas, anticipos → facturado; volver a traerla sin perder avance. Verifica: la S00047 cuadra 14 recintos y $22.764.048. Depende de A.
+- ◻️ O. Traer la orden de Odoo (`src/lib/odoo.ts`, según d13; parte de `scripts/leer-odoo.ts`): enlazar propiedades con su cuenta analítica; recintos → partidas, anticipos → facturado; volver a traerla sin perder avance. Verifica: la S00047 cuadra 14 recintos y $22.764.048. Depende de A.
 - ◻️ E. Avance (por recinto, y por línea si hace falta), pagos y recepción de la obra. Depende de D y O.
 - ◻️ V. La página de la venta: resumen arriba, registrar visita en el celular con oferta y tarea de seguimiento (visitas, ofertas y precio ya existen). Depende de B y C.
 - ◻️ P. Propiedades del equipo: listado con trabajo en curso e historial de cada propiedad. Depende de B y C.
