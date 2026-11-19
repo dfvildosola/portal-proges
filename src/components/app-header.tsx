@@ -27,6 +27,9 @@ const segmentLabels: Record<string, string> = {
   contratos: "Contratos",
   duenos: "Dueños",
   equipo: "Equipo",
+  etapas: "Etapas",
+  operacion: "Operación",
+  servicios: "Servicios",
   contactos: "Contactos",
   nueva: "Nueva",
   nuevo: "Nuevo",
@@ -37,11 +40,14 @@ type Crumb = { label: string; href: string; isLast: boolean };
 
 function buildCrumbs(pathname: string): Crumb[] {
   const segments = pathname.split("/").filter(Boolean);
-  return segments.map((segment, i) => ({
-    label: segmentLabels[segment] ?? "Detalle",
-    href: "/" + segments.slice(0, i + 1).join("/"),
-    isLast: i === segments.length - 1,
-  }));
+  return segments.map((segment, i) => {
+    let href = "/" + segments.slice(0, i + 1).join("/");
+    // /propiedades/[id]/servicios no es una página: los servicios son una pestaña de la ficha.
+    if (segment === "servicios" && segments[i - 2] === "propiedades") {
+      href = "/" + segments.slice(0, i).join("/") + "?pestana=servicios";
+    }
+    return { label: segmentLabels[segment] ?? "Detalle", href, isLast: i === segments.length - 1 };
+  });
 }
 
 export function AppHeader() {
