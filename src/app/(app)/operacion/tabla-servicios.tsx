@@ -10,7 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AbrirEnCliente } from "./abrir-en-cliente";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { enlaceServicio, type FilaServicio } from "./filas";
 
 export function TablaServicios({ filas }: { filas: FilaServicio[] }) {
@@ -42,10 +43,14 @@ export function TablaServicios({ filas }: { filas: FilaServicio[] }) {
             </TableCell>
             <TableCell className="text-muted-foreground">{f.desde}</TableCell>
             <TableCell className="text-right">
-              <AbrirEnCliente
-                clienteId={f.clienteId}
-                href={enlaceServicio(f.propertyId, f.id)}
-              />
+              <Button
+                size="sm"
+                variant="outline"
+                nativeButton={false}
+                render={<Link href={enlaceServicio(f.propertyId, f.id)} />}
+              >
+                Abrir
+              </Button>
             </TableCell>
           </TableRow>
         ))}

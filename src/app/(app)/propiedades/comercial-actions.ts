@@ -4,7 +4,8 @@
 // aviso, visitas, ofertas y recomendación.
 //
 // Todas parten igual: comprueban que quien llama es del equipo (equipoEnAccion)
-// y que el servicio es del cliente activo, es comercial y sigue ABIERTO. Es la
+// y que se puede escribir en el espacio del servicio (el del cliente dueño de la propiedad,
+// que sale del servicio mismo), que es comercial y sigue ABIERTO. Es la
 // cerradura del servidor: aunque alguien llame la acción a mano, sin pasar por
 // la pantalla, no puede tocar un servicio cerrado ni de otro tipo.
 
@@ -13,13 +14,14 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { Currency, OfertaEstado, PrecioOrigen } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
-import { getOrgId, ORG_PROGES } from "@/lib/org";
+import { espacioParaEscribirEnRegistro, ORG_PROGES } from "@/lib/org";
 import { equipoEnAccion } from "@/lib/sesion";
 import { hoyChile } from "@/lib/fechas";
 import { esComercial } from "@/lib/servicios";
 import {
   dateField,
   enumField,
+  optionalDateField,
   optionalText,
   requiredMoneyField,
   toFieldErrors,
@@ -34,14 +36,15 @@ export type ComercialFormState = {
 // Comprobaciones comunes
 // ---------------------------------------------------------------------------
 
-// Busca el servicio y confirma que se puede tocar: de la organización, de tipo
-// venta o arriendo, y abierto. Devuelve el servicio o el texto del error.
-async function servicioComercialAbierto(servicioId: string, orgId: string) {
+// Busca el servicio y confirma que se puede tocar: de un espacio donde se puede escribir, de
+// tipo venta o arriendo, y abierto. Devuelve el servicio y su espacio, o el texto del error.
+async function servicioComercialAbierto(servicioId: string) {
   if (!servicioId) return { error: "Falta el servicio." } as const;
-  const servicio = await db.servicioEnCurso.findFirst({
-    where: { id: servicioId, organizationId: orgId },
+  const servicio = await db.servicioEnCurso.findUnique({
+    where: { id: servicioId },
     select: {
       id: true,
+      organizationId: true,
       propertyId: true,
       tipo: true,
       estado: true,
@@ -49,12 +52,13 @@ async function servicioComercialAbierto(servicioId: string, orgId: string) {
       precioMoneda: true,
     },
   });
-  if (!servicio) return { error: "Servicio no encontrado." } as const;
+  const orgId = await espacioParaEscribirEnRegistro(servicio);
+  if (!servicio || !orgId) return { error: "Servicio no encontrado." } as const;
   if (!esComercial(servicio.tipo))
     return { error: "Solo la venta y el arriendo llevan precio, visitas y ofertas." } as const;
   if (servicio.estado !== "ABIERTO")
     return { error: "El servicio ya está cerrado: no se puede modificar." } as const;
-  return { servicio } as const;
+  return { servicio, orgId } as const;
 }
 
 // Vuelve a pintar la página del servicio y la ficha de la propiedad.
@@ -102,10 +106,9 @@ export async function cambiarPrecio(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const orgId = await getOrgId();
-  const encontrado = await servicioComercialAbierto(servicioId, orgId);
+  const encontrado = await servicioComercialAbierto(servicioId);
   if ("error" in encontrado) return { error: encontrado.error };
-  const { servicio } = encontrado;
+  const { servicio, orgId } = encontrado;
 
   const nuevo = new Prisma.Decimal(parsed.data.monto);
   const habiaPrecio = servicio.precio !== null;
@@ -193,8 +196,7 @@ export async function cambiarAvisoUrl(
     return { error: "Revisa el enlace.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const orgId = await getOrgId();
-  const encontrado = await servicioComercialAbierto(servicioId, orgId);
+  const encontrado = await servicioComercialAbierto(servicioId);
   if ("error" in encontrado) return { error: encontrado.error };
   const { servicio } = encontrado;
 
@@ -235,11 +237,27 @@ const visitaSchema = z.object({
   comentario: optionalText,
 });
 
+// Lo opcional que se anota junto a la visita desde el celular: si el interesado hizo una
+// oferta (se crea la Oferta, con la fecha de la visita) y el seguimiento (se crea una Tarea).
+const ofertaDeVisitaSchema = z.object({
+  monto: montoPositivo,
+  moneda: enumField(Currency),
+  oferente: z.string().trim().min(1, "Escribe quién ofertó").max(200),
+});
+
+const seguimientoSchema = z.object({
+  que: z.string().trim().max(300, "Máximo 300 caracteres"),
+  vence: optionalDateField(),
+});
+
+// Registra la visita y, si vienen, la oferta y la tarea de seguimiento, todo en una
+// transacción: o queda todo anotado o nada (así no hay una oferta sin su visita).
+// La tarea queda asignada a quien registra (la sesión), no a quien hizo la visita.
 export async function registrarVisita(
   _prev: ComercialFormState,
   formData: FormData,
 ): Promise<ComercialFormState> {
-  await equipoEnAccion();
+  const usuario = await equipoEnAccion();
   const servicioId = String(formData.get("servicioId") ?? "");
 
   const parsed = visitaSchema.safeParse({
@@ -250,14 +268,43 @@ export async function registrarVisita(
     evaluacion: formData.get("evaluacion") ?? "",
     comentario: formData.get("comentario") ?? "",
   });
-  if (!parsed.success) {
-    return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
+  const errores: Record<string, string> = parsed.success ? {} : toFieldErrors(parsed.error);
+
+  // Oferta: solo si marcaron «Hizo una oferta». Sin nombre de oferente se usa el del interesado.
+  const hizoOferta = formData.get("hizoOferta") === "1";
+  const nombreInteresado = parsed.success ? parsed.data.interesadoNombre : null;
+  const oferta = hizoOferta
+    ? ofertaDeVisitaSchema.safeParse({
+        monto: formData.get("ofertaMonto") ?? "",
+        moneda: formData.get("ofertaMoneda"),
+        oferente: String(formData.get("ofertaOferente") ?? "").trim() || nombreInteresado || "",
+      })
+    : null;
+  if (oferta && !oferta.success) {
+    for (const [campo, mensaje] of Object.entries(toFieldErrors(oferta.error))) {
+      errores[`oferta${campo[0].toUpperCase()}${campo.slice(1)}`] = mensaje;
+    }
   }
 
-  const orgId = await getOrgId();
-  const encontrado = await servicioComercialAbierto(servicioId, orgId);
+  const seguimiento = seguimientoSchema.safeParse({
+    que: formData.get("seguimientoQue") ?? "",
+    vence: formData.get("seguimientoVence") ?? "",
+  });
+  if (!seguimiento.success) {
+    for (const [campo, mensaje] of Object.entries(toFieldErrors(seguimiento.error))) {
+      errores[`seguimiento${campo[0].toUpperCase()}${campo.slice(1)}`] = mensaje;
+    }
+  } else if (seguimiento.data.que === "" && seguimiento.data.vence) {
+    errores.seguimientoQue = "Escribe qué hay que hacer";
+  }
+
+  if (!parsed.success || Object.keys(errores).length > 0) {
+    return { error: "Revisa los campos.", fieldErrors: errores };
+  }
+
+  const encontrado = await servicioComercialAbierto(servicioId);
   if ("error" in encontrado) return { error: encontrado.error };
-  const { servicio } = encontrado;
+  const { servicio, orgId } = encontrado;
 
   // Quien hizo la visita tiene que ser una persona activa del equipo.
   const persona = await db.usuario.findFirst({
@@ -276,20 +323,52 @@ export async function registrarVisita(
     };
   }
 
-  await db.visita.create({
-    data: {
-      organizationId: orgId,
-      servicioEnCursoId: servicio.id,
-      fecha: parsed.data.fecha,
-      realizadaPorId: persona.id,
-      interesadoNombre: parsed.data.interesadoNombre,
-      interesadoContacto: parsed.data.interesadoContacto,
-      evaluacion: parsed.data.evaluacion,
-      comentario: parsed.data.comentario,
-    },
+  await db.$transaction(async (tx) => {
+    await tx.visita.create({
+      data: {
+        organizationId: orgId,
+        servicioEnCursoId: servicio.id,
+        fecha: parsed.data.fecha,
+        realizadaPorId: persona.id,
+        interesadoNombre: parsed.data.interesadoNombre,
+        interesadoContacto: parsed.data.interesadoContacto,
+        evaluacion: parsed.data.evaluacion,
+        comentario: parsed.data.comentario,
+      },
+    });
+    if (oferta?.success) {
+      await tx.oferta.create({
+        data: {
+          organizationId: orgId,
+          servicioEnCursoId: servicio.id,
+          fecha: parsed.data.fecha,
+          monto: oferta.data.monto,
+          moneda: oferta.data.moneda,
+          oferente: oferta.data.oferente,
+          nota: "Anotada al registrar la visita.",
+        },
+      });
+    }
+    if (seguimiento.success && seguimiento.data.que !== "") {
+      await tx.tarea.create({
+        data: {
+          organizationId: orgId,
+          servicioEnCursoId: servicio.id,
+          que: seguimiento.data.que,
+          responsableId: usuario.id,
+          vence: seguimiento.data.vence,
+          creadaPorId: usuario.id,
+        },
+      });
+    }
   });
 
   refrescar(servicio.propertyId, servicio.id);
+  // La tarea nueva aparece en «Mi trabajo» y en «Trabajo del equipo».
+  if (seguimiento.success && seguimiento.data.que !== "") {
+    revalidatePath("/mi-trabajo");
+    revalidatePath("/operacion");
+  }
   return {};
 }
 
@@ -302,10 +381,9 @@ export async function borrarVisita(formData: FormData): Promise<void> {
   const visitaId = String(formData.get("visitaId") ?? "");
   if (!visitaId) throw new Error("Falta la visita.");
 
-  const orgId = await getOrgId();
-  const encontrado = await servicioComercialAbierto(servicioId, orgId);
+  const encontrado = await servicioComercialAbierto(servicioId);
   if ("error" in encontrado) throw new Error(encontrado.error);
-  const { servicio } = encontrado;
+  const { servicio, orgId } = encontrado;
 
   await db.visita.deleteMany({
     where: { id: visitaId, organizationId: orgId, servicioEnCursoId: servicio.id },
@@ -343,10 +421,9 @@ export async function registrarOferta(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const orgId = await getOrgId();
-  const encontrado = await servicioComercialAbierto(servicioId, orgId);
+  const encontrado = await servicioComercialAbierto(servicioId);
   if ("error" in encontrado) return { error: encontrado.error };
-  const { servicio } = encontrado;
+  const { servicio, orgId } = encontrado;
 
   await db.oferta.create({
     data: {
@@ -374,10 +451,9 @@ export async function cambiarEstadoOferta(formData: FormData): Promise<void> {
   if (!ofertaId) throw new Error("Falta la oferta.");
   if (!estado.success) throw new Error("Estado de oferta inválido.");
 
-  const orgId = await getOrgId();
-  const encontrado = await servicioComercialAbierto(servicioId, orgId);
+  const encontrado = await servicioComercialAbierto(servicioId);
   if ("error" in encontrado) throw new Error(encontrado.error);
-  const { servicio } = encontrado;
+  const { servicio, orgId } = encontrado;
 
   await db.oferta.updateMany({
     where: { id: ofertaId, organizationId: orgId, servicioEnCursoId: servicio.id },
@@ -413,8 +489,7 @@ export async function guardarRecomendacion(
     return { error: "Revisa el texto.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const orgId = await getOrgId();
-  const encontrado = await servicioComercialAbierto(servicioId, orgId);
+  const encontrado = await servicioComercialAbierto(servicioId);
   if ("error" in encontrado) return { error: encontrado.error };
   const { servicio } = encontrado;
 

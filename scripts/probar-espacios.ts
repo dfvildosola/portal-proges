@@ -4,16 +4,19 @@
 // cartera, un servicio de venta con visita y oferta, y una solicitud; y comprueba con el código
 // REAL de `src/lib/vista-cliente.ts` (la ventanilla que le entrega datos a un cliente) que:
 //  - el usuario de A ve lo suyo y nada de B, ni pasándole un id de B;
-//  - nada de lo que sale lleva el nombre del interesado, el oferente, el Drive ni el ROL.
+//  - nada de lo que sale lleva el nombre del interesado, el oferente, el Drive ni el ROL;
+//  - las reglas de lectura y escritura por espacio (el equipo lee y escribe en cualquier cliente
+//    activo, el cliente solo en el suyo, un cliente inactivo no se lee ni se escribe);
+//  - el pedido de un cliente (`src/lib/pedidos.ts`) abre el proyecto en SU espacio y en ningún otro.
 //
 // Se corre con: npx tsx scripts/probar-espacios.ts
 // Se puede correr las veces que se quiera: todo tiene id fijo y se actualiza, no se duplica.
 // Solo escribe en una base `proges_dev*` (se niega si la dirección apunta a otra, p. ej. Neon).
 // Todos los correos son @proges.test.
 //
-// `getOrgId()` y `orgParaEscribir()` leen la sesión de Clerk, que solo existe dentro de Next;
-// la decisión que toman está separada en `espacioParaLeer()` y `espacioParaEscribir()`, y esas
-// sí se prueban acá. Lo que no se prueba: que `src/lib/operacion.ts` le diga «Sin permiso» a un
+// `espaciosQueLee()` y `espacioParaEscribirEn()` leen la sesión de Clerk, que solo existe dentro
+// de Next; la decisión que toman está separada en `espaciosQueLeePuro()`, `puedeLeer()` y
+// `puedeEscribirEn()`, y esas sí se prueban acá. Lo que no se prueba: que `src/lib/operacion.ts` le diga «Sin permiso» a un
 // cliente (se revisa en el navegador).
 
 import "dotenv/config";
@@ -22,10 +25,13 @@ import { db } from "../src/lib/db";
 import {
   DEFAULT_ORG_ID,
   ORG_PROGES,
-  SoloLecturaError,
-  espacioParaEscribir,
-  espacioParaLeer,
+  clientesActivos,
+  espacioParaCrearPuro,
+  espaciosQueLeePuro,
+  puedeEscribirEn,
+  puedeLeer,
 } from "../src/lib/org";
+import { abrirPedido, aceptarRevision, rechazarRevision } from "../src/lib/pedidos";
 import { hoyChile, sumarDias } from "../src/lib/fechas";
 import {
   propiedadesDelCliente,
@@ -287,6 +293,9 @@ async function main() {
   await db.servicioEnCurso.deleteMany({
     where: { organizationId: { in: espaciosDePrueba }, NOT: { id: { startsWith: "prueba_espacios_" } } },
   });
+  await db.property.deleteMany({
+    where: { organizationId: { in: espaciosDePrueba }, NOT: { id: { startsWith: "prueba_espacios_" } } },
+  });
   const catalogo = await catalogoYEtapaDeVenta();
   const a = await armarEspacio("A", catalogo);
   const b = await armarEspacio("B", catalogo);
@@ -369,24 +378,27 @@ async function main() {
     await assert.rejects(servicioParaCliente(equipo, a.servicioId), /Sin permiso/);
   });
 
-  await caso("un cliente que manda la cookie del cliente B sigue leyendo su espacio A", () => {
-    assert.equal(espacioParaLeer(a.usuarioCliente, b.usuarioCliente.organizationId), a.usuarioCliente.organizationId);
+  const clientesActivosIds = [a.usuarioCliente.organizationId, b.usuarioCliente.organizationId];
+
+  await caso("un cliente que pide el filtro del cliente B sigue leyendo su espacio A", () => {
+    assert.deepEqual(
+      espaciosQueLeePuro(a.usuarioCliente, clientesActivosIds, b.usuarioCliente.organizationId),
+      [a.usuarioCliente.organizationId],
+    );
   });
 
-  await caso("el equipo lee el cliente activo que eligió", () => {
-    assert.equal(espacioParaLeer(equipo, b.usuarioCliente.organizationId), b.usuarioCliente.organizationId);
+  await caso("el equipo lee todos los clientes, o solo el del filtro", () => {
+    assert.deepEqual(espaciosQueLeePuro(equipo, clientesActivosIds), clientesActivosIds);
+    assert.deepEqual(
+      espaciosQueLeePuro(equipo, clientesActivosIds, b.usuarioCliente.organizationId),
+      [b.usuarioCliente.organizationId],
+    );
   });
 
-  await caso("el equipo sin clientes creados recibe un aviso claro", () => {
-    assert.throws(() => espacioParaLeer(equipo, null), /Todavía no hay clientes creados/);
-  });
-
-  await caso("el equipo no puede escribir la cartera de un cliente", () => {
-    assert.throws(() => espacioParaEscribir(equipo), SoloLecturaError);
-  });
-
-  await caso("el cliente escribe solo en su propio espacio", () => {
-    assert.equal(espacioParaEscribir(a.usuarioCliente), a.usuarioCliente.organizationId);
+  await caso("el equipo escribe en cualquier cliente activo; el cliente, solo en el suyo", () => {
+    assert.equal(puedeEscribirEn(equipo, b.usuarioCliente.organizationId, clientesActivosIds), true);
+    assert.equal(puedeEscribirEn(a.usuarioCliente, a.usuarioCliente.organizationId, clientesActivosIds), true);
+    assert.equal(puedeEscribirEn(a.usuarioCliente, b.usuarioCliente.organizationId, clientesActivosIds), false);
   });
 
   await caso("un cliente desactivado no ve nada", async () => {
@@ -394,6 +406,173 @@ async function main() {
     assert.deepEqual(await propiedadesDelCliente(desactivado), []);
     assert.deepEqual(await serviciosDePropiedad(desactivado, a.propiedadId), []);
     assert.equal(await servicioParaCliente(desactivado, a.servicioId), null);
+  });
+
+  // ---- Reglas de lectura y escritura por espacio (funciones puras de org.ts) ----
+
+  const idA = a.usuarioCliente.organizationId;
+  const idB = b.usuarioCliente.organizationId;
+
+  await caso("el equipo lee todos los clientes activos, un cliente filtrado, y un filtro inventado se ignora", () => {
+    assert.deepEqual(espaciosQueLeePuro(equipo, clientesActivosIds), [idA, idB]);
+    assert.deepEqual(espaciosQueLeePuro(equipo, clientesActivosIds, idA), [idA]);
+    assert.deepEqual(espaciosQueLeePuro(equipo, clientesActivosIds, "org_que_no_existe"), [idA, idB]);
+    assert.deepEqual(espaciosQueLeePuro(equipo, clientesActivosIds, ORG_PROGES), [idA, idB]); // ni siquiera org_proges
+  });
+
+  await caso("el cliente lee solo el suyo, aunque pida el filtro del otro (A y B)", () => {
+    assert.deepEqual(espaciosQueLeePuro(a.usuarioCliente, clientesActivosIds, idB), [idA]);
+    assert.deepEqual(espaciosQueLeePuro(b.usuarioCliente, clientesActivosIds, idA), [idB]);
+    assert.equal(puedeLeer(a.usuarioCliente, idA, clientesActivosIds), true);
+    assert.equal(puedeLeer(a.usuarioCliente, idB, clientesActivosIds), false);
+    assert.equal(puedeLeer(b.usuarioCliente, idA, clientesActivosIds), false);
+  });
+
+  await caso("el equipo escribe en A y en B; cada cliente escribe en el suyo y NO en el del otro", () => {
+    assert.equal(puedeEscribirEn(equipo, idA, clientesActivosIds), true);
+    assert.equal(puedeEscribirEn(equipo, idB, clientesActivosIds), true);
+    assert.equal(puedeEscribirEn(a.usuarioCliente, idA, clientesActivosIds), true);
+    assert.equal(puedeEscribirEn(a.usuarioCliente, idB, clientesActivosIds), false);
+    assert.equal(puedeEscribirEn(b.usuarioCliente, idB, clientesActivosIds), true);
+    assert.equal(puedeEscribirEn(b.usuarioCliente, idA, clientesActivosIds), false);
+  });
+
+  await caso("nadie lee ni escribe la cartera en org_proges: ni el equipo", () => {
+    assert.equal(puedeLeer(equipo, ORG_PROGES, clientesActivosIds), false);
+    assert.equal(puedeEscribirEn(equipo, ORG_PROGES, clientesActivosIds), false);
+    assert.equal(puedeEscribirEn(a.usuarioCliente, ORG_PROGES, clientesActivosIds), false);
+  });
+
+  await caso("crear algo nuevo: el cliente siempre en el suyo; el equipo en el cliente que elige, y sin elegir no crea", () => {
+    assert.equal(espacioParaCrearPuro(a.usuarioCliente, idB, clientesActivosIds), idA); // ignora lo que mande el formulario
+    assert.equal(espacioParaCrearPuro(equipo, idB, clientesActivosIds), idB);
+    assert.equal(espacioParaCrearPuro(equipo, null, clientesActivosIds), null);
+    assert.throws(() => espacioParaCrearPuro(equipo, "org_que_no_existe", clientesActivosIds), /Sin permiso/);
+  });
+
+  await caso("un cliente inactivo no se lee ni se escribe, ni siquiera por el equipo (lista real de clientes activos)", async () => {
+    const activosAntes = (await clientesActivos()).map((c) => c.id);
+    assert.ok(activosAntes.includes(idA) && activosAntes.includes(idB), "A y B deberían estar activos");
+    assert.equal(activosAntes.includes(ORG_PROGES), false);
+    await db.organizacion.update({ where: { id: idB }, data: { activa: false } });
+    try {
+      const activos = (await clientesActivos()).map((c) => c.id);
+      assert.equal(activos.includes(idB), false);
+      assert.equal(activos.includes(idA), true);
+      assert.deepEqual(espaciosQueLeePuro(equipo, activos, idB), activos); // el filtro de un inactivo se ignora
+      assert.equal(puedeLeer(equipo, idB, activos), false);
+      assert.equal(puedeEscribirEn(equipo, idB, activos), false);
+      assert.throws(() => espacioParaCrearPuro(equipo, idB, activos), /Sin permiso/);
+    } finally {
+      await db.organizacion.update({ where: { id: idB }, data: { activa: true } });
+    }
+  });
+
+  // ---- El pedido de un cliente se abre en SU espacio (la lógica real de src/lib/pedidos.ts) ----
+
+  // El pedido abre el primer servicio del catálogo de la familia del tipo (VENTA: NV o SC).
+  const catalogoNv =
+    (await db.servicio.findFirst({ where: { organizationId: ORG_PROGES, activo: true, familia: { in: ["NV", "SC"] } } })) ??
+    (await db.servicio.upsert({
+      where: { id: "prueba_espacios_servicio_nv" },
+      update: { activo: true },
+      create: { id: "prueba_espacios_servicio_nv", organizationId: ORG_PROGES, codigo: "NV-PRUEBA", familia: "NV", nombre: "Prueba espacios: nueva venta" },
+    }));
+  const contar = async (orgId: string) => ({
+    proyectos: await db.servicioEnCurso.count({ where: { organizationId: orgId } }),
+    solicitudes: await db.solicitud.count({ where: { organizationId: orgId } }),
+    tareas: await db.tarea.count({ where: { organizationId: orgId } }),
+    propiedades: await db.property.count({ where: { organizationId: orgId } }),
+  });
+  const deB = await contar(idB);
+  const deAAntes = await contar(idA);
+  const pedido = { orgId: idA, usuarioId: a.usuarioCliente.id, tipo: "VENTA" as const, descripcion: "Quiero vender mi casa (prueba)", propertyId: a.propiedadId, propiedadNueva: null };
+  const abierto = await abrirPedido(pedido);
+
+  await caso("el pedido de A crea el proyecto «por revisar», la solicitud y la tarea en el espacio de A", async () => {
+    assert.ok(abierto.ok, abierto.ok ? "" : abierto.error);
+    const servicio = await db.servicioEnCurso.findUniqueOrThrow({ where: { id: abierto.servicioEnCursoId } });
+    assert.equal(servicio.organizationId, idA);
+    assert.equal(servicio.propertyId, a.propiedadId);
+    assert.equal(servicio.porRevisar, true);
+    const solicitud = await db.solicitud.findUniqueOrThrow({ where: { id: abierto.solicitudId } });
+    assert.equal(solicitud.organizationId, idA);
+    assert.equal(solicitud.servicioEnCursoId, servicio.id);
+    const tarea = await db.tarea.findUniqueOrThrow({ where: { id: abierto.tareaId } });
+    assert.equal(tarea.organizationId, idA);
+    assert.equal(tarea.servicioEnCursoId, servicio.id);
+    assert.match(tarea.que, /^Revisar y repartir/);
+  });
+
+  await caso("el pedido de A no dejó nada en el espacio de B (proyectos, solicitudes, tareas, propiedades)", async () => {
+    assert.deepEqual(await contar(idB), deB);
+    const despuesA = await contar(idA);
+    assert.deepEqual(
+      [despuesA.proyectos - deAAntes.proyectos, despuesA.solicitudes - deAAntes.solicitudes, despuesA.tareas - deAAntes.tareas],
+      [1, 1, 1],
+    );
+  });
+
+  await caso("un doble clic no abre dos proyectos: el segundo pedido igual se rechaza", async () => {
+    const otra = await abrirPedido(pedido);
+    assert.equal(otra.ok, false);
+    assert.equal((await contar(idA)).proyectos, deAAntes.proyectos + 1);
+  });
+
+  await caso("A no puede pedir sobre la propiedad de B: «Propiedad no encontrada» y no queda nada", async () => {
+    const r = await abrirPedido({ ...pedido, descripcion: "Pedido sobre la propiedad de B", propertyId: b.propiedadId });
+    assert.equal(r.ok, false);
+    assert.equal(r.ok ? "" : r.error, "Propiedad no encontrada.");
+    assert.deepEqual(await contar(idB), deB);
+    assert.equal((await contar(idA)).proyectos, deAAntes.proyectos + 1);
+  });
+
+  await caso("una propiedad nueva pedida por A nace en el espacio de A, y repetirla se rechaza", async () => {
+    const nueva = { direccion: "Calle Nueva 1", comuna: "Comuna A", region: "Metropolitana", tipo: "CASA" as const };
+    const r = await abrirPedido({ ...pedido, descripcion: "Evaluar propiedad nueva", propertyId: null, propiedadNueva: nueva });
+    assert.ok(r.ok, r.ok ? "" : r.error);
+    const propiedad = await db.property.findUniqueOrThrow({ where: { id: r.propertyId } });
+    assert.equal(propiedad.organizationId, idA);
+    assert.equal(r.propiedadCreada, true);
+    const repetida = await abrirPedido({ ...pedido, descripcion: "Otra vez", propertyId: null, propiedadNueva: { ...nueva, direccion: "CALLE NUEVA 1" } });
+    assert.equal(repetida.ok, false);
+    assert.deepEqual(await contar(idB), deB);
+  });
+
+  await caso("la misma dirección que tiene B no se rechaza ni se cruza: A crea la suya en su espacio", async () => {
+    const igualQueB = { direccion: "Calle Prueba B 100", comuna: "Comuna B", region: "Metropolitana", tipo: "CASA" as const };
+    const r = await abrirPedido({ ...pedido, descripcion: "Propiedad con la dirección de B", propertyId: null, propiedadNueva: igualQueB });
+    assert.ok(r.ok, r.ok ? "" : r.error);
+    assert.equal((await db.property.findUniqueOrThrow({ where: { id: r.propertyId } })).organizationId, idA);
+    assert.deepEqual(await contar(idB), deB);
+  });
+
+  await caso("el panel de B sigue igual, y el pedido «por revisar» de A no aparece en el panel de A", async () => {
+    const panelB = await propiedadesDelCliente(b.usuarioCliente);
+    assert.deepEqual(panelB.map((p) => p.id), [b.propiedadId]);
+    assert.deepEqual(panelB[0].servicios.map((s) => s.id), [b.servicioId]);
+    const panelA = await propiedadesDelCliente(a.usuarioCliente);
+    const idsDeA = panelA.flatMap((p) => p.servicios.map((s) => s.id));
+    assert.equal(idsDeA.includes(abierto.ok ? abierto.servicioEnCursoId : ""), false);
+    assert.equal(await servicioParaCliente(a.usuarioCliente, abierto.ok ? abierto.servicioEnCursoId : ""), null);
+  });
+
+  await caso("revisar desde el espacio equivocado no encuentra el proyecto; desde el suyo lo acepta y A lo ve", async () => {
+    assert.ok(abierto.ok);
+    const id = abierto.servicioEnCursoId;
+    const mal = await aceptarRevision({ orgId: idB, servicioEnCursoId: id, servicioCatalogoId: catalogoNv.id, responsableId: null, nota: null, usuarioId: equipo.id });
+    assert.equal(mal.ok, false);
+    const malRechazo = await rechazarRevision({ orgId: idB, servicioEnCursoId: id, motivo: "no", usuarioId: equipo.id });
+    assert.equal(malRechazo.ok, false);
+    assert.equal((await db.servicioEnCurso.findUniqueOrThrow({ where: { id } })).porRevisar, true); // nada cambió
+
+    const bien = await aceptarRevision({ orgId: idA, servicioEnCursoId: id, servicioCatalogoId: catalogoNv.id, responsableId: null, nota: null, usuarioId: equipo.id });
+    assert.ok(bien.ok, bien.ok ? "" : bien.error);
+    const solicitud = await db.solicitud.findUniqueOrThrow({ where: { id: abierto.solicitudId } });
+    assert.equal(solicitud.estado, "ACEPTADA");
+    assert.notEqual((await db.tarea.findUniqueOrThrow({ where: { id: abierto.tareaId } })).hechaEl, null);
+    assert.ok(await servicioParaCliente(a.usuarioCliente, id), "A no ve el proyecto ya revisado");
+    assert.equal(await servicioParaCliente(b.usuarioCliente, id), null);
   });
 
   console.log(`${casos} casos, todos pasan`);

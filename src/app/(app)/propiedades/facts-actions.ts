@@ -4,9 +4,8 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
-import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
+import { espacioParaEscribirEnPropiedad, espacioParaEscribirEnRegistro } from "@/lib/org";
 import {
-  assertProperty,
   enumField,
   moneyField,
   optionalText,
@@ -54,11 +53,9 @@ export async function addOwner(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(porcentaje.error) };
   }
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const orgId = espacio.orgId;
-  if (!(await assertProperty(propertyId, orgId)))
-    return { error: "Propiedad no encontrada." };
+  // El espacio sale de la propiedad, no del formulario.
+  const orgId = await espacioParaEscribirEnPropiedad(propertyId);
+  if (!orgId) return { error: "Propiedad no encontrada." };
 
   // Entidad existente o nueva
   const existingOwnerId = String(formData.get("ownerId") ?? "").trim();
@@ -110,7 +107,10 @@ export async function removeOwner(formData: FormData): Promise<void> {
   const propertyId = String(formData.get("propertyId") ?? "");
   if (!propertyOwnerId) return;
 
-  const orgId = await orgParaEscribir();
+  const orgId = await espacioParaEscribirEnRegistro(
+    await db.propertyOwner.findUnique({ where: { id: propertyOwnerId }, select: { organizationId: true } }),
+  );
+  if (!orgId) return;
   await db.propertyOwner.deleteMany({
     where: { id: propertyOwnerId, organizationId: orgId },
   });
@@ -133,11 +133,9 @@ export async function addTag(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const orgId = espacio.orgId;
-  if (!(await assertProperty(propertyId, orgId)))
-    return { error: "Propiedad no encontrada." };
+  // El espacio sale de la propiedad, no del formulario.
+  const orgId = await espacioParaEscribirEnPropiedad(propertyId);
+  if (!orgId) return { error: "Propiedad no encontrada." };
 
   // Crea la etiqueta si no existe (única por organización) y la vincula a la propiedad.
   const tag = await db.propertyTag.upsert({
@@ -161,8 +159,8 @@ export async function removeTag(formData: FormData): Promise<void> {
   const tagId = String(formData.get("tagId") ?? "");
   if (!propertyId || !tagId) return;
 
-  const orgId = await orgParaEscribir();
-  if (!(await assertProperty(propertyId, orgId))) return;
+  const orgId = await espacioParaEscribirEnPropiedad(propertyId);
+  if (!orgId) return;
 
   await db.property.update({
     where: { id: propertyId },
@@ -199,11 +197,9 @@ export async function addUnit(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const orgId = espacio.orgId;
-  if (!(await assertProperty(propertyId, orgId)))
-    return { error: "Propiedad no encontrada." };
+  // El espacio sale de la propiedad, no del formulario.
+  const orgId = await espacioParaEscribirEnPropiedad(propertyId);
+  if (!orgId) return { error: "Propiedad no encontrada." };
 
   await db.propertyUnit.create({
     data: { organizationId: orgId, propertyId, ...parsed.data },
@@ -218,7 +214,10 @@ export async function removeUnit(formData: FormData): Promise<void> {
   const propertyId = String(formData.get("propertyId") ?? "");
   if (!unitId) return;
 
-  const orgId = await orgParaEscribir();
+  const orgId = await espacioParaEscribirEnRegistro(
+    await db.propertyUnit.findUnique({ where: { id: unitId }, select: { organizationId: true } }),
+  );
+  if (!orgId) return;
   await db.propertyUnit.deleteMany({
     where: { id: unitId, organizationId: orgId },
   });
@@ -256,11 +255,9 @@ export async function addAssessment(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const orgId = espacio.orgId;
-  if (!(await assertProperty(propertyId, orgId)))
-    return { error: "Propiedad no encontrada." };
+  // El espacio sale de la propiedad, no del formulario.
+  const orgId = await espacioParaEscribirEnPropiedad(propertyId);
+  if (!orgId) return { error: "Propiedad no encontrada." };
 
   try {
     await db.propertyAssessment.create({
@@ -288,7 +285,10 @@ export async function removeAssessment(formData: FormData): Promise<void> {
   const propertyId = String(formData.get("propertyId") ?? "");
   if (!assessmentId) return;
 
-  const orgId = await orgParaEscribir();
+  const orgId = await espacioParaEscribirEnRegistro(
+    await db.propertyAssessment.findUnique({ where: { id: assessmentId }, select: { organizationId: true } }),
+  );
+  if (!orgId) return;
   await db.propertyAssessment.deleteMany({
     where: { id: assessmentId, organizationId: orgId },
   });

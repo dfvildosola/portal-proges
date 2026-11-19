@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { hoyChile } from "@/lib/fechas";
 import { estaVigente } from "@/lib/contratos";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { puedeLeerEn } from "@/lib/org";
 import { usuarioActual } from "@/lib/sesion";
 import { agenda } from "@/lib/agenda";
 import { getLatestUf, toCLP } from "@/lib/currency";
@@ -22,6 +22,7 @@ import {
   sacarReemplazados,
 } from "@/lib/papeles";
 import { BackLink } from "@/components/back-link";
+import { ModificadoPor } from "@/components/modificado-por";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PropertyHeader } from "./property-header";
 import { AttentionStrip } from "./attention-strip";
@@ -35,7 +36,10 @@ import { LeaseTab } from "./lease-tab";
 import { FinanceTab } from "./finance-tab";
 import { DocumentsTab } from "./documents-tab";
 import { ServiciosTab } from "./servicios-tab";
+import { HistorialTab } from "./historial-tab";
+import { AdministracionCard } from "./administracion-card";
 
+// «Historial» es solo del equipo: se agrega a la lista más abajo, según quién mira.
 const TABS = [
   { value: "resumen", label: "Resumen" },
   { value: "servicios", label: "Servicios" },
@@ -51,42 +55,45 @@ export default async function PropiedadDetallePage({
   const { id } = await params;
   // ?pestana=servicios abre la ficha directo en esa pestaña (al volver desde un servicio).
   const { pestana } = await searchParams;
-  const pestanaInicial = TABS.some((t) => t.value === pestana) ? String(pestana) : "resumen";
-  const orgId = await getOrgId();
   const esEquipo = (await usuarioActual())?.rol === "EQUIPO";
+  const pestanas = esEquipo ? [...TABS, { value: "historial", label: "Historial" }] : TABS;
+  const pestanaInicial = pestanas.some((t) => t.value === pestana) ? String(pestana) : "resumen";
 
-  const [p, uf, entidades, items] = await Promise.all([
-    db.property.findFirst({
-      where: { id, organizationId: orgId },
-      include: {
-        owners: { include: { owner: true }, orderBy: { porcentaje: "desc" } },
-        tags: { orderBy: { nombre: "asc" } },
-        units: { orderBy: [{ tipo: "asc" }, { numero: "asc" }] },
-        assessments: { orderBy: { anio: "desc" } },
-        contracts: {
-          include: {
-            tenant: { select: { nombre: true, rut: true } },
-            charges: {
-              select: { periodo: true, estado: true, fechaVencimiento: true },
-            },
+  // Primero la propiedad por su id; después se comprueba que su espacio se puede leer (si no, es
+  // como si no existiera) y, con el espacio del registro, se leen sus dueños y su agenda.
+  const p = await db.property.findUnique({
+    where: { id },
+    include: {
+      owners: { include: { owner: true }, orderBy: { porcentaje: "desc" } },
+      tags: { orderBy: { nombre: "asc" } },
+      units: { orderBy: [{ tipo: "asc" }, { numero: "asc" }] },
+      assessments: { orderBy: { anio: "desc" } },
+      contracts: {
+        include: {
+          tenant: { select: { nombre: true, rut: true } },
+          charges: {
+            select: { periodo: true, estado: true, fechaVencimiento: true },
           },
-          orderBy: { fechaInicio: "desc" },
         },
-        documents: { orderBy: { createdAt: "desc" } },
-        movements: { orderBy: { fecha: "desc" } },
-        taxes: { orderBy: [{ anio: "desc" }, { cuota: "asc" }] },
-        bills: { orderBy: { fechaVencimiento: "asc" } },
+        orderBy: { fechaInicio: "desc" },
       },
-    }),
+      documents: { orderBy: { createdAt: "desc" } },
+      movements: { orderBy: { fecha: "desc" } },
+      taxes: { orderBy: [{ anio: "desc" }, { cuota: "asc" }] },
+      bills: { orderBy: { fechaVencimiento: "asc" } },
+    },
+  });
+  if (!p || !(await puedeLeerEn(p.organizationId))) notFound();
+
+  const [uf, entidades, items] = await Promise.all([
     getLatestUf(),
     db.owner.findMany({
-      where: { organizationId: orgId },
+      where: { organizationId: p.organizationId },
       select: { id: true, nombre: true, tipo: true },
       orderBy: { nombre: "asc" },
     }),
-    agenda(orgId),
+    agenda([p.organizationId]),
   ]);
-  if (!p) notFound();
   const pendientes = items.filter((i) => i.propiedad?.id === id);
 
   // Entidades existentes (para reutilizar en vez de duplicar), sin las que ya
@@ -144,11 +151,12 @@ export default async function PropiedadDetallePage({
       <BackLink href="/propiedades">Propiedades</BackLink>
 
       <PropertyHeader property={p} esEquipo={esEquipo} />
+      <ModificadoPor usuarioId={p.modificadoPorId} fecha={p.updatedAt} className="-mt-4 mb-6 text-xs text-muted-foreground" />
       <AttentionStrip items={pendientes} />
 
       <Tabs defaultValue={pestanaInicial}>
         <TabsList className="flex-wrap">
-          {TABS.map((t) => (
+          {pestanas.map((t) => (
             <TabsTrigger key={t.value} value={t.value}>
               {t.label}
             </TabsTrigger>
@@ -180,6 +188,8 @@ export default async function PropiedadDetallePage({
                 libre={libre}
                 costoAnual={costo}
               />
+              {/* Se vale sola: no pinta nada si el dueño no tiene la propiedad en administración. */}
+              <AdministracionCard propertyId={p.id} />
               <FactsCard
                 property={p}
                 owners={p.owners}
@@ -241,6 +251,12 @@ export default async function PropiedadDetallePage({
             papeles={papeles}
           />
         </TabsContent>
+
+        {esEquipo && (
+          <TabsContent value="historial" className="mt-6">
+            <HistorialTab propertyId={p.id} />
+          </TabsContent>
+        )}
       </Tabs>
     </>
   );

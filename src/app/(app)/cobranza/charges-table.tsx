@@ -37,10 +37,12 @@ export type ChargeRow = {
   propertyRol: string;
   propertyDireccion: string;
   tenantNombre: string;
+  clienteNombre: string; // vacío si quien mira es un cliente
 };
 
 const columnLabels: Record<string, string> = {
   propertyRol: "Propiedad",
+  clienteNombre: "Cliente",
   tenantNombre: "Arrendatario",
   montoEsperado: "Monto esperado",
   fechaVencimiento: "Vencimiento",
@@ -61,6 +63,11 @@ const columns: ColumnDef<ChargeRow>[] = [
         </span>
       </div>
     ),
+  },
+  {
+    accessorKey: "clienteNombre",
+    header: sortHeader("Cliente"),
+    size: 140,
   },
   {
     accessorKey: "tenantNombre",
@@ -119,12 +126,17 @@ const columns: ColumnDef<ChargeRow>[] = [
   },
 ];
 
-export function ChargesTable({ data }: { data: ChargeRow[] }) {
+// Las columnas para quien no es del equipo: las mismas sin «Cliente» (se arma una sola vez).
+const columnasSinCliente = columns.filter((c) => !("accessorKey" in c && c.accessorKey === "clienteNombre"));
+
+// `mostrarCliente`: solo el equipo, que ve varios clientes juntos, tiene la columna «Cliente».
+export function ChargesTable({ data, mostrarCliente }: { data: ChargeRow[]; mostrarCliente: boolean }) {
   const router = useRouter();
+  const columnas = mostrarCliente ? columns : columnasSinCliente;
 
   return (
     <DataTable
-      columns={columns}
+      columns={columnas}
       data={data}
       onRowClick={(c) => router.push(`/cobranza/${c.id}`)}
       initialSorting={[{ id: "estado", desc: false }]}
@@ -135,7 +147,7 @@ export function ChargesTable({ data }: { data: ChargeRow[] }) {
         return (
           <div className="flex flex-wrap items-center gap-2">
             <Input
-              placeholder="Buscar propiedad o arrendatario…"
+              placeholder="Buscar propiedad, cliente o arrendatario…"
               value={table.getState().globalFilter ?? ""}
               onChange={(e) => table.setGlobalFilter(e.target.value)}
               className="h-8 w-full max-w-xs"

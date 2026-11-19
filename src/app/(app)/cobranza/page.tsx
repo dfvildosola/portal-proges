@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Wallet, Zap, ChevronLeft, ChevronRight } from "lucide-react";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { clientesParaElegir, espaciosQueLee, nombresPorId } from "@/lib/org";
+import { FiltroCliente } from "@/components/filtro-cliente";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
@@ -28,9 +29,12 @@ export default async function CobranzaPage({
       ? rawMes
       : mesActual();
 
-  const orgId = await getOrgId();
+  // El equipo ve todos los clientes juntos y puede filtrar por uno (?cliente=).
+  const filtro = typeof sp.cliente === "string" ? sp.cliente : null;
+  const clientes = await clientesParaElegir();
+  const nombreDe = nombresPorId(clientes);
   const charges = await db.rentCharge.findMany({
-    where: { organizationId: orgId, periodo: mes },
+    where: { organizationId: { in: await espaciosQueLee(filtro) }, periodo: mes },
     include: {
       contract: {
         include: {
@@ -58,16 +62,21 @@ export default async function CobranzaPage({
     propertyRol: ch.contract.property.rolSII ?? "Sin ROL",
     propertyDireccion: ch.contract.property.direccion,
     tenantNombre: ch.contract.tenant.nombre,
+    clienteNombre: nombreDe.get(ch.organizationId) ?? "",
   }));
 
   const prevMes = addMonths(mes, -1);
   const nextMes = addMonths(mes, 1);
+  // Al cambiar de mes se conserva el filtro de cliente.
+  const hrefMes = (m: string) =>
+    `/cobranza?mes=${m}${filtro ? `&cliente=${encodeURIComponent(filtro)}` : ""}`;
 
   return (
     <>
       <PageHeader
         title="Cobranza"
         description="La corrida del mes: quién pagó, quién no, cuánto."
+        action={clientes && <FiltroCliente clientes={clientes} actual={filtro} />}
       />
 
       {/* Navegación por mes */}
@@ -76,7 +85,7 @@ export default async function CobranzaPage({
           variant="ghost"
           size="icon-sm"
           nativeButton={false}
-          render={<Link href={`/cobranza?mes=${prevMes}`} aria-label={formatPeriodo(prevMes)} />}
+          render={<Link href={hrefMes(prevMes)} aria-label={formatPeriodo(prevMes)} />}
         >
           <ChevronLeft className="size-4" />
         </Button>
@@ -85,7 +94,7 @@ export default async function CobranzaPage({
           variant="ghost"
           size="icon-sm"
           nativeButton={false}
-          render={<Link href={`/cobranza?mes=${nextMes}`} aria-label={formatPeriodo(nextMes)} />}
+          render={<Link href={hrefMes(nextMes)} aria-label={formatPeriodo(nextMes)} />}
         >
           <ChevronRight className="size-4" />
         </Button>
@@ -100,6 +109,7 @@ export default async function CobranzaPage({
         </p>
         <form action={generateMonthCharges}>
           <input type="hidden" name="mes" value={mes} />
+          {filtro && <input type="hidden" name="cliente" value={filtro} />}
           <Button type="submit" variant="outline" size="sm">
             <Zap className="size-4" />
             Generar cobros del mes
@@ -114,7 +124,7 @@ export default async function CobranzaPage({
           description="Haz clic en 'Generar cobros del mes' para crear cobros para todos los contratos vigentes."
         />
       ) : (
-        <ChargesTable data={rows} />
+        <ChargesTable data={rows} mostrarCliente={clientes !== null} />
       )}
     </>
   );

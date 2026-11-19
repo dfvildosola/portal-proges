@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { puedeLeerEn } from "@/lib/org";
 import { toDateInputValue } from "@/lib/format";
 import { BackLink } from "@/components/back-link";
 import { PageHeader } from "@/components/page-header";
@@ -11,11 +11,8 @@ export default async function EditarPropiedadPage({
   params,
 }: PageProps<"/propiedades/[id]/editar">) {
   const { id } = await params;
-  const orgId = await getOrgId();
-  const p = await db.property.findFirst({
-    where: { id, organizationId: orgId },
-  });
-  if (!p) notFound();
+  const p = await db.property.findUnique({ where: { id } });
+  if (!p || !(await puedeLeerEn(p.organizationId))) notFound();
 
   return (
     <>

@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
+import { espacioParaCrear, espacioParaEscribirEnRegistro } from "@/lib/org";
 import { toFieldErrors } from "@/lib/form-helpers";
 import { OwnerType } from "@/generated/prisma/enums";
 
@@ -34,9 +34,11 @@ export async function createGrupo(
   if (!parsed.success)
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const orgId = espacio.orgId;
+  // El dueño crea en lo suyo; el equipo elige el cliente en el formulario.
+  const orgId = await espacioParaCrear(String(formData.get("clienteId") ?? "") || null);
+  if (!orgId) {
+    return { error: "Revisa los campos.", fieldErrors: { clienteId: "Elige el cliente" } };
+  }
   await db.grupo.create({
     data: { organizationId: orgId, nombre: parsed.data.nombre, rut: parsed.data.rut },
   });
@@ -48,7 +50,10 @@ export async function createGrupo(
 export async function deleteGrupo(formData: FormData): Promise<void> {
   const grupoId = String(formData.get("grupoId") ?? "");
   if (!grupoId) return;
-  const orgId = await orgParaEscribir();
+  const orgId = await espacioParaEscribirEnRegistro(
+    await db.grupo.findUnique({ where: { id: grupoId }, select: { organizationId: true } }),
+  );
+  if (!orgId) return;
   await db.grupo.deleteMany({ where: { id: grupoId, organizationId: orgId } });
   revalidatePath("/duenos");
 }
@@ -58,7 +63,11 @@ export async function setOwnerGrupo(formData: FormData): Promise<void> {
   const ownerId = String(formData.get("ownerId") ?? "");
   if (!ownerId) return;
   const grupoIdRaw = String(formData.get("grupoId") ?? "");
-  const orgId = await orgParaEscribir();
+  // El espacio sale de la entidad que se mueve; el grupo debe ser del mismo cliente.
+  const orgId = await espacioParaEscribirEnRegistro(
+    await db.owner.findUnique({ where: { id: ownerId }, select: { organizationId: true } }),
+  );
+  if (!orgId) return;
 
   let grupoId: string | null = null;
   if (grupoIdRaw) {
@@ -103,16 +112,21 @@ export async function createOwner(
   if (!parsed.success)
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const orgId = espacio.orgId;
+  const orgId = await espacioParaCrear(String(formData.get("clienteId") ?? "") || null);
+  if (!orgId) {
+    return { error: "Revisa los campos.", fieldErrors: { clienteId: "Elige el cliente" } };
+  }
   let grupoId: string | null = null;
   if (parsed.data.grupoId) {
     const grupo = await db.grupo.findFirst({
       where: { id: parsed.data.grupoId, organizationId: orgId },
       select: { id: true },
     });
-    grupoId = grupo?.id ?? null;
+    // Un grupo de otro cliente no sirve: no se ignora en silencio, se avisa.
+    if (!grupo) {
+      return { error: "Revisa los campos.", fieldErrors: { grupoId: "Ese grupo es de otro cliente" } };
+    }
+    grupoId = grupo.id;
   }
 
   await db.owner.create({

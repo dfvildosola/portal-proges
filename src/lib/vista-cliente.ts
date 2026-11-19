@@ -14,10 +14,15 @@
 //    contacto y el nombre del interesado de una visita, el nombre del oferente
 //    ni la nota de una oferta, el autor y el motivo de un cambio de precio, el
 //    responsable de un servicio, el enlace del aviso ni el motivo de cierre.
+//    Tampoco sale NADA del costo de una obra: ni presupuestos ni facturas ni pagos de
+//    maestros, ni el nombre de un maestro, ni las tareas, ni las notas que el equipo no
+//    marcó «la ve el dueño», ni el precio de las partidas (se usa para ponderar el avance,
+//    pero no se entrega).
 // 3. Un usuario que no es CLIENTE lanza Error("Sin permiso"). Un CLIENTE
 //    desactivado no ve nada. Los servicios «por confirmar» (deducidos de las carpetas del
 //    Drive en la carga inicial) no se muestran: son una suposición hasta que
-//    el equipo los revisa. Los cancelados tampoco.
+//    el equipo los revisa. Los cancelados tampoco. Los «por revisar» (un pedido que la
+//    jefatura todavía no repartió) tampoco: el cliente los ve como pedido, no como proyecto.
 // 4. Los indicadores los calcula `src/lib/servicios.ts`, igual que en la ficha
 //    del equipo: los dos ven siempre la misma cifra.
 
@@ -34,6 +39,8 @@ import { db } from "@/lib/db";
 import { diaChile, esComercial, indicadoresComerciales } from "@/lib/servicios";
 import type { IndicadoresComerciales } from "@/lib/servicios";
 import { hoyChile } from "@/lib/fechas";
+import { avancePonderado, resumenRecepcion } from "@/lib/obra";
+import type { ResumenRecepcion } from "@/lib/obra";
 
 // ---------------------------------------------------------------------------
 // El espacio: de quién son los datos que puede ver este cliente
@@ -46,8 +53,8 @@ function espacioDe(usuario: Usuario): string | null {
   return usuario.activo ? usuario.organizationId : null;
 }
 
-// Los servicios que un cliente puede ver: abiertos y terminados, y ninguno «por confirmar».
-// Los cancelados no se muestran.
+// Los servicios que un cliente puede ver: abiertos y terminados, y ninguno «por confirmar» ni
+// «por revisar». Los cancelados no se muestran.
 const ESTADOS_VISIBLES: ServicioEstado[] = ["ABIERTO", "TERMINADO"];
 
 // ---------------------------------------------------------------------------
@@ -116,12 +123,48 @@ export type DatosComerciales = {
   recomendacion: { texto: string; fecha: Date | null } | null; // fecha: día de Chile
 };
 
+// Una línea de la orden vista por el dueño: qué se hace y cómo va. Sin precio, sin maestro,
+// sin la observación del equipo (podría nombrar al maestro).
+export type PartidaDelCliente = {
+  id: string;
+  codigo: string | null;
+  descripcion: string;
+  cantidad: number | null;
+  unidad: string | null;
+  avance: number; // 0 a 100
+  recepcion: "PENDIENTE" | "CONFORME" | "OBSERVADA";
+};
+
+// Las partidas de un recinto (o «sin recinto» en un servicio suelto) con su avance.
+export type RecintoDelCliente = {
+  nombre: string | null;
+  avance: number; // 0 a 100, ponderado igual que el de la obra
+  partidas: PartidaDelCliente[];
+};
+
+export type ObraDelCliente = {
+  avance: number; // 0 a 100 de toda la obra
+  recepcion: ResumenRecepcion;
+  recintos: RecintoDelCliente[];
+};
+
+// Una nota de la bitácora que el equipo marcó «la ve el dueño». Sin autor ni tarea.
+export type NotaDelCliente = {
+  id: string;
+  fecha: Date; // día de Chile
+  texto: string;
+  fotos: { driveFileId: string; nombre: string }[]; // se ven por /archivos/<driveFileId>
+};
+
 // Un servicio con todo lo que el cliente puede ver de él.
 export type ServicioDelDetalle = ServicioDeLaLista & {
   propiedad: { id: string; direccion: string; comuna: string };
   // Cada paso de etapa, del más antiguo al más nuevo (solo el nombre de la etapa).
   cambiosDeEtapa: { fecha: Date; etapa: string }[]; // fecha: día de Chile
   comercial: DatosComerciales | null;
+  // Solo si el servicio tiene partidas (una orden enlazada).
+  obra: ObraDelCliente | null;
+  notas: NotaDelCliente[];
 };
 
 // ---------------------------------------------------------------------------
@@ -144,7 +187,7 @@ export async function propiedadesDelCliente(usuario: Usuario): Promise<Propiedad
       comuna: true,
       tipo: true,
       servicios: {
-        where: { estado: "ABIERTO", porConfirmar: false, organizationId: espacio },
+        where: { estado: "ABIERTO", porConfirmar: false, porRevisar: false, organizationId: espacio },
         orderBy: { abiertoEl: "asc" },
         select: {
           id: true,
@@ -192,6 +235,7 @@ export async function serviciosDePropiedad(
       organizationId: espacio,
       estado: { in: ESTADOS_VISIBLES },
       porConfirmar: false,
+      porRevisar: false,
     },
     orderBy: { abiertoEl: "desc" },
     select: {
@@ -225,6 +269,59 @@ function textoANumero(texto: string, eventoId: string): number {
   return n;
 }
 
+// Las partidas de una orden agrupadas por recinto, con el avance de cada recinto y el de toda la
+// obra. Los avances salen de `src/lib/obra.ts` (el mismo cálculo que ve el equipo). El precio
+// solo sirve para ponderar: el resultado no lo lleva. Sin partidas, null.
+function obraDelCliente(
+  partidas: {
+    id: string;
+    recinto: string | null;
+    codigo: string | null;
+    descripcion: string;
+    cantidad: { toString(): string } | null;
+    unidad: string | null;
+    precioDueno: { toString(): string } | null;
+    avance: number;
+    recepcion: "PENDIENTE" | "CONFORME" | "OBSERVADA";
+  }[],
+): ObraDelCliente | null {
+  if (partidas.length === 0) return null;
+  const paraCuenta = partidas.map((p) => ({
+    avance: p.avance,
+    recepcion: p.recepcion,
+    precioDueno: p.precioDueno === null ? null : Number(p.precioDueno.toString()),
+  }));
+
+  // Los recintos en el orden en que aparecen en la orden.
+  const grupos: { nombre: string | null; indices: number[] }[] = [];
+  partidas.forEach((p, i) => {
+    const ultimo = grupos.find((g) => g.nombre === p.recinto);
+    if (ultimo) ultimo.indices.push(i);
+    else grupos.push({ nombre: p.recinto, indices: [i] });
+  });
+
+  return {
+    avance: avancePonderado(paraCuenta),
+    recepcion: resumenRecepcion(paraCuenta),
+    recintos: grupos.map((g) => ({
+      nombre: g.nombre,
+      avance: avancePonderado(g.indices.map((i) => paraCuenta[i])),
+      partidas: g.indices.map((i) => {
+        const p = partidas[i];
+        return {
+          id: p.id,
+          codigo: p.codigo,
+          descripcion: p.descripcion,
+          cantidad: p.cantidad === null ? null : Number(p.cantidad.toString()),
+          unidad: p.unidad,
+          avance: p.avance,
+          recepcion: p.recepcion,
+        };
+      }),
+    })),
+  };
+}
+
 // Un servicio con su detalle. null si no es del espacio del cliente (o está cancelado o por
 // confirmar): la página responde «no encontrada», igual que si no existiera.
 export async function servicioParaCliente(
@@ -239,6 +336,7 @@ export async function servicioParaCliente(
       organizationId: espacio,
       estado: { in: ESTADOS_VISIBLES },
       porConfirmar: false,
+      porRevisar: false,
     },
     select: {
       id: true,
@@ -274,6 +372,34 @@ export async function servicioParaCliente(
         orderBy: { fecha: "desc" },
         select: { fecha: true, monto: true, moneda: true, estado: true },
       },
+      // La obra: select explícito, sin maestro, sin observación y sin precio al maestro.
+      // `precioDueno` se lee solo para ponderar el avance; no se entrega.
+      partidas: {
+        where: { quitadaEnOdoo: false, organizationId: espacio },
+        orderBy: { posicion: "asc" },
+        select: {
+          id: true,
+          recinto: true,
+          codigo: true,
+          descripcion: true,
+          cantidad: true,
+          unidad: true,
+          precioDueno: true,
+          avance: true,
+          recepcion: true,
+        },
+      },
+      // Solo las notas marcadas para el dueño. Sin autor ni tarea.
+      notas: {
+        where: { paraDueno: true, organizationId: espacio },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          texto: true,
+          createdAt: true,
+          fotos: { orderBy: { createdAt: "asc" }, select: { driveFileId: true, nombre: true } },
+        },
+      },
     },
   });
   if (!s) return null;
@@ -289,6 +415,13 @@ export async function servicioParaCliente(
     cerradoEl: s.cerradoEl ? diaChile(s.cerradoEl) : null,
     propiedad: { id: s.property.id, direccion: s.property.direccion, comuna: s.property.comuna },
     cambiosDeEtapa: eventosDeEtapa.map((e) => ({ fecha: diaChile(e.fecha), etapa: e.nuevo })),
+    obra: obraDelCliente(s.partidas),
+    notas: s.notas.map((n) => ({
+      id: n.id,
+      fecha: diaChile(n.createdAt),
+      texto: n.texto,
+      fotos: n.fotos.map((f) => ({ driveFileId: f.driveFileId, nombre: f.nombre })),
+    })),
   };
   if (!esComercial(s.tipo)) return { ...base, comercial: null };
 

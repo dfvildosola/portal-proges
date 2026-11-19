@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
+import { espacioParaCrear, espacioParaEscribirEnRegistro } from "@/lib/org";
 import { toFieldErrors } from "@/lib/form-helpers";
 
 
@@ -48,9 +48,11 @@ export async function createTenant(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const orgId = espacio.orgId;
+  // El dueño crea en lo suyo; el equipo elige el cliente en el formulario.
+  const orgId = await espacioParaCrear(String(formData.get("clienteId") ?? "") || null);
+  if (!orgId) {
+    return { error: "Revisa los campos.", fieldErrors: { clienteId: "Elige el cliente" } };
+  }
   await db.tenant.create({
     data: { ...parsed.data, organizationId: orgId },
   });
@@ -71,9 +73,11 @@ export async function updateTenant(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const orgId = espacio.orgId;
+  // El espacio sale del contacto que se edita, no del formulario.
+  const orgId = await espacioParaEscribirEnRegistro(
+    await db.tenant.findUnique({ where: { id }, select: { organizationId: true } }),
+  );
+  if (!orgId) return { error: "Contacto no encontrado." };
   const res = await db.tenant.updateMany({
     where: { id, organizationId: orgId },
     data: parsed.data,
@@ -88,7 +92,10 @@ export async function deleteTenant(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  const orgId = await orgParaEscribir();
+  const orgId = await espacioParaEscribirEnRegistro(
+    await db.tenant.findUnique({ where: { id }, select: { organizationId: true } }),
+  );
+  if (!orgId) return;
   // onDelete: Restrict en LeaseContract impide borrar un arrendatario con contratos;
   // lo verificamos antes para dar un mensaje claro en vez de un error de FK.
   const conContratos = await db.leaseContract.count({

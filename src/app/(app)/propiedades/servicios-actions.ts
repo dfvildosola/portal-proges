@@ -5,9 +5,10 @@
 //
 // Cada acción parte pidiendo un integrante activo del EQUIPO (equipoEnAccion)
 // y vuelve a comprobar en el servidor cada id que llega del formulario: la propiedad y el
-// servicio en curso contra el cliente activo (getOrgId), y la etapa, el catálogo y el
-// responsable contra el espacio de Proges (ORG_PROGES), donde viven comunes a todos los
-// clientes. Lo que llega del formulario nunca se da por bueno.
+// servicio en curso contra el espacio de la propiedad (el equipo escribe en el cliente dueño
+// de ella: espacioParaEscribirEnPropiedad), y la etapa, el catálogo y el responsable contra el
+// espacio de Proges (ORG_PROGES), donde viven comunes a todos los clientes. Lo que llega del
+// formulario nunca se da por bueno.
 //
 // Cada cambio de etapa deja un Evento (el historial). Cancelar NO es una etapa:
 // es una salida, y por eso no crea Evento de etapa.
@@ -15,9 +16,9 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { getOrgId, ORG_PROGES } from "@/lib/org";
+import { espacioParaEscribirEnPropiedad, ORG_PROGES } from "@/lib/org";
 import { equipoEnAccion } from "@/lib/sesion";
-import { assertProperty, enumField, optionalText, toFieldErrors } from "@/lib/form-helpers";
+import { enumField, optionalText, toFieldErrors } from "@/lib/form-helpers";
 import { ServicioTipo } from "@/generated/prisma/enums";
 import { familiasDelTipo } from "@/lib/servicios";
 
@@ -57,7 +58,7 @@ async function errorDeResponsable(responsableId: string | null) {
   return usuario ? null : "El responsable no es del equipo.";
 }
 
-// El servicio de la propiedad, siempre dentro del espacio del cliente activo.
+// El servicio de la propiedad, siempre dentro del espacio de la propiedad.
 async function buscarServicio(servicioId: string, propertyId: string, orgId: string) {
   return db.servicioEnCurso.findFirst({
     where: { id: servicioId, propertyId, organizationId: orgId },
@@ -85,7 +86,6 @@ export async function abrirServicio(
   formData: FormData,
 ): Promise<ServicioFormState> {
   const usuario = await equipoEnAccion();
-  const orgId = await getOrgId();
 
   const parsed = abrirSchema.safeParse({
     propertyId: formData.get("propertyId") ?? "",
@@ -99,7 +99,9 @@ export async function abrirServicio(
   }
   const { propertyId, tipo, servicioId, responsableId, nota } = parsed.data;
 
-  if (!(await assertProperty(propertyId, orgId))) return { error: "Propiedad no encontrada." };
+  // El espacio es el de la propiedad, no uno que mande el navegador.
+  const orgId = await espacioParaEscribirEnPropiedad(propertyId);
+  if (!orgId) return { error: "Propiedad no encontrada." };
 
   // El servicio del catálogo (de Proges) debe estar activo y ser de una familia que ese tipo ofrece.
   const catalogo = await db.servicio.findFirst({
@@ -174,7 +176,6 @@ export async function moverEtapa(
   formData: FormData,
 ): Promise<ServicioFormState> {
   const usuario = await equipoEnAccion();
-  const orgId = await getOrgId();
 
   const parsed = moverSchema.safeParse({
     propertyId: formData.get("propertyId") ?? "",
@@ -187,6 +188,8 @@ export async function moverEtapa(
   }
   const { propertyId, servicioId, etapaId, nota } = parsed.data;
 
+  const orgId = await espacioParaEscribirEnPropiedad(propertyId);
+  if (!orgId) return { error: "Propiedad no encontrada." };
   const servicio = await buscarServicio(servicioId, propertyId, orgId);
   if (!servicio) return { error: "Servicio no encontrado." };
   if (servicio.estado !== "ABIERTO") return { error: "Este servicio ya está cerrado." };
@@ -252,7 +255,6 @@ export async function confirmarServicio(
   formData: FormData,
 ): Promise<ServicioFormState> {
   await equipoEnAccion();
-  const orgId = await getOrgId();
 
   const parsed = idsSchema.safeParse({
     propertyId: formData.get("propertyId") ?? "",
@@ -263,6 +265,8 @@ export async function confirmarServicio(
   }
   const { propertyId, servicioId } = parsed.data;
 
+  const orgId = await espacioParaEscribirEnPropiedad(propertyId);
+  if (!orgId) return { error: "Propiedad no encontrada." };
   const servicio = await buscarServicio(servicioId, propertyId, orgId);
   if (!servicio) return { error: "Servicio no encontrado." };
   if (servicio.estado !== "ABIERTO") return { error: "Este servicio ya está cerrado." };
@@ -294,7 +298,6 @@ export async function cambiarDetalle(
   formData: FormData,
 ): Promise<ServicioFormState> {
   await equipoEnAccion();
-  const orgId = await getOrgId();
 
   const parsed = detalleSchema.safeParse({
     propertyId: formData.get("propertyId") ?? "",
@@ -307,6 +310,8 @@ export async function cambiarDetalle(
   }
   const { propertyId, servicioId, responsableId, nota } = parsed.data;
 
+  const orgId = await espacioParaEscribirEnPropiedad(propertyId);
+  if (!orgId) return { error: "Propiedad no encontrada." };
   const servicio = await buscarServicio(servicioId, propertyId, orgId);
   if (!servicio) return { error: "Servicio no encontrado." };
   if (servicio.estado !== "ABIERTO") return { error: "Este servicio ya está cerrado." };
@@ -340,7 +345,6 @@ export async function cancelarServicio(
   formData: FormData,
 ): Promise<ServicioFormState> {
   await equipoEnAccion();
-  const orgId = await getOrgId();
 
   const parsed = cancelarSchema.safeParse({
     propertyId: formData.get("propertyId") ?? "",
@@ -352,6 +356,8 @@ export async function cancelarServicio(
   }
   const { propertyId, servicioId, motivo } = parsed.data;
 
+  const orgId = await espacioParaEscribirEnPropiedad(propertyId);
+  if (!orgId) return { error: "Propiedad no encontrada." };
   const servicio = await buscarServicio(servicioId, propertyId, orgId);
   if (!servicio) return { error: "Servicio no encontrado." };
 

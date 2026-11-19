@@ -20,10 +20,12 @@ export type TenantRow = {
   email: string | null;
   telefono: string | null;
   contratos: number;
+  clienteNombre: string; // vacío si quien mira es un cliente
 };
 
 const columnLabels: Record<string, string> = {
   nombre: "Nombre",
+  clienteNombre: "Cliente",
   rut: "RUT",
   email: "Email",
   telefono: "Teléfono",
@@ -36,6 +38,11 @@ const columns: ColumnDef<TenantRow>[] = [
     header: sortHeader("Nombre"),
     size: 200,
     cell: ({ row }) => <span className="font-medium">{row.original.nombre}</span>,
+  },
+  {
+    accessorKey: "clienteNombre",
+    header: sortHeader("Cliente"),
+    size: 140,
   },
   {
     accessorKey: "rut",
@@ -92,10 +99,15 @@ const columns: ColumnDef<TenantRow>[] = [
   },
 ];
 
-export function ContactsTable({ data }: { data: TenantRow[] }) {
+// Las columnas para quien no es del equipo: las mismas sin «Cliente» (se arma una sola vez).
+const columnasSinCliente = columns.filter((c) => !("accessorKey" in c && c.accessorKey === "clienteNombre"));
+
+// `mostrarCliente`: solo el equipo, que ve varios clientes juntos, tiene la columna «Cliente».
+export function ContactsTable({ data, mostrarCliente }: { data: TenantRow[]; mostrarCliente: boolean }) {
+  const columnas = mostrarCliente ? columns : columnasSinCliente;
   return (
     <DataTable
-      columns={columns}
+      columns={columnas}
       data={data}
       initialSorting={[{ id: "nombre", desc: false }]}
       toolbar={(table) => {
@@ -103,7 +115,7 @@ export function ContactsTable({ data }: { data: TenantRow[] }) {
         return (
           <div className="flex flex-wrap items-center gap-2">
             <Input
-              placeholder="Buscar nombre, RUT o email…"
+              placeholder="Buscar nombre, RUT, email o cliente…"
               value={table.getState().globalFilter ?? ""}
               onChange={(e) => table.setGlobalFilter(e.target.value)}
               className="h-8 w-full max-w-xs"

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { puedeLeerEn } from "@/lib/org";
 import { BackLink } from "@/components/back-link";
 import { PageHeader } from "@/components/page-header";
 import { TenantForm } from "../../tenant-form";
@@ -10,11 +10,8 @@ export default async function EditarContactoPage({
   params,
 }: PageProps<"/contactos/[id]/editar">) {
   const { id } = await params;
-  const orgId = await getOrgId();
-  const t = await db.tenant.findFirst({
-    where: { id, organizationId: orgId },
-  });
-  if (!t) notFound();
+  const t = await db.tenant.findUnique({ where: { id } });
+  if (!t || !(await puedeLeerEn(t.organizationId))) notFound();
 
   return (
     <>

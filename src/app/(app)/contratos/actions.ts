@@ -4,7 +4,11 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
+import {
+  espacioParaEscribirEnPropiedad,
+  espacioParaEscribirEnRegistro,
+} from "@/lib/org";
+import { usuarioEnAccion } from "@/lib/sesion";
 import {
   dateField,
   enumField,
@@ -121,8 +125,9 @@ function parse(formData: FormData) {
   });
 }
 
-// Construye el objeto de datos para Prisma a partir de lo validado.
-function toData(d: z.infer<typeof contractSchema>) {
+// Construye el objeto de datos para Prisma a partir de lo validado. `modificadoPorId` es quién
+// guarda (el equipo y el dueño editan lo mismo: vale el último, y queda quién fue).
+function toData(d: z.infer<typeof contractSchema>, modificadoPorId: string) {
   const aplicaReajuste = d.reajusteTipo !== AdjustmentType.NINGUNO;
   return {
     propertyId: d.propertyId,
@@ -148,10 +153,11 @@ function toData(d: z.infer<typeof contractSchema>) {
       ? Number(d.plazoMeses)
       : plazoEnMeses(d.fechaInicio, d.fechaTermino),
     garantia: d.garantia,
+    modificadoPorId,
   };
 }
 
-// Verifica que propiedad y arrendatario pertenezcan a la organización activa.
+// Verifica que propiedad y arrendatario pertenezcan al mismo espacio (el del contrato).
 async function assertRefs(propertyId: string, tenantId: string, orgId: string) {
   const [prop, tenant] = await Promise.all([
     db.property.findFirst({
@@ -175,15 +181,15 @@ export async function createContract(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const orgId = espacio.orgId;
-  if (!(await assertRefs(parsed.data.propertyId, parsed.data.tenantId, orgId))) {
-    return { error: "Propiedad o arrendatario no encontrado." };
+  // El contrato nace en el espacio de su propiedad; el arrendatario tiene que ser del mismo.
+  const usuario = await usuarioEnAccion();
+  const orgId = await espacioParaEscribirEnPropiedad(parsed.data.propertyId);
+  if (!orgId || !(await assertRefs(parsed.data.propertyId, parsed.data.tenantId, orgId))) {
+    return { error: "Propiedad o arrendatario no encontrado (deben ser del mismo cliente)." };
   }
 
   const created = await db.leaseContract.create({
-    data: { ...toData(parsed.data), organizationId: orgId },
+    data: { ...toData(parsed.data, usuario.id), organizationId: orgId },
   });
 
   revalidatePath("/contratos");
@@ -203,17 +209,20 @@ export async function updateContract(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const orgId = espacio.orgId;
+  // El espacio sale del contrato que se edita; la propiedad y el arrendatario nuevos deben ser de él.
+  const usuario = await usuarioEnAccion();
+  const orgId = await espacioParaEscribirEnRegistro(
+    await db.leaseContract.findUnique({ where: { id }, select: { organizationId: true } }),
+  );
+  if (!orgId) return { error: "Contrato no encontrado." };
   if (!(await assertRefs(parsed.data.propertyId, parsed.data.tenantId, orgId))) {
-    return { error: "Propiedad o arrendatario no encontrado." };
+    return { error: "Propiedad o arrendatario no encontrado (deben ser del mismo cliente)." };
   }
 
   const res = await db.leaseContract.updateMany({
     where: { id, organizationId: orgId },
     data: {
-      ...toData(parsed.data),
+      ...toData(parsed.data, usuario.id),
       // Solo se toca la salida si el formulario trajo el campo (contratos que ya la tenían).
       ...(formData.has("fechaSalida") && { fechaSalida: parsed.data.fechaSalida }),
     },
@@ -233,7 +242,10 @@ export async function deleteContract(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  const orgId = await orgParaEscribir();
+  const orgId = await espacioParaEscribirEnRegistro(
+    await db.leaseContract.findUnique({ where: { id }, select: { organizationId: true } }),
+  );
+  if (!orgId) return;
   await db.leaseContract.deleteMany({ where: { id, organizationId: orgId } });
 
   revalidatePath("/contratos");

@@ -1,6 +1,6 @@
 "use client";
 
-// «Rechazar» una solicitud: el motivo es obligatorio porque el cliente lo ve en su ficha.
+// «Rechazar» un pedido: el motivo es obligatorio porque el cliente lo ve en «Mis servicios».
 
 import { useCallback, useEffect, useState } from "react";
 import { useFormAction } from "@/hooks/use-form-action";
@@ -15,9 +15,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { rechazarSolicitud, type SolicitudFormState } from "./solicitudes-actions";
+import { rechazarProyecto, type RevisionFormState } from "./revisar-actions";
 
-export function RechazarDialogo({ solicitudId }: { solicitudId: string }) {
+export function RechazarDialogo({ servicioEnCursoId }: { servicioEnCursoId: string }) {
   const [abierto, setAbierto] = useState(false);
   const cerrar = useCallback(() => setAbierto(false), []);
 
@@ -26,25 +26,25 @@ export function RechazarDialogo({ solicitudId }: { solicitudId: string }) {
       <DialogTrigger render={<Button size="sm" variant="outline" />}>Rechazar</DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Rechazar solicitud</DialogTitle>
+          <DialogTitle>Rechazar pedido</DialogTitle>
           <DialogDescription>
-            El cliente verá el motivo en la ficha de su propiedad.
+            El proyecto queda cancelado y el cliente verá el motivo en su pedido.
           </DialogDescription>
         </DialogHeader>
-        <RechazarForm solicitudId={solicitudId} onListo={cerrar} />
+        <RechazarForm servicioEnCursoId={servicioEnCursoId} onListo={cerrar} />
       </DialogContent>
     </Dialog>
   );
 }
 
 function RechazarForm({
-  solicitudId,
+  servicioEnCursoId,
   onListo,
 }: {
-  solicitudId: string;
+  servicioEnCursoId: string;
   onListo: () => void;
 }) {
-  const [state, formProps, pending] = useFormAction(rechazarSolicitud, {} as SolicitudFormState);
+  const [state, formProps, pending] = useFormAction(rechazarProyecto, {} as RevisionFormState);
   const err = (f: string) => state?.fieldErrors?.[f];
 
   const guardado = state?.ok === true;
@@ -54,18 +54,16 @@ function RechazarForm({
 
   return (
     <form {...formProps} className="flex flex-col gap-4">
-      <input type="hidden" name="solicitudId" value={solicitudId} />
+      <input type="hidden" name="servicioEnCursoId" value={servicioEnCursoId} />
 
-      <Field label="Motivo" htmlFor={`rechazar-motivo-${solicitudId}`} error={err("motivo")}>
-        <Textarea id={`rechazar-motivo-${solicitudId}`} name="motivo" rows={3} />
+      <Field label="Motivo" htmlFor={`rechazar-motivo-${servicioEnCursoId}`} error={err("motivo")}>
+        <Textarea id={`rechazar-motivo-${servicioEnCursoId}`} name="motivo" rows={3} />
       </Field>
 
-      {state?.error && !state.fieldErrors && (
-        <p className="text-sm text-destructive">{state.error}</p>
-      )}
+      {state?.error && !state.fieldErrors && <p className="text-sm text-destructive">{state.error}</p>}
 
       <Button type="submit" variant="destructive" disabled={pending}>
-        {pending ? "Rechazando…" : "Rechazar solicitud"}
+        {pending ? "Rechazando…" : "Rechazar pedido"}
       </Button>
     </form>
   );

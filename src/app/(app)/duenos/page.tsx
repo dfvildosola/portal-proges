@@ -1,6 +1,7 @@
 import { Users, Building2 } from "lucide-react";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { clientesParaElegir, espaciosQueLee, nombresPorId } from "@/lib/org";
+import { FiltroCliente } from "@/components/filtro-cliente";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,20 +21,28 @@ import {
   DeleteGrupoButton,
 } from "./forms";
 
-export default async function DuenosPage() {
-  const orgId = await getOrgId();
+export default async function DuenosPage({
+  searchParams,
+}: PageProps<"/duenos">) {
+  const sp = await searchParams;
+  // El equipo ve todos los clientes juntos y puede filtrar por uno (?cliente=).
+  const filtro = typeof sp.cliente === "string" ? sp.cliente : null;
+  const clientes = await clientesParaElegir();
+  const nombreDe = nombresPorId(clientes);
+  const orgIds = await espaciosQueLee(filtro);
 
   const [grupos, owners] = await Promise.all([
     db.grupo.findMany({
-      where: { organizationId: orgId },
+      where: { organizationId: { in: orgIds } },
       orderBy: { nombre: "asc" },
-      select: { id: true, nombre: true, rut: true },
+      select: { id: true, organizationId: true, nombre: true, rut: true },
     }),
     db.owner.findMany({
-      where: { organizationId: orgId },
+      where: { organizationId: { in: orgIds } },
       orderBy: { nombre: "asc" },
       select: {
         id: true,
+        organizationId: true,
         nombre: true,
         rut: true,
         tipo: true,
@@ -43,7 +52,14 @@ export default async function DuenosPage() {
     }),
   ]);
 
-  const grupoOpts = grupos.map((g) => ({ id: g.id, nombre: g.nombre }));
+  // Un grupo solo agrupa entidades de su mismo cliente: cada entidad ofrece los grupos del suyo.
+  // En el formulario de crear (equipo) cada grupo lleva el nombre de su cliente.
+  const grupoOpts = grupos.map((g) => ({
+    id: g.id,
+    nombre: nombreDe.has(g.organizationId) ? `${g.nombre} · ${nombreDe.get(g.organizationId)}` : g.nombre,
+  }));
+  const gruposDe = (orgId: string) =>
+    grupos.filter((g) => g.organizationId === orgId).map((g) => ({ id: g.id, nombre: g.nombre }));
 
   // Resumen por grupo: nº de entidades y nº de propiedades distintas.
   const statsByGrupo = new Map<
@@ -67,6 +83,7 @@ export default async function DuenosPage() {
       <PageHeader
         title="Dueños"
         description="Grupos económicos y las entidades legales (personas y sociedades) que los componen."
+        action={clientes && <FiltroCliente clientes={clientes} actual={filtro} />}
       />
 
       <div className="space-y-10">
@@ -77,7 +94,7 @@ export default async function DuenosPage() {
           </h2>
           <Card>
             <CardContent className="space-y-4 pt-6">
-              <CreateGrupoForm />
+              <CreateGrupoForm clientes={clientes ?? undefined} />
               {grupos.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   Aún no hay grupos. Crea uno y luego asigna entidades abajo.
@@ -94,6 +111,7 @@ export default async function DuenosPage() {
                         <div>
                           <div className="font-medium">{g.nombre}</div>
                           <div className="text-xs text-muted-foreground">
+                            {nombreDe.has(g.organizationId) && `${nombreDe.get(g.organizationId)} · `}
                             {g.rut ? `RUT ${g.rut} · ` : ""}
                             {s.entidades}{" "}
                             {s.entidades === 1 ? "entidad" : "entidades"} ·{" "}
@@ -133,7 +151,7 @@ export default async function DuenosPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <CreateOwnerForm grupos={grupoOpts} />
+              <CreateOwnerForm grupos={grupoOpts} clientes={clientes ?? undefined} />
             </CardContent>
           </Card>
 
@@ -166,6 +184,7 @@ export default async function DuenosPage() {
                           <div>
                             <div className="font-medium">{o.nombre}</div>
                             <div className="text-xs text-muted-foreground">
+                              {nombreDe.has(o.organizationId) && `${nombreDe.get(o.organizationId)} · `}
                               {o.rut}
                             </div>
                           </div>
@@ -183,7 +202,7 @@ export default async function DuenosPage() {
                         <OwnerGrupoSelect
                           ownerId={o.id}
                           grupoId={o.grupoId}
-                          grupos={grupoOpts}
+                          grupos={gruposDe(o.organizationId)}
                         />
                       </TableCell>
                     </TableRow>

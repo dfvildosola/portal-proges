@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { put, del } from "@vercel/blob";
 import { db } from "@/lib/db";
-import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
-import { assertProperty, optionalDateField } from "@/lib/form-helpers";
+import { espacioParaEscribirEnPropiedad, espacioParaEscribirEnRegistro } from "@/lib/org";
+import { optionalDateField } from "@/lib/form-helpers";
 import { DocumentType, Papel } from "@/generated/prisma/enums";
 import { PAPEL_CATEGORIA } from "@/lib/papeles";
 
@@ -68,10 +68,9 @@ export async function uploadDocument(
   const fechaEmision = emisionParsed.data;
   const fechaVencimiento = vencimientoParsed.data;
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const orgId = espacio.orgId;
-  if (!(await assertProperty(propertyId, orgId))) return { error: "Propiedad no encontrada." };
+  // El espacio sale de la propiedad, no del formulario.
+  const orgId = await espacioParaEscribirEnPropiedad(propertyId);
+  if (!orgId) return { error: "Propiedad no encontrada." };
 
   const ext = file.name.includes(".") ? file.name.split(".").pop() : "";
   const blobPath = `proges/${orgId}/propiedades/${propertyId}/${crypto.randomUUID()}${ext ? `.${ext}` : ""}`;
@@ -101,12 +100,11 @@ export async function deleteDocument(formData: FormData): Promise<void> {
   const propertyId = String(formData.get("propertyId") ?? "");
   if (!documentId) return;
 
-  const orgId = await orgParaEscribir();
-  const doc = await db.document.findFirst({
-    where: { id: documentId, organizationId: orgId },
-    select: { id: true, blobKey: true },
+  const doc = await db.document.findUnique({
+    where: { id: documentId },
+    select: { id: true, blobKey: true, organizationId: true },
   });
-  if (!doc) return;
+  if (!(await espacioParaEscribirEnRegistro(doc)) || !doc) return;
 
   try {
     await del(doc.blobKey);

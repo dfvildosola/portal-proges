@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronRight, ClipboardList, UserRound } from "lucide-react";
 import { db } from "@/lib/db";
-import { getOrgId, ORG_PROGES } from "@/lib/org";
+import { espaciosQueLee, ORG_PROGES } from "@/lib/org";
 import { usuarioActual } from "@/lib/sesion";
 import { formatDate } from "@/lib/format";
 import { NOMBRES_ESTADO, TIPOS_SERVICIO, diaChile } from "@/lib/servicios";
@@ -27,7 +27,7 @@ type ServicioFila = {
 
 // Pestaña «Servicios» de la ficha: los servicios abiertos de la propiedad arriba y
 // los cerrados abajo, plegados. Busca sus propios datos para no engordar la página.
-// Tiene dos caras: el EQUIPO gestiona (en el cliente activo) y el CLIENTE solo lee, con
+// Tiene dos caras: el EQUIPO gestiona (en el cliente dueño de la propiedad) y el CLIENTE solo lee, con
 // lo que le deja ver `src/lib/vista-cliente.ts`.
 export async function ServiciosTab({ propertyId }: { propertyId: string }) {
   const usuario = await usuarioActual();
@@ -36,11 +36,12 @@ export async function ServiciosTab({ propertyId }: { propertyId: string }) {
     return <ServiciosTabCliente usuario={usuario} propertyId={propertyId} />;
   }
 
-  const orgId = await getOrgId();
+  // La ficha ya comprobó que se puede leer la propiedad; aquí se vuelve a filtrar por espacio.
+  const orgIds = await espaciosQueLee();
 
   const [servicios, catalogo, responsables] = await Promise.all([
     db.servicioEnCurso.findMany({
-      where: { propertyId, organizationId: orgId },
+      where: { propertyId, organizationId: { in: orgIds } },
       orderBy: { abiertoEl: "desc" },
       select: {
         id: true,
@@ -55,7 +56,7 @@ export async function ServiciosTab({ propertyId }: { propertyId: string }) {
       },
     }),
     // El catálogo completo de servicios activos: el formulario lo filtra por tipo.
-    // El catálogo es de Proges (común a todos los clientes), no del cliente activo.
+    // El catálogo es de Proges (común a todos los clientes), no de un cliente.
     db.servicio.findMany({
       where: { organizationId: ORG_PROGES, activo: true },
       orderBy: [{ codigo: "asc" }, { nombre: "asc" }],

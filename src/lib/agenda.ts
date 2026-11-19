@@ -40,7 +40,8 @@ export type ItemAgenda = {
   cuando: Cuando;
   fecha: Date; // cuándo hay que actuar (o desde cuándo está atrasado)
   montoCLP: number | null;
-  propiedad: { id: string; direccion: string; comuna: string } | null;
+  // organizationId: de qué cliente es (el equipo ve varios clientes juntos).
+  propiedad: { id: string; direccion: string; comuna: string; organizationId: string } | null;
   contrato: { id: string; arrendatario: string } | null;
   texto: string;
   accion: { texto: string; href: string };
@@ -141,22 +142,23 @@ const dinero = (n: number, moneda: Currency) =>
 
 const minuscula = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
 
-type Prop = { id: string; direccion: string; comuna: string };
+type Prop = { id: string; direccion: string; comuna: string; organizationId: string };
 const propDe = (p: Prop) => ({
   id: p.id,
   direccion: p.direccion,
   comuna: p.comuna,
+  organizationId: p.organizationId,
 });
 
 export async function calcularAgenda(
-  orgId: string,
+  orgIds: string[],
   hoy: Date,
 ): Promise<ItemAgenda[]> {
   // «mes de hoy» sale de `hoy` (medianoche UTC del día en Chile); mesActual(hoy)
   // se equivocaría de mes el día 1, porque leería esa medianoche en hora de Chile.
   const mes = hoy.toISOString().slice(0, 7);
   const fin7 = sumarDias(hoy, ARRIENDOS_SEMANA_DIAS);
-  const propSelect = { select: { id: true, direccion: true, comuna: true } };
+  const propSelect = { select: { id: true, direccion: true, comuna: true, organizationId: true } };
 
   const [
     uf,
@@ -171,9 +173,10 @@ export async function calcularAgenda(
     getLatestUf(),
     // Propiedades con sus contratos y papeles: sirven a 4 reglas.
     db.property.findMany({
-      where: { organizationId: orgId },
+      where: { organizationId: { in: orgIds } },
       select: {
         id: true,
+        organizationId: true,
         direccion: true,
         comuna: true,
         tipo: true,
@@ -202,14 +205,14 @@ export async function calcularAgenda(
     }),
     db.leaseContract.findMany({
       where: {
-        organizationId: orgId,
+        organizationId: { in: orgIds },
         OR: [{ fechaSalida: null }, { fechaSalida: { gte: hoy } }],
       },
       include: { property: propSelect, tenant: { select: { nombre: true } } },
     }),
     db.rentCharge.findMany({
       where: {
-        organizationId: orgId,
+        organizationId: { in: orgIds },
         OR: [
           { estado: "ATRASADO" },
           { estado: "PENDIENTE", fechaVencimiento: { lt: hoy } },
@@ -226,7 +229,7 @@ export async function calcularAgenda(
     }),
     db.rentCharge.findMany({
       where: {
-        organizationId: orgId,
+        organizationId: { in: orgIds },
         estado: { not: "PAGADO" },
         fechaVencimiento: { gte: hoy, lte: fin7 },
       },
@@ -234,13 +237,13 @@ export async function calcularAgenda(
     db.leaseContract.count({
       where: {
         ...whereCubreMes(mes),
-        organizationId: orgId,
+        organizationId: { in: orgIds },
         charges: { none: { periodo: mes } },
       },
     }),
     db.propertyTax.findMany({
       where: {
-        organizationId: orgId,
+        organizationId: { in: orgIds },
         estado: "PENDIENTE",
         fechaVencimiento: { lte: sumarDias(hoy, CONTRIBUCIONES_DIAS) },
       },
@@ -248,7 +251,7 @@ export async function calcularAgenda(
     }),
     db.propertyBill.findMany({
       where: {
-        organizationId: orgId,
+        organizationId: { in: orgIds },
         estado: "PENDIENTE",
         fechaVencimiento: { lte: sumarDias(hoy, CUENTAS_DIAS) },
       },
@@ -530,8 +533,12 @@ export async function calcularAgenda(
   });
 }
 
-// Una sola vez por página: `cache` compara argumentos por identidad, por eso
-// recibe solo `orgId` y calcula «hoy» adentro.
-export const agenda = cache(async (orgId: string) =>
-  calcularAgenda(orgId, hoyChile()),
+// Una sola vez por página: `cache` compara argumentos por identidad, y una lista nueva nunca
+// es «la misma». Por eso la lista de espacios se convierte en un texto (la clave) y se vuelve
+// a separar adentro; «hoy» también se calcula adentro.
+const agendaPorClave = cache(async (clave: string) =>
+  calcularAgenda(clave ? clave.split("|") : [], hoyChile()),
 );
+
+// La agenda de los espacios que se leen (espaciosQueLee()): un cliente, uno; el equipo, varios.
+export const agenda = (orgIds: string[]) => agendaPorClave([...orgIds].sort().join("|"));

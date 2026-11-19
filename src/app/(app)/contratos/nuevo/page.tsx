@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { clientesParaElegir, espaciosQueLee, nombresPorId } from "@/lib/org";
 import { BackLink } from "@/components/back-link";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
@@ -13,19 +13,23 @@ export default async function NuevoContratoPage({
   searchParams,
 }: PageProps<"/contratos/nuevo">) {
   const { propertyId } = await searchParams;
-  const orgId = await getOrgId();
+  // El equipo elige entre las propiedades y contactos de todos los clientes (con el nombre del
+  // cliente en cada opción); el servidor exige que ambos sean del mismo cliente.
+  const orgIds = await espaciosQueLee();
+  const nombreDe = nombresPorId(await clientesParaElegir());
   const [properties, tenants] = await Promise.all([
     db.property.findMany({
-      where: { organizationId: orgId },
+      where: { organizationId: { in: orgIds } },
       orderBy: { rolSII: "asc" },
-      select: { id: true, rolSII: true, direccion: true },
+      select: { id: true, organizationId: true, rolSII: true, direccion: true },
     }),
     db.tenant.findMany({
-      where: { organizationId: orgId },
+      where: { organizationId: { in: orgIds } },
       orderBy: { nombre: "asc" },
-      select: { id: true, nombre: true, rut: true },
+      select: { id: true, organizationId: true, nombre: true, rut: true },
     }),
   ]);
+  const delCliente = (orgId: string) => (nombreDe.has(orgId) ? `${nombreDe.get(orgId)} · ` : "");
 
   // Un contrato necesita una propiedad y un arrendatario; si falta alguno, guiamos.
   if (properties.length === 0 || tenants.length === 0) {
@@ -78,11 +82,11 @@ export default async function NuevoContratoPage({
         initial={typeof propertyId === "string" ? { propertyId } : undefined}
         properties={properties.map((p) => ({
           value: p.id,
-          label: `${p.rolSII ?? "Sin ROL"} · ${p.direccion}`,
+          label: `${delCliente(p.organizationId)}${p.rolSII ?? "Sin ROL"} · ${p.direccion}`,
         }))}
         tenants={tenants.map((t) => ({
           value: t.id,
-          label: `${t.nombre} · ${t.rut}`,
+          label: `${delCliente(t.organizationId)}${t.nombre} · ${t.rut}`,
         }))}
       />
     </>

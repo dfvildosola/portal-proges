@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Building2, Percent, Wallet, Bell } from "lucide-react";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { espaciosQueLee } from "@/lib/org";
+import { exigirUsuario } from "@/lib/sesion";
 import { PageHeader } from "@/components/page-header";
 import { AgendaLinea } from "@/components/agenda-linea";
 import {
@@ -16,17 +18,21 @@ import { mesActual, rangoDelMes } from "@/lib/fechas";
 import { getLatestUf, toCLP } from "@/lib/currency";
 
 export default async function InicioPage() {
-  const orgId = await getOrgId();
+  // El inicio del equipo es «Mi trabajo» (ADR 0013). Esta pantalla es el inicio del cliente.
+  const usuario = await exigirUsuario();
+  if (usuario.rol === "EQUIPO") redirect("/mi-trabajo");
+
+  const orgIds = await espaciosQueLee();
   const { inicio: startOfMonth, fin: endOfMonth } = rangoDelMes(mesActual());
 
   const [total, arrendadas, items, cobrosMes, uf] = await Promise.all([
-    db.property.count({ where: { organizationId: orgId } }),
-    db.property.count({ where: { organizationId: orgId, estado: "ARRENDADA" } }),
-    agenda(orgId),
+    db.property.count({ where: { organizationId: { in: orgIds } } }),
+    db.property.count({ where: { organizationId: { in: orgIds }, estado: "ARRENDADA" } }),
+    agenda(orgIds),
     // Cualquier cobro con pago dentro del mes, también los parciales.
     db.rentCharge.findMany({
       where: {
-        organizationId: orgId,
+        organizationId: { in: orgIds },
         montoPagado: { not: null },
         fechaPago: { gte: startOfMonth, lte: endOfMonth },
       },

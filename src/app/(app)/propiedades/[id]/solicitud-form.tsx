@@ -5,7 +5,8 @@
 //
 // Hay dos formas de usarlo:
 //  - PedirServicioBoton: desde la ficha de una propiedad, que ya sabe de cuál se trata.
-//  - PedirServicioConSelector: desde «Mis servicios», donde el cliente elige la propiedad.
+//  - PedirServicioConSelector: desde «Mis servicios», donde el cliente elige la propiedad o
+//    «Otra propiedad (nueva)», y entonces escribe su dirección, comuna y tipo.
 // Las dos abren el mismo diálogo. Pensado para el celular: los campos ocupan todo el ancho
 // y el diálogo hace scroll si el teclado le quita espacio.
 
@@ -30,10 +31,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { propertyTypeLabels } from "@/lib/domain";
 import { TIPOS_SERVICIO } from "@/lib/servicios";
 import { pedirServicio } from "../solicitud-actions";
 
 export type PropiedadParaPedir = { id: string; nombre: string };
+
+// Valor del selector para «Otra propiedad (nueva)»: no es un id de propiedad.
+const PROPIEDAD_NUEVA = "__nueva";
 
 const TIPOS = Object.fromEntries(
   Object.entries(TIPOS_SERVICIO).map(([tipo, v]) => [tipo, v.nombre]),
@@ -60,10 +66,9 @@ function PedirServicioDialogo({
   propertyId?: string;
   propiedades?: PropiedadParaPedir[];
 }) {
-  const sinPropiedades = propiedades !== undefined && propiedades.length === 0;
   return (
     <Dialog>
-      <DialogTrigger render={<Button size="sm" disabled={sinPropiedades} />}>
+      <DialogTrigger render={<Button size="sm" />}>
         <Plus className="size-4" />
         Pedir un servicio
       </DialogTrigger>
@@ -92,6 +97,8 @@ function PedirServicioForm({
 
   const [propiedadId, setPropiedadId] = useState(propertyId ?? "");
   const [tipo, setTipo] = useState("");
+  const [tipoPropiedad, setTipoPropiedad] = useState("");
+  const esNueva = propiedadId === PROPIEDAD_NUEVA;
 
   if (state?.ok === true) {
     return (
@@ -104,12 +111,17 @@ function PedirServicioForm({
     );
   }
 
-  const itemsPropiedad = Object.fromEntries((propiedades ?? []).map((p) => [p.id, p.nombre]));
+  const itemsPropiedad: Record<string, string> = {
+    ...Object.fromEntries((propiedades ?? []).map((p) => [p.id, p.nombre])),
+    [PROPIEDAD_NUEVA]: "Otra propiedad (nueva)",
+  };
 
   return (
     <form {...formProps} className="flex flex-col gap-4">
-      <input type="hidden" name="propertyId" value={propiedadId} />
+      <input type="hidden" name="propertyId" value={esNueva ? "" : propiedadId} />
+      <input type="hidden" name="propiedadNueva" value={esNueva ? "1" : ""} />
       <input type="hidden" name="tipo" value={tipo} />
+      <input type="hidden" name="tipoPropiedad" value={tipoPropiedad} />
 
       {propiedades && (
         <Field label="Propiedad" error={err("propertyId")}>
@@ -122,14 +134,51 @@ function PedirServicioForm({
               <SelectValue placeholder="Elige la propiedad" />
             </SelectTrigger>
             <SelectContent>
-              {propiedades.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.nombre}
+              {Object.entries(itemsPropiedad).map(([valor, nombre]) => (
+                <SelectItem key={valor} value={valor}>
+                  {nombre}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </Field>
+      )}
+
+      {esNueva && (
+        <div className="flex flex-col gap-4 rounded-lg border p-3">
+          <Field label="Dirección" htmlFor="pedido-direccion" error={err("direccion")}>
+            <Input
+              id="pedido-direccion"
+              name="direccion"
+              maxLength={200}
+              placeholder="Av. Providencia 123, depto 45"
+            />
+          </Field>
+          <Field label="Comuna" htmlFor="pedido-comuna" error={err("comuna")}>
+            <Input id="pedido-comuna" name="comuna" maxLength={100} placeholder="Providencia" />
+          </Field>
+          <Field label="Tipo de propiedad" error={err("tipoPropiedad")}>
+            <Select
+              items={propertyTypeLabels}
+              value={tipoPropiedad || null}
+              onValueChange={(v) => setTipoPropiedad(v ?? "")}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Elige el tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(propertyTypeLabels).map(([valor, nombre]) => (
+                  <SelectItem key={valor} value={valor}>
+                    {nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Región (opcional)" htmlFor="pedido-region" error={err("region")}>
+            <Input id="pedido-region" name="region" maxLength={100} placeholder="Región Metropolitana" />
+          </Field>
+        </div>
       )}
 
       <Field label="Tipo de servicio" error={err("tipo")}>

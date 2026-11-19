@@ -1,6 +1,6 @@
 // Los pedidos del cliente, del más nuevo al más antiguo, con su estado.
-// Nueva = Proges todavía no responde; Aceptada = ya hay un servicio abierto (con enlace);
-// Rechazada = Proges explica el motivo.
+// Nueva = «Por revisar»: el proyecto ya está abierto pero la jefatura de Proges todavía no lo
+// revisa; Aceptada = ya está repartido (con enlace); Rechazada = Proges explica el motivo.
 
 import Link from "next/link";
 import { ChevronRight, Inbox } from "lucide-react";
@@ -26,8 +26,8 @@ function EstadoDelPedido({ pedido: p }: { pedido: PedidoFila }) {
   if (p.estado === "NUEVA") {
     return (
       <p className="flex items-center gap-2 text-sm">
-        <Badge variant="warning">Nueva</Badge>
-        <span className="text-muted-foreground">Esperando respuesta de Proges</span>
+        <Badge variant="warning">Por revisar</Badge>
+        <span className="text-muted-foreground">Proges lo está revisando</span>
       </p>
     );
   }

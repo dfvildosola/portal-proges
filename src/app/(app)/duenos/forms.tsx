@@ -13,18 +13,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ownerTypeLabels, enumOptions } from "@/lib/domain";
+import { CampoCliente } from "@/components/campo-cliente";
 import { createGrupo, createOwner, setOwnerGrupo, deleteGrupo } from "./actions";
 
 type GrupoOpt = { id: string; nombre: string };
+// Los clientes entre los que elegir: solo para el equipo. El dueño crea en lo suyo.
+type Clientes = { id: string; nombre: string }[] | undefined;
 
 const SIN_GRUPO = "__none__";
 
 // Crea un grupo económico.
-export function CreateGrupoForm() {
+export function CreateGrupoForm({ clientes }: { clientes?: Clientes }) {
   const [state, formProps, pending] = useFormAction(createGrupo, {});
   const err = (f: string) => state?.fieldErrors?.[f];
   return (
     <form {...formProps} className="flex flex-wrap items-start gap-2">
+      {clientes && <CampoCliente clientes={clientes} error={err("clienteId")} className="w-full sm:w-56" />}
       <div className="min-w-48 flex-1">
         <Input name="nombre" placeholder="Nombre del grupo / familia" />
         {err("nombre") && (
@@ -43,7 +47,7 @@ export function CreateGrupoForm() {
 }
 
 // Crea una entidad legal (persona/sociedad), opcionalmente dentro de un grupo.
-export function CreateOwnerForm({ grupos }: { grupos: GrupoOpt[] }) {
+export function CreateOwnerForm({ grupos, clientes }: { grupos: GrupoOpt[]; clientes?: Clientes }) {
   const [state, formProps, pending] = useFormAction(createOwner, {});
   const err = (f: string) => state?.fieldErrors?.[f];
   const [grupo, setGrupo] = useState(SIN_GRUPO);
@@ -58,6 +62,7 @@ export function CreateOwnerForm({ grupos }: { grupos: GrupoOpt[] }) {
         name="grupoId"
         value={grupo === SIN_GRUPO ? "" : grupo}
       />
+      {clientes && <CampoCliente clientes={clientes} error={err("clienteId")} className="w-full sm:w-56" />}
       <div className="min-w-44 flex-1">
         <Input name="nombre" placeholder="Nombre o razón social" />
         {err("nombre") && (
@@ -87,7 +92,7 @@ export function CreateOwnerForm({ grupos }: { grupos: GrupoOpt[] }) {
         value={grupo}
         onValueChange={(v) => setGrupo(v ?? SIN_GRUPO)}
       >
-        <SelectTrigger className="w-40">
+        <SelectTrigger className="w-40" aria-label="Grupo">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -99,6 +104,7 @@ export function CreateOwnerForm({ grupos }: { grupos: GrupoOpt[] }) {
           ))}
         </SelectContent>
       </Select>
+      {err("grupoId") && <p className="w-full text-xs text-destructive">{err("grupoId")}</p>}
       <Button type="submit" variant="outline" disabled={pending}>
         <Plus className="size-4" />
         Crear entidad

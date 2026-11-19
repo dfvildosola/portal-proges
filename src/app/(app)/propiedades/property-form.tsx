@@ -4,6 +4,7 @@ import { useFormAction } from "@/hooks/use-form-action";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/field";
+import { CampoCliente } from "@/components/campo-cliente";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -63,7 +64,10 @@ export function PropertyForm({
   action,
   initial,
   submitLabel,
+  clientes,
 }: {
+  // Solo al crear y solo para el equipo: los clientes entre los que elegir. El dueño crea en lo suyo.
+  clientes?: { id: string; nombre: string }[];
   action: (
     prev: PropertyFormState,
     fd: FormData,
@@ -84,6 +88,11 @@ export function PropertyForm({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {clientes && (
+          <div className="sm:col-span-2">
+            <CampoCliente clientes={clientes} error={err("clienteId")} />
+          </div>
+        )}
         <Field label="ROL SII" htmlFor="rolSII" error={err("rolSII")}>
           <Input
             id="rolSII"

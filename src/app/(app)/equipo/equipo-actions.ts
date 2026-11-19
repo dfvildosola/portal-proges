@@ -31,6 +31,7 @@ const usuarioSchema = z.object({
   rol: z.enum(["EQUIPO", "CLIENTE"], { message: "Elige el rol" }),
   clienteId: z.string().optional(), // obligatorio solo si el rol es CLIENTE (se comprueba abajo)
   admin: z.boolean(),
+  jefatura: z.boolean(),
   activo: z.boolean(),
 });
 
@@ -48,6 +49,8 @@ export async function guardarUsuario(
     clienteId: formData.get("clienteId") || undefined,
     // Un cliente nunca es admin, aunque el formulario lo mande.
     admin: formData.get("rol") === "EQUIPO" && formData.get("admin") === "on",
+    // La jefatura (aprueba presupuestos de maestros y cierra obras) tampoco existe en un cliente.
+    jefatura: formData.get("rol") === "EQUIPO" && formData.get("jefatura") === "on",
     // Al crear no hay casilla «activo»: nace activo.
     activo: formData.has("id") ? formData.get("activo") === "on" : true,
   });
@@ -105,6 +108,7 @@ export async function guardarUsuario(
     rol: datos.rol,
     organizationId,
     admin: datos.admin,
+    jefatura: datos.jefatura,
     activo: datos.activo,
   };
 

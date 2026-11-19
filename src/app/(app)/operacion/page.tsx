@@ -1,21 +1,24 @@
-// Operación: el trabajo de Proges con TODOS los clientes en una pantalla.
-// Arriba, la bandeja de solicitudes nuevas; después, lo abierto por tipo y etapa, por
-// responsable, lo que falta confirmar y las visitas de la semana.
-// La página solo carga los datos (una consulta por bloque, ninguna dentro de un bucle,
-// todas desde `src/lib/operacion.ts`, que es lo único que cruza clientes) y los reparte
-// a sus bloques, cada uno en su archivo.
+// Trabajo del equipo: la pizarra de Proges con TODOS los clientes en una pantalla.
+// Arriba, los proyectos «por revisar» (pedidos de clientes que la jefatura aún no reparte);
+// después, las tareas de todos por persona (atrasadas y de la semana) y las que nadie lleva;
+// y al final, plegadas, las cifras de hoy (por tipo y etapa, por responsable, visitas).
+// La página solo carga los datos (una consulta por bloque, ninguna dentro de un bucle: las de
+// tareas desde `src/lib/tareas.ts`, las demás desde `src/lib/operacion.ts`) y los reparte a
+// sus bloques, cada uno en su archivo.
 
 import { exigirEquipo } from "@/lib/sesion";
+import { espaciosQueLee, nombresPorId } from "@/lib/org";
 import {
   SIN_RESPONSABLE,
-  catalogoParaAceptar,
+  catalogoParaRevisar,
   clientesDeOperacion,
   equipoActivo,
   etapasDeProges,
+  proyectosPorRevisar,
   serviciosAbiertos,
-  solicitudesNuevas,
   visitasDeLaSemana,
 } from "@/lib/operacion";
+import { tareasAbiertas } from "@/lib/tareas";
 import { hoyChile } from "@/lib/fechas";
 import { formatDate } from "@/lib/format";
 import { TIPOS_SERVICIO, visitasUltimaSemana } from "@/lib/servicios";
@@ -27,7 +30,8 @@ import { Filtros, type Filtro } from "./filtros";
 import { PorConfirmarTabla } from "./por-confirmar-tabla";
 import { PorResponsable, type CuentaResponsable } from "./por-responsable";
 import { PorTipoYEtapa } from "./por-tipo-y-etapa";
-import { SolicitudesBandeja } from "./solicitudes-bandeja";
+import { PorRevisar } from "./por-revisar";
+import { TareasPorPersona, type PersonaConTareas } from "./tareas-por-persona";
 import { VisitasSemana } from "./visitas-semana";
 
 function Seccion({
@@ -81,14 +85,48 @@ export default async function OperacionPage({
   if (filtro.cliente && !clientes.some((c) => c.id === filtro.cliente)) filtro.cliente = null;
   const nombreCliente = new Map(clientes.map((c) => [c.id, c.nombre]));
 
-  const [solicitudes, catalogo, servicios, etapas, equipo, visitas] = await Promise.all([
-    solicitudesNuevas(),
-    catalogoParaAceptar(),
+  // Las tareas salen de los espacios que el equipo puede leer, recortados por el filtro de cliente
+  // (un cliente inventado se ignora). «Sin responsable» es responsableId = null.
+  const espaciosTareas = await espaciosQueLee(filtro.cliente);
+
+  const [porRevisar, catalogo, servicios, etapas, equipo, visitas, tareas] = await Promise.all([
+    proyectosPorRevisar(filtro.cliente),
+    catalogoParaRevisar(),
     serviciosAbiertos(filtro, clientes),
     etapasDeProges(),
     equipoActivo(),
     visitasDeLaSemana(filtro, clientes, hoy),
+    tareasAbiertas(espaciosTareas, {
+      tipo: filtro.tipo,
+      ...(filtro.responsable
+        ? { responsableId: filtro.responsable === SIN_RESPONSABLE ? null : filtro.responsable }
+        : {}),
+    }),
   ]);
+
+  // Las tareas por persona: primero quien tiene tareas, el equipo activo por nombre y quien ya no
+  // está activo pero aún lleva alguna, y al final «Sin responsable».
+  const nombresPersona = new Map(equipo.map((u) => [u.id, u.nombre]));
+  for (const t of tareas) {
+    if (t.responsable) nombresPersona.set(t.responsable.id, t.responsable.nombre);
+  }
+  const personas: PersonaConTareas[] = [...nombresPersona]
+    .map(([id, nombre]) => ({
+      clave: id,
+      nombre,
+      tareas: tareas.filter((t) => t.responsable?.id === id),
+    }))
+    .filter((p) => p.tareas.length > 0)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  const sinResponsable = tareas.filter((t) => t.responsable === null);
+  if (sinResponsable.length > 0) {
+    personas.push({ clave: SIN_RESPONSABLE, nombre: "Sin responsable", tareas: sinResponsable });
+  }
+  // Solo se nombra a quien no tiene tareas si no se está filtrando por una persona.
+  const sinTareas = filtro.responsable
+    ? []
+    : equipo.filter((u) => !personas.some((p) => p.clave === u.id)).map((u) => u.nombre);
+  const nombreDeCliente = nombresPorId(clientes);
 
   const filas: FilaServicio[] = servicios
     .map((s) => {
@@ -156,63 +194,79 @@ export default async function OperacionPage({
   return (
     <>
       <PageHeader
-        title="Operación"
-        description="El trabajo de todos los clientes: las solicitudes nuevas, y lo abierto por tipo y etapa, por responsable y lo que falta confirmar."
+        title="Trabajo del equipo"
+        description="Los pedidos por revisar y las tareas de todos: quién va atrasado, qué falta repartir."
       />
 
       <Seccion
-        titulo="Solicitudes nuevas"
-        ayuda="Pedidos de los clientes que esperan respuesta. Aceptar abre el servicio en la cartera del cliente; rechazar pide un motivo."
+        titulo="Por revisar"
+        ayuda="Pedidos de los clientes que abrieron un proyecto solo. Revisar elige el servicio y quién lo lleva; rechazar pide un motivo."
       >
-        <SolicitudesBandeja
-          solicitudes={solicitudes}
-          catalogo={catalogo}
-          responsables={equipo}
-        />
+        <PorRevisar proyectos={porRevisar} catalogo={catalogo} responsables={equipo} />
       </Seccion>
 
       <Filtros filtro={filtro} clientes={clientes} responsables={equipo} />
 
-      <Cifras
-        abiertos={filas.length}
-        porConfirmar={porConfirmar.length}
-        sinResponsable={filas.filter((f) => f.responsableId === null).length}
-        visitasSemana={visitasUltimaSemana(visitas, hoy)}
-      />
-
       <Seccion
-        titulo="Por tipo y etapa"
-        ayuda="Cuántos servicios abiertos hay en cada etapa. Toca una etapa para ver cuáles son."
+        titulo="Tareas por persona"
+        ayuda="Las tareas abiertas de cada uno: las atrasadas primero, después las de esta semana. «Sin responsable» son las que nadie lleva todavía."
       >
-        <PorTipoYEtapa etapas={etapas} filas={filas} />
+        <TareasPorPersona
+          personas={personas}
+          sinTareas={sinTareas}
+          hoy={hoy}
+          nombreDe={nombreDeCliente}
+        />
       </Seccion>
 
-      <Seccion
-        titulo="Por responsable"
-        ayuda="Cuántos servicios abiertos lleva cada persona."
-      >
-        <PorResponsable cuentas={cuentasVisibles} />
-      </Seccion>
+      <details className="group mb-10 rounded-xl border">
+        <summary className="cursor-pointer px-4 py-3 text-lg font-semibold tracking-tight">
+          Cifras de hoy
+          <span className="ml-2 text-sm font-normal text-muted-foreground">
+            servicios por tipo y etapa, por responsable, visitas de la semana
+          </span>
+        </summary>
+        <div className="border-t px-4 pt-6">
+          <Cifras
+            abiertos={filas.length}
+            porConfirmar={porConfirmar.length}
+            sinResponsable={filas.filter((f) => f.responsableId === null).length}
+            visitasSemana={visitasUltimaSemana(visitas, hoy)}
+          />
 
-      <Seccion
-        titulo="Por confirmar"
-        ayuda="Servicios que la carga inicial dedujo de las carpetas del Drive. El equipo tiene que revisar cada uno."
-      >
-        {porConfirmar.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No hay servicios por confirmar.
-          </p>
-        ) : (
-          <PorConfirmarTabla data={porConfirmar} />
-        )}
-      </Seccion>
+          <Seccion
+            titulo="Por tipo y etapa"
+            ayuda="Cuántos servicios abiertos hay en cada etapa. Toca una etapa para ver cuáles son."
+          >
+            <PorTipoYEtapa etapas={etapas} filas={filas} />
+          </Seccion>
 
-      <Seccion
-        titulo="Visitas de la semana"
-        ayuda="Las de los últimos 7 días, de más reciente a más antigua."
-      >
-        <VisitasSemana visitas={filasVisita} />
-      </Seccion>
+          <Seccion
+            titulo="Por responsable"
+            ayuda="Cuántos servicios abiertos lleva cada persona."
+          >
+            <PorResponsable cuentas={cuentasVisibles} />
+          </Seccion>
+
+          <Seccion
+            titulo="Por confirmar"
+            ayuda="Servicios que la carga inicial dedujo de las carpetas del Drive. El equipo tiene que revisar cada uno."
+          >
+            {porConfirmar.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No hay servicios por confirmar.</p>
+            ) : (
+              <PorConfirmarTabla data={porConfirmar} />
+            )}
+          </Seccion>
+
+          <Seccion
+            titulo="Visitas de la semana"
+            ayuda="Las de los últimos 7 días, de más reciente a más antigua."
+          >
+            <VisitasSemana visitas={filasVisita} />
+          </Seccion>
+        </div>
+      </details>
     </>
   );
 }

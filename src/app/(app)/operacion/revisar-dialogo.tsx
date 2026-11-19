@@ -1,7 +1,8 @@
 "use client";
 
-// «Aceptar» una solicitud: el equipo elige qué servicio del catálogo se abre, quién lo lleva
-// y una nota. El formulario solo existe mientras el diálogo está abierto, así que parte limpio.
+// «Revisar» un proyecto que nació de un pedido: la jefatura elige qué servicio del catálogo es
+// (parte con el que se abrió solo), quién lo lleva y una nota. El formulario solo existe
+// mientras el diálogo está abierto, así que parte limpio.
 // El catálogo llega ya filtrado por las familias del tipo pedido (familiasDelTipo).
 
 import { useCallback, useEffect, useState } from "react";
@@ -24,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { aceptarSolicitud, type SolicitudFormState } from "./solicitudes-actions";
+import { revisarProyecto, type RevisionFormState } from "./revisar-actions";
 
 export type OpcionCatalogo = { id: string; codigo: string; nombre: string };
 export type OpcionResponsable = { id: string; nombre: string };
@@ -32,13 +33,15 @@ export type OpcionResponsable = { id: string; nombre: string };
 // Valor del selector para «sin responsable». Al servidor viaja vacío.
 const NADIE = "NADIE";
 
-export function AceptarDialogo({
-  solicitudId,
+export function RevisarDialogo({
+  servicioEnCursoId,
+  servicioActualId,
   tipoNombre,
   catalogo,
   responsables,
 }: {
-  solicitudId: string;
+  servicioEnCursoId: string;
+  servicioActualId: string; // el servicio con que se abrió solo
   tipoNombre: string;
   catalogo: OpcionCatalogo[];
   responsables: OpcionResponsable[];
@@ -48,17 +51,18 @@ export function AceptarDialogo({
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
-      <DialogTrigger render={<Button size="sm" />}>Aceptar</DialogTrigger>
+      <DialogTrigger render={<Button size="sm" />}>Revisar</DialogTrigger>
       <DialogContent className="max-h-[90svh] max-w-md overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Aceptar solicitud</DialogTitle>
+          <DialogTitle>Revisar pedido</DialogTitle>
           <DialogDescription>
-            Se abre un servicio de {tipoNombre.toLowerCase()} en la primera etapa, en la cartera
-            del cliente que lo pidió.
+            Confirma qué servicio de {tipoNombre.toLowerCase()} es y quién lo lleva. El proyecto
+            sale de «por revisar» y la tarea de revisión queda hecha.
           </DialogDescription>
         </DialogHeader>
-        <AceptarForm
-          solicitudId={solicitudId}
+        <RevisarForm
+          servicioEnCursoId={servicioEnCursoId}
+          servicioActualId={servicioActualId}
           catalogo={catalogo}
           responsables={responsables}
           onListo={cerrar}
@@ -68,21 +72,25 @@ export function AceptarDialogo({
   );
 }
 
-function AceptarForm({
-  solicitudId,
+function RevisarForm({
+  servicioEnCursoId,
+  servicioActualId,
   catalogo,
   responsables,
   onListo,
 }: {
-  solicitudId: string;
+  servicioEnCursoId: string;
+  servicioActualId: string;
   catalogo: OpcionCatalogo[];
   responsables: OpcionResponsable[];
   onListo: () => void;
 }) {
-  const [state, formProps, pending] = useFormAction(aceptarSolicitud, {} as SolicitudFormState);
+  const [state, formProps, pending] = useFormAction(revisarProyecto, {} as RevisionFormState);
   const err = (f: string) => state?.fieldErrors?.[f];
 
-  const [servicioId, setServicioId] = useState("");
+  const [servicioId, setServicioId] = useState(
+    catalogo.some((s) => s.id === servicioActualId) ? servicioActualId : "",
+  );
   const [responsableId, setResponsableId] = useState("");
 
   const guardado = state?.ok === true;
@@ -90,9 +98,7 @@ function AceptarForm({
     if (guardado) onListo();
   }, [guardado, onListo]);
 
-  const itemsServicio = Object.fromEntries(
-    catalogo.map((s) => [s.id, `${s.codigo} · ${s.nombre}`]),
-  );
+  const itemsServicio = Object.fromEntries(catalogo.map((s) => [s.id, `${s.codigo} · ${s.nombre}`]));
   const itemsResponsable: Record<string, string> = {
     [NADIE]: "Sin responsable",
     ...Object.fromEntries(responsables.map((r) => [r.id, r.nombre])),
@@ -100,7 +106,7 @@ function AceptarForm({
 
   return (
     <form {...formProps} className="flex flex-col gap-4">
-      <input type="hidden" name="solicitudId" value={solicitudId} />
+      <input type="hidden" name="servicioEnCursoId" value={servicioEnCursoId} />
       <input type="hidden" name="servicioId" value={servicioId} />
       <input type="hidden" name="responsableId" value={responsableId} />
 
@@ -142,16 +148,14 @@ function AceptarForm({
         </Select>
       </Field>
 
-      <Field label="Nota (opcional)" htmlFor={`aceptar-nota-${solicitudId}`} error={err("nota")}>
-        <Textarea id={`aceptar-nota-${solicitudId}`} name="nota" rows={3} />
+      <Field label="Nota (opcional)" htmlFor={`revisar-nota-${servicioEnCursoId}`} error={err("nota")}>
+        <Textarea id={`revisar-nota-${servicioEnCursoId}`} name="nota" rows={3} />
       </Field>
 
-      {state?.error && !state.fieldErrors && (
-        <p className="text-sm text-destructive">{state.error}</p>
-      )}
+      {state?.error && !state.fieldErrors && <p className="text-sm text-destructive">{state.error}</p>}
 
       <Button type="submit" disabled={pending}>
-        {pending ? "Abriendo…" : "Aceptar y abrir servicio"}
+        {pending ? "Guardando…" : "Aceptar y repartir"}
       </Button>
     </form>
   );

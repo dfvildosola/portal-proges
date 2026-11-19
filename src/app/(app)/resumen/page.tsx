@@ -15,7 +15,8 @@ import { hoyChile } from "@/lib/fechas";
 import { whereVigenteEn } from "@/lib/contratos";
 import { saldoCobro } from "@/lib/cobros";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { clientesParaElegir, espaciosQueLee } from "@/lib/org";
+import { FiltroCliente } from "@/components/filtro-cliente";
 import { getLatestUf, toCLP } from "@/lib/currency";
 import { PageHeader } from "@/components/page-header";
 import { formatMoney } from "@/lib/format";
@@ -44,7 +45,10 @@ export default async function ResumenPage({
   const selGrupoId = sel?.startsWith("grupo:") ? sel.slice(6) : null;
   const selOwnerId = sel?.startsWith("owner:") ? sel.slice(6) : null;
 
-  const orgId = await getOrgId();
+  // El equipo ve todos los clientes juntos y puede filtrar por uno (?cliente=).
+  const filtroCliente = typeof sp.cliente === "string" ? sp.cliente : null;
+  const clientes = await clientesParaElegir();
+  const orgIds = await espaciosQueLee(filtroCliente);
   const now = hoyChile();
   const year = now.getUTCFullYear();
   const yearStart = new Date(Date.UTC(year, 0, 1));
@@ -53,17 +57,17 @@ export default async function ResumenPage({
   const [uf, grupos, owners, properties, movements, charges] = await Promise.all([
     getLatestUf(),
     db.grupo.findMany({
-      where: { organizationId: orgId },
+      where: { organizationId: { in: orgIds } },
       orderBy: { nombre: "asc" },
       select: { id: true, nombre: true },
     }),
     db.owner.findMany({
-      where: { organizationId: orgId },
+      where: { organizationId: { in: orgIds } },
       orderBy: { nombre: "asc" },
       select: { id: true, nombre: true },
     }),
     db.property.findMany({
-      where: { organizationId: orgId },
+      where: { organizationId: { in: orgIds } },
       select: {
         id: true,
         rolSII: true,
@@ -97,7 +101,7 @@ export default async function ResumenPage({
     }),
     db.movement.findMany({
       where: {
-        organizationId: orgId,
+        organizationId: { in: orgIds },
         fecha: { gte: yearStart, lte: yearEnd },
       },
       select: {
@@ -109,7 +113,7 @@ export default async function ResumenPage({
       },
     }),
     db.rentCharge.findMany({
-      where: { organizationId: orgId },
+      where: { organizationId: { in: orgIds } },
       select: {
         estado: true,
         montoEsperado: true,
@@ -378,7 +382,12 @@ export default async function ResumenPage({
               ? `Patrimonio y resultados de ${selOwnerNombre} (ponderado por su % de propiedad).`
               : "Patrimonio, flujo y rentabilidad de toda la cartera."
         }
-        action={<OwnerFilter grupos={grupos} owners={owners} value={sel} />}
+        action={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {clientes && <FiltroCliente clientes={clientes} actual={filtroCliente} />}
+            <OwnerFilter grupos={grupos} owners={owners} value={sel} />
+          </div>
+        }
       />
 
       {propsCount === 0 ? (

@@ -36,10 +36,12 @@ export type ContractRow = {
   fechaInicio: string;
   fechaTermino: string;
   estado: EstadoContrato;
+  clienteNombre: string; // vacío si quien mira es un cliente
 };
 
 const columnLabels: Record<string, string> = {
   propertyRol: "Propiedad",
+  clienteNombre: "Cliente",
   tenantNombre: "Arrendatario",
   monto: "Arriendo",
   reajusteTipo: "Reajuste",
@@ -60,6 +62,11 @@ const columns: ColumnDef<ContractRow>[] = [
         </span>
       </div>
     ),
+  },
+  {
+    accessorKey: "clienteNombre",
+    header: sortHeader("Cliente"),
+    size: 140,
   },
   {
     accessorKey: "tenantNombre",
@@ -114,12 +121,17 @@ const columns: ColumnDef<ContractRow>[] = [
   },
 ];
 
-export function ContractsTable({ data }: { data: ContractRow[] }) {
+// Las columnas para quien no es del equipo: las mismas sin «Cliente» (se arma una sola vez).
+const columnasSinCliente = columns.filter((c) => !("accessorKey" in c && c.accessorKey === "clienteNombre"));
+
+// `mostrarCliente`: solo el equipo, que ve varios clientes juntos, tiene la columna «Cliente».
+export function ContractsTable({ data, mostrarCliente }: { data: ContractRow[]; mostrarCliente: boolean }) {
   const router = useRouter();
+  const columnas = mostrarCliente ? columns : columnasSinCliente;
 
   return (
     <DataTable
-      columns={columns}
+      columns={columnas}
       data={data}
       onRowClick={(c) => router.push(`/contratos/${c.id}`)}
       initialSorting={[{ id: "fechaInicio", desc: true }]}
@@ -131,7 +143,7 @@ export function ContractsTable({ data }: { data: ContractRow[] }) {
         return (
           <div className="flex flex-wrap items-center gap-2">
             <Input
-              placeholder="Buscar propiedad o arrendatario…"
+              placeholder="Buscar propiedad, cliente o arrendatario…"
               value={table.getState().globalFilter ?? ""}
               onChange={(e) => table.setGlobalFilter(e.target.value)}
               className="h-8 w-full max-w-xs"

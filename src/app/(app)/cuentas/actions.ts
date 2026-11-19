@@ -3,8 +3,8 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
-import { assertProperty, dateField, toFieldErrors } from "@/lib/form-helpers";
+import { espacioParaEscribirEnPropiedad, espacioParaEscribirEnRegistro } from "@/lib/org";
+import { dateField, toFieldErrors } from "@/lib/form-helpers";
 import { BillStatus, BillType, Currency } from "@/generated/prisma/enums";
 
 
@@ -61,11 +61,9 @@ export async function addBill(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const orgId = espacio.orgId;
-  if (!(await assertProperty(propertyId, orgId)))
-    return { error: "Propiedad no encontrada." };
+  // El espacio sale de la propiedad, no del formulario.
+  const orgId = await espacioParaEscribirEnPropiedad(propertyId);
+  if (!orgId) return { error: "Propiedad no encontrada." };
 
   try {
     await db.propertyBill.create({
@@ -99,12 +97,12 @@ export async function markBillPaid(formData: FormData): Promise<void> {
   const fechaPago = new Date(`${fechaPagoStr}T00:00:00Z`);
   if (Number.isNaN(fechaPago.getTime())) return;
 
-  const orgId = await orgParaEscribir();
-  const bill = await db.propertyBill.findFirst({
-    where: { id: billId, organizationId: orgId },
-    select: { propertyId: true },
+  const bill = await db.propertyBill.findUnique({
+    where: { id: billId },
+    select: { propertyId: true, organizationId: true },
   });
-  if (!bill) return;
+  const orgId = await espacioParaEscribirEnRegistro(bill);
+  if (!bill || !orgId) return;
   await db.propertyBill.updateMany({
     where: { id: billId, organizationId: orgId, estado: BillStatus.PENDIENTE },
     data: { estado: BillStatus.PAGADA, fechaPago },
@@ -119,12 +117,12 @@ export async function removeBill(formData: FormData): Promise<void> {
   const billId = String(formData.get("billId") ?? "");
   if (!billId) return;
 
-  const orgId = await orgParaEscribir();
-  const bill = await db.propertyBill.findFirst({
-    where: { id: billId, organizationId: orgId },
-    select: { propertyId: true },
+  const bill = await db.propertyBill.findUnique({
+    where: { id: billId },
+    select: { propertyId: true, organizationId: true },
   });
-  if (!bill) return;
+  const orgId = await espacioParaEscribirEnRegistro(bill);
+  if (!bill || !orgId) return;
   await db.propertyBill.deleteMany({
     where: { id: billId, organizationId: orgId },
   });

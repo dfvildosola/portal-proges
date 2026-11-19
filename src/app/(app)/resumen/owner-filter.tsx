@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Select,
   SelectContent,
@@ -26,10 +26,15 @@ export function OwnerFilter({
   value: string | null;
 }) {
   const router = useRouter();
+  const params = useSearchParams();
 
+  // Cambia solo la selección: el filtro de cliente (?cliente=) se conserva.
   function onChange(next: string | null) {
-    if (!next || next === ALL) router.push("/resumen");
-    else router.push(`/resumen?sel=${encodeURIComponent(next)}`);
+    const nuevos = new URLSearchParams(params.toString());
+    if (!next || next === ALL) nuevos.delete("sel");
+    else nuevos.set("sel", next);
+    const texto = nuevos.toString();
+    router.push(texto ? `/resumen?${texto}` : "/resumen");
   }
 
   // Mapa valor→etiqueta para que el trigger muestre el nombre (no el id).

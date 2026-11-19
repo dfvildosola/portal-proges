@@ -26,6 +26,7 @@ export type UsuarioValores = {
   rol: "EQUIPO" | "CLIENTE";
   clienteId: string | null; // el cliente al que pertenece (solo si el rol es CLIENTE)
   admin: boolean;
+  jefatura: boolean;
   activo: boolean;
 };
 
@@ -50,6 +51,7 @@ export function UsuarioForm({
   const [rol, setRol] = useState<string>(usuario?.rol ?? "EQUIPO");
   const [clienteId, setClienteId] = useState<string>(usuario?.clienteId ?? "");
   const [admin, setAdmin] = useState(usuario?.admin ?? false);
+  const [jefatura, setJefatura] = useState(usuario?.jefatura ?? false);
   const [activo, setActivo] = useState(usuario?.activo ?? true);
 
   // Solo se ofrecen los clientes activos; si el usuario ya está en uno desactivado, ese también
@@ -69,6 +71,7 @@ export function UsuarioForm({
       <input type="hidden" name="rol" value={rol} />
       {rol === "CLIENTE" && <input type="hidden" name="clienteId" value={clienteId} />}
       {rol === "EQUIPO" && admin && <input type="hidden" name="admin" value="on" />}
+      {rol === "EQUIPO" && jefatura && <input type="hidden" name="jefatura" value="on" />}
       {usuario && activo && <input type="hidden" name="activo" value="on" />}
 
       <Field label="Nombre" htmlFor="nombre" error={err("nombre")}>
@@ -91,7 +94,10 @@ export function UsuarioForm({
           value={rol}
           onValueChange={(v) => {
             setRol(v ?? "EQUIPO");
-            if (v === "CLIENTE") setAdmin(false);
+            if (v === "CLIENTE") {
+              setAdmin(false);
+              setJefatura(false);
+            }
           }}
           disabled={esYo}
         >
@@ -138,6 +144,13 @@ export function UsuarioForm({
         <div className="flex items-center gap-2">
           <Checkbox id="admin" checked={admin} onCheckedChange={setAdmin} disabled={esYo} />
           <Label htmlFor="admin">Admin (crea usuarios y edita las etapas)</Label>
+        </div>
+      )}
+
+      {rol === "EQUIPO" && (
+        <div className="flex items-center gap-2">
+          <Checkbox id="jefatura" checked={jefatura} onCheckedChange={setJefatura} />
+          <Label htmlFor="jefatura">Jefatura (aprueba presupuestos de maestros y cierra obras)</Label>
         </div>
       )}
 

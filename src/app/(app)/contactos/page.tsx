@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Users, Plus } from "lucide-react";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { clientesParaElegir, espaciosQueLee, nombresPorId } from "@/lib/org";
+import { FiltroCliente } from "@/components/filtro-cliente";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
@@ -10,10 +11,14 @@ import { ContactsTable, type TenantRow } from "./contacts-table";
 export default async function ContactosPage({
   searchParams,
 }: PageProps<"/contactos">) {
-  const { error } = await searchParams;
-  const orgId = await getOrgId();
+  const sp = await searchParams;
+  const { error } = sp;
+  // El equipo ve todos los clientes juntos y puede filtrar por uno (?cliente=).
+  const filtro = typeof sp.cliente === "string" ? sp.cliente : null;
+  const clientes = await clientesParaElegir();
+  const nombreDe = nombresPorId(clientes);
   const tenants = await db.tenant.findMany({
-    where: { organizationId: orgId },
+    where: { organizationId: { in: await espaciosQueLee(filtro) } },
     orderBy: { nombre: "asc" },
     include: { _count: { select: { contracts: true } } },
   });
@@ -25,6 +30,7 @@ export default async function ContactosPage({
     email: t.email,
     telefono: t.telefono,
     contratos: t._count.contracts,
+    clienteNombre: nombreDe.get(t.organizationId) ?? "",
   }));
 
   return (
@@ -33,10 +39,13 @@ export default async function ContactosPage({
         title="Contactos"
         description="Arrendatarios de la cartera, vinculados a sus contratos."
         action={
-          <Button nativeButton={false} render={<Link href="/contactos/nuevo" />}>
-            <Plus className="size-4" />
-            Nuevo contacto
-          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {clientes && <FiltroCliente clientes={clientes} actual={filtro} />}
+            <Button nativeButton={false} render={<Link href="/contactos/nuevo" />}>
+              <Plus className="size-4" />
+              Nuevo contacto
+            </Button>
+          </div>
         }
       />
 
@@ -60,7 +69,7 @@ export default async function ContactosPage({
           }
         />
       ) : (
-        <ContactsTable data={rows} />
+        <ContactsTable data={rows} mostrarCliente={clientes !== null} />
       )}
     </>
   );

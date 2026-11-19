@@ -1,5 +1,6 @@
 import { Bell } from "lucide-react";
-import { getOrgId } from "@/lib/org";
+import { clientesParaElegir, espaciosQueLee, nombresPorId } from "@/lib/org";
+import { FiltroCliente } from "@/components/filtro-cliente";
 import {
   agenda,
   cuandoLabels,
@@ -28,9 +29,15 @@ const ACENTO: Record<Cuando, { caja: string; titulo: string }> = {
 };
 
 // Pendientes: la agenda calculada, ordenada por cuándo hay que actuar.
-export default async function PendientesPage() {
-  const orgId = await getOrgId();
-  const items = await agenda(orgId);
+export default async function PendientesPage({
+  searchParams,
+}: PageProps<"/pendientes">) {
+  const sp = await searchParams;
+  // El equipo ve todos los clientes juntos y puede filtrar por uno (?cliente=).
+  const filtro = typeof sp.cliente === "string" ? sp.cliente : null;
+  const clientes = await clientesParaElegir();
+  const nombreDe = nombresPorId(clientes);
+  const items = await agenda(await espaciosQueLee(filtro));
   const resumen = resumenAgenda(items);
 
   return (
@@ -38,6 +45,7 @@ export default async function PendientesPage() {
       <PageHeader
         title="Pendientes"
         description="Lo que hay que hacer, ordenado por cuándo. Cada línea se quita sola al resolverla."
+        action={clientes && <FiltroCliente clientes={clientes} actual={filtro} />}
       />
 
       {items.length === 0 ? (
@@ -74,7 +82,11 @@ export default async function PendientesPage() {
                   className={`divide-y divide-inherit rounded-xl border ${acento.caja}`}
                 >
                   {delGrupo.map((item) => (
-                    <AgendaLinea key={item.clave} item={item} />
+                    <AgendaLinea
+                      key={item.clave}
+                      item={item}
+                      cliente={nombreDe.get(item.propiedad?.organizationId ?? "")}
+                    />
                   ))}
                 </div>
               </section>

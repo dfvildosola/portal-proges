@@ -4,6 +4,7 @@ import { useFormAction } from "@/hooks/use-form-action";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/field";
+import { CampoCliente } from "@/components/campo-cliente";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,7 +27,10 @@ export function TenantForm({
   action,
   initial,
   submitLabel,
+  clientes,
 }: {
+  // Solo al crear y solo para el equipo: los clientes entre los que elegir.
+  clientes?: { id: string; nombre: string }[];
   action: (prev: TenantFormState, fd: FormData) => Promise<TenantFormState>;
   initial?: TenantValues;
   submitLabel: string;
@@ -44,6 +48,11 @@ export function TenantForm({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {clientes && (
+              <div className="sm:col-span-2">
+                <CampoCliente clientes={clientes} error={err("clienteId")} />
+              </div>
+            )}
             <Field label="Nombre o razón social" htmlFor="nombre" error={err("nombre")}>
               <Input
                 id="nombre"

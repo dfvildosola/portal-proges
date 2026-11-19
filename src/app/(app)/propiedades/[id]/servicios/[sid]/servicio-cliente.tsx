@@ -1,6 +1,7 @@
 // La página de un servicio vista por un CLIENTE: solo lectura. Recibe lo que entrega
 // `servicioParaCliente` (src/lib/vista-cliente.ts): sin responsable, sin notas internas, sin
-// motivo de cierre y sin datos de interesados u oferentes.
+// motivo de cierre y sin datos de interesados u oferentes. La obra y las notas marcadas para el
+// dueño salen del mismo archivo y se pintan en `obra-cliente.tsx`.
 
 import Link from "next/link";
 import { BackLink } from "@/components/back-link";
@@ -10,6 +11,7 @@ import { formatDate } from "@/lib/format";
 import { NOMBRES_ESTADO, TIPOS_SERVICIO } from "@/lib/servicios";
 import type { ServicioDelDetalle } from "@/lib/vista-cliente";
 import { ServicioClienteComercial } from "./servicio-cliente-comercial";
+import { ObraCliente } from "./obra-cliente";
 
 export function ServicioCliente({ servicio: s }: { servicio: ServicioDelDetalle }) {
   const abierto = s.estado === "ABIERTO";
@@ -50,6 +52,8 @@ export function ServicioCliente({ servicio: s }: { servicio: ServicioDelDetalle 
 
       <div className="space-y-6">
         {s.comercial && <ServicioClienteComercial comercial={s.comercial} />}
+
+        <ObraCliente obra={s.obra} notas={s.notas} />
 
         <Card>
           <CardHeader>

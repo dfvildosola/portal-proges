@@ -86,6 +86,7 @@ export function UsuariosBloque({
                   rol: u.rol,
                   clienteId: u.rol === "CLIENTE" ? u.organizationId : null,
                   admin: u.admin,
+                  jefatura: u.jefatura,
                   activo: u.activo,
                 };
                 return (
@@ -98,6 +99,7 @@ export function UsuariosBloque({
                           {u.rol === "EQUIPO" ? "Equipo" : "Cliente"}
                         </Badge>
                         {u.admin && <Badge variant="secondary">Admin</Badge>}
+                        {u.jefatura && <Badge variant="secondary">Jefatura</Badge>}
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">

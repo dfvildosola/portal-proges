@@ -1,13 +1,13 @@
 // «Mis servicios»: lo que el cliente le ha pedido a Proges y en qué va cada servicio.
-// Es solo para usuarios de un cliente; el equipo tiene su propia pantalla (Operación).
+// Es solo para usuarios de un cliente; el equipo tiene su propia pantalla (Trabajo del equipo).
 //
-// Arriba, los pedidos (Solicitud): esperando respuesta, aceptados o rechazados. Abajo, los
-// servicios abiertos. Las consultas traen solo lo que el cliente puede ver: nada del
+// Arriba, los pedidos (Solicitud): por revisar, aceptados o rechazados. Abajo, los servicios
+// abiertos (los «por revisar» todavía no cuentan: se ven arriba, como pedido). Las consultas traen solo lo que el cliente puede ver: nada del
 // interesado, del oferente ni del responsable.
 
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { espaciosQueLee } from "@/lib/org";
 import { exigirUsuario } from "@/lib/sesion";
 import { PageHeader } from "@/components/page-header";
 import { PedirServicioConSelector } from "../propiedades/[id]/solicitud-form";
@@ -16,14 +16,15 @@ import { ServiciosEnCurso } from "./servicios-en-curso";
 
 export default async function MisServiciosPage() {
   const usuario = await exigirUsuario();
-  // Un integrante del equipo no tiene «mis servicios»: su vista es Operación.
+  // Un integrante del equipo no tiene «mis servicios»: su vista es Trabajo del equipo.
   if (usuario.rol !== "CLIENTE") redirect("/operacion");
 
-  const orgId = await getOrgId();
+  // Para un cliente es solo su espacio.
+  const orgIds = await espaciosQueLee();
 
   const [pedidos, servicios, propiedades] = await Promise.all([
     db.solicitud.findMany({
-      where: { organizationId: orgId },
+      where: { organizationId: { in: orgIds } },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -36,9 +37,15 @@ export default async function MisServiciosPage() {
         property: { select: { id: true, direccion: true, comuna: true } },
       },
     }),
-    // Los «por confirmar» vienen de la carga inicial y todavía no están confirmados por Proges.
+    // Los «por confirmar» vienen de la carga inicial y todavía no están confirmados por Proges;
+    // los «por revisar» nacieron de un pedido y la jefatura aún no los reparte.
     db.servicioEnCurso.findMany({
-      where: { organizationId: orgId, estado: "ABIERTO", porConfirmar: false },
+      where: {
+        organizationId: { in: orgIds },
+        estado: "ABIERTO",
+        porConfirmar: false,
+        porRevisar: false,
+      },
       orderBy: { abiertoEl: "desc" },
       select: {
         id: true,
@@ -49,7 +56,7 @@ export default async function MisServiciosPage() {
       },
     }),
     db.property.findMany({
-      where: { organizationId: orgId },
+      where: { organizationId: { in: orgIds } },
       orderBy: { direccion: "asc" },
       select: { id: true, direccion: true, comuna: true },
     }),

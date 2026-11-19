@@ -1,15 +1,22 @@
 import { Receipt } from "lucide-react";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { clientesParaElegir, espaciosQueLee, nombresPorId } from "@/lib/org";
+import { FiltroCliente } from "@/components/filtro-cliente";
 import { hoyChile } from "@/lib/fechas";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { BillsTable, type BillRow } from "./bills-table";
 
-export default async function CuentasPage() {
-  const orgId = await getOrgId();
+export default async function CuentasPage({
+  searchParams,
+}: PageProps<"/cuentas">) {
+  const sp = await searchParams;
+  // El equipo ve todos los clientes juntos y puede filtrar por uno (?cliente=).
+  const filtro = typeof sp.cliente === "string" ? sp.cliente : null;
+  const clientes = await clientesParaElegir();
+  const nombreDe = nombresPorId(clientes);
   const bills = await db.propertyBill.findMany({
-    where: { organizationId: orgId },
+    where: { organizationId: { in: await espaciosQueLee(filtro) } },
     include: {
       property: { select: { id: true, rolSII: true, direccion: true } },
     },
@@ -35,6 +42,7 @@ export default async function CuentasPage() {
     propertyId: b.property.id,
     propertyRol: b.property.rolSII ?? "Sin ROL",
     propertyDireccion: b.property.direccion,
+    clienteNombre: nombreDe.get(b.organizationId) ?? "",
   }));
 
   return (
@@ -42,6 +50,7 @@ export default async function CuentasPage() {
       <PageHeader
         title="Cuentas"
         description="Gastos comunes, luz, agua y gas de todas las propiedades."
+        action={clientes && <FiltroCliente clientes={clientes} actual={filtro} />}
       />
 
       {rows.length === 0 ? (

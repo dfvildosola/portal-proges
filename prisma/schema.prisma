@@ -189,20 +189,30 @@ model Property {
   exentaContribuciones Boolean        @default(false)
   // Id de la carpeta de esta propiedad en Google Drive (para abrirla desde la ficha).
   driveCarpetaId       String?
+  // El edificio es solo un texto que agrupa unidades («Monjitas 550»): la unidad es la propiedad.
+  edificio             String?
+  // Código de la cuenta analítica de Odoo de esta unidad. Puede repetirse entre propiedades
+  // (una cuenta puede cubrir dos deptos): sirve para sugerir la unidad al enlazar una orden.
+  odooCuentaAnalitica  String?
+  // Quién guardó por última vez (el equipo y el dueño editan lo mismo: vale el último).
+  modificadoPorId      String?
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
 
-  owners      PropertyOwner[]
-  tags        PropertyTag[]        @relation("PropertyToTag")
-  units       PropertyUnit[]
-  assessments PropertyAssessment[]
-  documents   Document[]
-  contracts   LeaseContract[]
-  movements   Movement[]
-  taxes       PropertyTax[]
-  bills       PropertyBill[]
-  servicios   ServicioEnCurso[]
-  solicitudes Solicitud[]
+  modificadoPor Usuario? @relation("PropertyModificadoPor", fields: [modificadoPorId], references: [id], onDelete: SetNull)
+
+  owners           PropertyOwner[]
+  tags             PropertyTag[]        @relation("PropertyToTag")
+  units            PropertyUnit[]
+  assessments      PropertyAssessment[]
+  documents        Document[]
+  contracts        LeaseContract[]
+  movements        Movement[]
+  taxes            PropertyTax[]
+  bills            PropertyBill[]
+  servicios        ServicioEnCurso[]
+  solicitudes      Solicitud[]
+  administraciones Administracion[]
 
   @@index([organizationId])
 }
@@ -335,12 +345,14 @@ model LeaseContract {
   fechaSalida             DateTime? // si hay, el contrato termina ese día y no se renueva
   garantia                Decimal?       @db.Decimal(14, 2) // garantía, en la moneda del arriendo
   ultimoReajuste          DateTime? // fecha del último reajuste aplicado
+  modificadoPorId         String? // quién guardó por última vez
   createdAt               DateTime       @default(now())
   updatedAt               DateTime       @updatedAt
 
-  property Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  charges  RentCharge[]
+  property      Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  modificadoPor Usuario?     @relation("ContratoModificadoPor", fields: [modificadoPorId], references: [id], onDelete: SetNull)
+  charges       RentCharge[]
 
   @@index([organizationId])
   @@index([propertyId])
@@ -364,9 +376,11 @@ model RentCharge {
   montoPagado      Decimal?     @db.Decimal(14, 2)
   interesMora      Decimal?     @db.Decimal(14, 2) // manual en MVP
   notas            String?
+  modificadoPorId  String? // quién lo marcó pagado o lo cambió por última vez
 
-  contract  LeaseContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  movements Movement[]
+  contract      LeaseContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  modificadoPor Usuario?      @relation("CobroModificadoPor", fields: [modificadoPorId], references: [id], onDelete: SetNull)
+  movements     Movement[]
 
   @@unique([contractId, periodo])
   @@index([organizationId])
@@ -557,6 +571,7 @@ model Usuario {
   nombre         String
   rol            UsuarioRol
   admin          Boolean    @default(false) // crea clientes y usuarios y edita etapas
+  jefatura       Boolean    @default(false) // solo EQUIPO: aprueba presupuestos de maestros y cierra obras
   activo         Boolean    @default(true)
   ultimoIngreso  DateTime?
   createdAt      DateTime   @default(now())
@@ -567,6 +582,18 @@ model Usuario {
   visitas              Visita[]
   solicitudesPedidas   Solicitud[]       @relation("SolicitudPedidaPor")
   solicitudesResueltas Solicitud[]       @relation("SolicitudResueltaPor")
+
+  propiedadesModificadas Property[]           @relation("PropertyModificadoPor")
+  contratosModificados   LeaseContract[]      @relation("ContratoModificadoPor")
+  cobrosModificados      RentCharge[]         @relation("CobroModificadoPor")
+  tareasResponsable      Tarea[]              @relation("TareaResponsable")
+  tareasHechas           Tarea[]              @relation("TareaHechaPor")
+  tareasCreadas          Tarea[]              @relation("TareaCreadaPor")
+  notas                  Nota[]
+  partidasRecibidas      Partida[]
+  presupuestosCargados   PresupuestoMaestro[] @relation("PresupuestoCargadoPor")
+  presupuestosResueltos  PresupuestoMaestro[] @relation("PresupuestoResueltoPor")
+  facturasAsignadas      FacturaMaestro[]
 
   @@index([organizationId])
 }
@@ -632,17 +659,30 @@ model ServicioEnCurso {
   recomendacion      String?
   recomendacionFecha DateTime?
 
+  // Nace de un pedido del cliente y la jefatura todavía no lo revisó ni lo repartió.
+  porRevisar        Boolean   @default(false)
+  // Solo para OBRA (fechas civiles, medianoche UTC): cuándo empezó el trabajo y cuándo se
+  // le prometió al dueño que terminaba.
+  inicioObra        DateTime?
+  fechaComprometida DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  property    Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  servicio    Servicio   @relation(fields: [servicioId], references: [id], onDelete: Restrict)
-  etapa       Etapa      @relation(fields: [etapaId], references: [id], onDelete: Restrict)
-  responsable Usuario?   @relation(fields: [responsableId], references: [id], onDelete: SetNull)
-  eventos     Evento[]
-  visitas     Visita[]
-  ofertas     Oferta[]
-  solicitud   Solicitud? // el pedido del cliente que abrió este servicio, si lo hubo
+  property        Property             @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  servicio        Servicio             @relation(fields: [servicioId], references: [id], onDelete: Restrict)
+  etapa           Etapa                @relation(fields: [etapaId], references: [id], onDelete: Restrict)
+  responsable     Usuario?             @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+  eventos         Evento[]
+  visitas         Visita[]
+  ofertas         Oferta[]
+  solicitud       Solicitud? // el pedido del cliente que abrió este servicio, si lo hubo
+  tareas          Tarea[]
+  notas           Nota[]
+  orden           OrdenDueno? // la orden de venta de Odoo enlazada, si ya existe
+  partidas        Partida[]
+  presupuestos    PresupuestoMaestro[]
+  facturasMaestro FacturaMaestro[]
 
   @@index([propertyId])
   @@index([organizationId, estado])
@@ -729,5 +769,245 @@ model Solicitud {
   servicioEnCurso ServicioEnCurso? @relation(fields: [servicioEnCursoId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, estado])
+  @@index([propertyId])
+}
+
+// ----------------------------------------------------------------------------
+// Etapa 1 (v6): trabajo del equipo, bitácora, obra con maestros y administración
+// ----------------------------------------------------------------------------
+
+enum RecepcionPartida {
+  PENDIENTE
+  CONFORME
+  OBSERVADA
+}
+
+enum PresupuestoTipo {
+  ORIGINAL
+  ADICIONAL
+}
+
+enum PresupuestoEstado {
+  RECIBIDO
+  APROBADO
+  RECHAZADO
+}
+
+// Lo que alguien tiene que hacer en un proyecto: qué, quién y para cuándo. Sin estados
+// intermedios: o está abierta o está hecha (`hechaEl`).
+model Tarea {
+  id                String    @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String
+  que               String
+  responsableId     String?
+  vence             DateTime? // fecha civil (medianoche UTC)
+  hechaEl           DateTime?
+  hechaPorId        String?
+  creadaPorId       String
+  // Si la abrió una recepción observada: la partida que hay que corregir.
+  partidaId         String?
+  createdAt         DateTime  @default(now())
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  responsable     Usuario?        @relation("TareaResponsable", fields: [responsableId], references: [id], onDelete: SetNull)
+  hechaPor        Usuario?        @relation("TareaHechaPor", fields: [hechaPorId], references: [id], onDelete: SetNull)
+  creadaPor       Usuario         @relation("TareaCreadaPor", fields: [creadaPorId], references: [id], onDelete: Restrict)
+  partida         Partida?        @relation(fields: [partidaId], references: [id], onDelete: SetNull)
+  notas           Nota[]
+
+  @@index([organizationId])
+  @@index([servicioEnCursoId])
+  @@index([responsableId, hechaEl])
+}
+
+// La bitácora del proyecto: lo que pasa, anotado en el momento. `paraDueno` marca las
+// notas (y sus fotos) que el dueño puede ver; las demás son solo del equipo.
+model Nota {
+  id                String   @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String
+  autorId           String
+  texto             String
+  paraDueno         Boolean  @default(false)
+  tareaId           String?
+  createdAt         DateTime @default(now())
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  autor           Usuario         @relation(fields: [autorId], references: [id], onDelete: Restrict)
+  tarea           Tarea?          @relation(fields: [tareaId], references: [id], onDelete: SetNull)
+  fotos           Foto[]
+
+  @@index([organizationId])
+  @@index([servicioEnCursoId, createdAt])
+}
+
+// Una foto guardada en el Drive de la propiedad (subcarpeta «Portal»). Solo se guarda su id
+// de Drive: el archivo se ve a través de la ruta /archivos/[driveFileId], que revisa permisos.
+// Cuelga de una nota (bitácora) o de una partida (recepción).
+model Foto {
+  id             String   @id @default(cuid())
+  organizationId String
+  notaId         String?
+  partidaId      String?
+  driveFileId    String   @unique
+  nombre         String
+  mime           String
+  createdAt      DateTime @default(now())
+
+  nota    Nota?    @relation(fields: [notaId], references: [id], onDelete: Cascade)
+  partida Partida? @relation(fields: [partidaId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([notaId])
+  @@index([partidaId])
+}
+
+// El maestro es un proveedor de Odoo (res.partner); acá solo se le suma lo que Odoo no
+// tiene. Vive en el espacio de Proges y vale para todos los clientes.
+model Maestro {
+  id             String  @id @default(cuid())
+  organizationId String // siempre org_proges
+  odooPartnerId  Int     @unique
+  nombre         String // copiado de Odoo al agregarlo
+  especialidad   String?
+  telefono       String?
+  activo         Boolean @default(true)
+
+  partidas     Partida[]
+  presupuestos PresupuestoMaestro[]
+  facturas     FacturaMaestro[]
+
+  @@index([organizationId])
+}
+
+// La orden de venta de Odoo que el dueño aprobó (S00047). Se trae por su número; el portal
+// nunca escribe en Odoo. `facturado` es lo que ya se le facturó al dueño (los anticipos).
+model OrdenDueno {
+  id                String   @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String   @unique
+  numero            String // «S00047»
+  odooOrderId       Int
+  total             Decimal  @db.Decimal(14, 2) // sin impuesto
+  moneda            Currency @default(CLP)
+  facturado         Decimal  @default(0) @db.Decimal(14, 2)
+  traidaEl          DateTime @default(now())
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  partidas        Partida[]
+
+  @@index([organizationId])
+}
+
+// Una línea de trabajo: lo que hay que hacer (en una reparación, agrupada por recinto; en un
+// servicio suelto, una lista para marcar). Se reconoce por `odooLineId` al volver a traer la
+// orden: las nuevas se suman, las que Odoo ya no tiene se marcan `quitadaEnOdoo`, nunca se borran.
+model Partida {
+  id                String           @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String
+  ordenId           String?
+  recinto           String?
+  codigo            String?
+  descripcion       String
+  cantidad          Decimal?         @db.Decimal(14, 3)
+  unidad            String?
+  precioDueno       Decimal?         @db.Decimal(14, 2)
+  moneda            Currency         @default(CLP)
+  odooLineId        Int?
+  posicion          Int              @default(0)
+  maestroId         String?
+  avance            Int              @default(0) // 0 a 100
+  recepcion         RecepcionPartida @default(PENDIENTE)
+  observacion       String?
+  recibidaEl        DateTime?
+  recibidaPorId     String?
+  quitadaEnOdoo     Boolean          @default(false)
+
+  servicioEnCurso ServicioEnCurso      @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  orden           OrdenDueno?          @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  maestro         Maestro?             @relation(fields: [maestroId], references: [id], onDelete: SetNull)
+  recibidaPor     Usuario?             @relation(fields: [recibidaPorId], references: [id], onDelete: SetNull)
+  presupuestos    PresupuestoMaestro[] @relation("PresupuestoPartidas")
+  fotos           Foto[]
+  tareas          Tarea[]
+
+  @@unique([ordenId, odooLineId])
+  @@index([organizationId])
+  @@index([servicioEnCursoId, posicion])
+}
+
+// El presupuesto que manda un maestro para un proyecto (pesos chilenos). Lo aprueba la
+// jefatura; el aprobado es el plan de costo. Un adicional es un cambio de alcance y se aprueba igual.
+model PresupuestoMaestro {
+  id                String            @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String
+  maestroId         String
+  tipo              PresupuestoTipo   @default(ORIGINAL)
+  total             Decimal           @db.Decimal(14, 2) // CLP
+  plazoDias         Int?
+  pdfDriveFileId    String?
+  estado            PresupuestoEstado @default(RECIBIDO)
+  nota              String?
+  cargadoPorId      String
+  resueltoPorId     String?
+  resueltoEl        DateTime?
+  createdAt         DateTime          @default(now())
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  maestro         Maestro         @relation(fields: [maestroId], references: [id], onDelete: Restrict)
+  cargadoPor      Usuario         @relation("PresupuestoCargadoPor", fields: [cargadoPorId], references: [id], onDelete: Restrict)
+  resueltoPor     Usuario?        @relation("PresupuestoResueltoPor", fields: [resueltoPorId], references: [id], onDelete: SetNull)
+  partidas        Partida[]       @relation("PresupuestoPartidas")
+
+  @@index([organizationId])
+  @@index([servicioEnCursoId])
+  @@index([pdfDriveFileId])
+}
+
+// Una factura del maestro asignada a un proyecto. Con `odooMoveId` solo se guarda la
+// asignación: número, fecha, total, estado y pago se leen de Odoo al mirar. Sin él es una
+// factura «fuera de Odoo» que el equipo anota a mano (número, fecha, si está pagada y nota).
+// Una factura puede repartirse entre proyectos; la suma asignada nunca pasa su total.
+model FacturaMaestro {
+  id                String    @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String
+  maestroId         String
+  odooMoveId        Int?
+  numero            String? // solo las anotadas a mano
+  fecha             DateTime? // solo las anotadas a mano (fecha civil)
+  pagada            Boolean   @default(false) // solo las anotadas a mano
+  nota              String?
+  montoAsignado     Decimal   @db.Decimal(14, 2) // CLP
+  asignadaPorId     String
+  createdAt         DateTime  @default(now())
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  maestro         Maestro         @relation(fields: [maestroId], references: [id], onDelete: Restrict)
+  asignadaPor     Usuario         @relation(fields: [asignadaPorId], references: [id], onDelete: Restrict)
+
+  @@unique([servicioEnCursoId, odooMoveId])
+  @@index([organizationId])
+  @@index([odooMoveId])
+}
+
+// Una propiedad que Proges administra: el arrendatario le paga directo al dueño, Proges
+// controla que pague y cobra su comisión (arriendo × %, calculada al mirar, no guardada).
+model Administracion {
+  id             String    @id @default(cuid())
+  organizationId String
+  propertyId     String
+  desde          DateTime // fecha civil (medianoche UTC)
+  hasta          DateTime? // vacío = sigue vigente
+  comisionPct    Decimal   @db.Decimal(5, 2)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
   @@index([propertyId])
 }

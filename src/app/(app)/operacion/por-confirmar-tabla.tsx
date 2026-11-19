@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/data-table";
 import { sortHeader } from "@/components/ui/data-table-helpers";
 import { TIPOS_SERVICIO } from "@/lib/servicios";
-import { AbrirEnCliente, useAbrirEnCliente } from "./abrir-en-cliente";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { enlaceServicio, type FilaServicio } from "./filas";
 
 const columnas: ColumnDef<FilaServicio>[] = [
@@ -60,22 +62,28 @@ const columnas: ColumnDef<FilaServicio>[] = [
     size: 100,
     enableSorting: false,
     cell: ({ row }) => (
-      <AbrirEnCliente
-        clienteId={row.original.clienteId}
-        href={enlaceServicio(row.original.propertyId, row.original.id)}
-      />
+      <Button
+        size="sm"
+        variant="outline"
+        nativeButton={false}
+        // Dentro de una fila clicable, el clic del botón no debe contar también como clic de la fila.
+        onClick={(e) => e.stopPropagation()}
+        render={<Link href={enlaceServicio(row.original.propertyId, row.original.id)} />}
+      >
+        Abrir
+      </Button>
     ),
   },
 ];
 
 export function PorConfirmarTabla({ data }: { data: FilaServicio[] }) {
-  // La fila entera también abre el servicio, pero antes cambia al cliente dueño.
-  const { abrir } = useAbrirEnCliente();
+  // La fila entera también abre el servicio.
+  const router = useRouter();
   return (
     <DataTable
       columns={columnas}
       data={data}
-      onRowClick={(f) => abrir(f.clienteId, enlaceServicio(f.propertyId, f.id))}
+      onRowClick={(f) => router.push(enlaceServicio(f.propertyId, f.id))}
       initialSorting={[{ id: "direccion", desc: false }]}
       toolbar={(table) => (
         <Input

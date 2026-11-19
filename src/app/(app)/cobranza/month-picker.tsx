@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -15,12 +15,16 @@ const MESES = [
 
 export function MonthPicker({ mes }: { mes: string }) {
   const router = useRouter();
+  const params = useSearchParams();
   const [open, setOpen] = useState(false);
   const [y, m] = mes.split("-").map(Number);
   const [pickerYear, setPickerYear] = useState(y);
 
   function navigate(year: number, month: number) {
-    router.push(`/cobranza?mes=${year}-${String(month).padStart(2, "0")}`);
+    // Cambia solo el mes: el filtro de cliente (?cliente=) se conserva.
+    const nuevos = new URLSearchParams(params.toString());
+    nuevos.set("mes", `${year}-${String(month).padStart(2, "0")}`);
+    router.push(`/cobranza?${nuevos.toString()}`);
     setOpen(false);
   }
 

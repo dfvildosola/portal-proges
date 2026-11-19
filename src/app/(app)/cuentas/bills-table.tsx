@@ -46,6 +46,7 @@ export type BillRow = {
   propertyId: string;
   propertyRol: string;
   propertyDireccion: string;
+  clienteNombre: string; // vacío si quien mira es un cliente
 };
 
 const columnLabels: Record<string, string> = {
@@ -62,7 +63,7 @@ const columns: ColumnDef<BillRow>[] = [
   {
     // ROL y dirección juntos, para que el buscador encuentre por cualquiera.
     id: "propiedad",
-    accessorFn: (b) => `${b.propertyRol} ${b.propertyDireccion}`,
+    accessorFn: (b) => `${b.propertyRol} ${b.propertyDireccion} ${b.clienteNombre}`,
     header: sortHeader("Propiedad"),
     size: 220,
     cell: ({ row }) => (
@@ -70,6 +71,7 @@ const columns: ColumnDef<BillRow>[] = [
         <span className="font-medium">{row.original.propertyRol}</span>
         <span className="block text-xs text-muted-foreground">
           {row.original.propertyDireccion}
+          {row.original.clienteNombre && ` · ${row.original.clienteNombre}`}
         </span>
       </div>
     ),
@@ -150,7 +152,7 @@ export function BillsTable({ data }: { data: BillRow[] }) {
         return (
           <div className="flex flex-wrap items-center gap-2">
             <Input
-              placeholder="Buscar propiedad…"
+              placeholder="Buscar propiedad o cliente…"
               value={table.getState().globalFilter ?? ""}
               onChange={(e) => table.setGlobalFilter(e.target.value)}
               className="h-8 w-full max-w-xs"

@@ -6,7 +6,7 @@
 // mismo cálculo que usa el panel del cliente), no se calculan acá.
 
 import { db } from "@/lib/db";
-import { getOrgId, ORG_PROGES } from "@/lib/org";
+import { espaciosQueLee, ORG_PROGES } from "@/lib/org";
 import { usuarioActual } from "@/lib/sesion";
 import { hoyChile } from "@/lib/fechas";
 import { toDateInputValue } from "@/lib/format";
@@ -30,11 +30,11 @@ function Indicador({ titulo, valor, detalle }: { titulo: string; valor: string; 
 }
 
 export async function ComercialPanel({ servicioId }: { servicioId: string }) {
-  const orgId = await getOrgId();
+  const orgIds = await espaciosQueLee();
   const usuario = await usuarioActual();
 
   const servicio = await db.servicioEnCurso.findFirst({
-    where: { id: servicioId, organizationId: orgId },
+    where: { id: servicioId, organizationId: { in: orgIds } },
     include: {
       eventos: {
         orderBy: { fecha: "asc" },

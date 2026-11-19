@@ -11,9 +11,7 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { currentUser } from "@clerk/nextjs/server";
-import { cookies } from "next/headers";
 import { db } from "@/lib/db";
-import { COOKIE_CLIENTE_ACTIVO } from "@/lib/org";
 import type { Usuario } from "@/generated/prisma/client";
 
 // El último ingreso se anota como máximo una vez por hora, para no escribir en la base
@@ -95,10 +93,32 @@ export async function equipoEnAccion(): Promise<Usuario> {
   return usuario;
 }
 
+// Para server actions de la cartera: cualquier usuario activo, del equipo o de un cliente.
+// En qué espacio puede escribir lo dice src/lib/org.ts (espacioParaEscribirEn).
+export async function usuarioEnAccion(): Promise<Usuario> {
+  const usuario = await usuarioActual();
+  if (!usuario) throw new Error("Sin permiso");
+  return usuario;
+}
+
 // Para server actions de administración: equipo y además admin.
 export async function adminEnAccion(): Promise<Usuario> {
   const usuario = await equipoEnAccion();
   if (!usuario.admin) throw new Error("Sin permiso");
+  return usuario;
+}
+
+// ¿Es de la jefatura? (Cecilia y Álvaro: aprueban presupuestos de maestros y cierran obras).
+// La marca solo vale para el equipo: un cliente nunca es jefatura, aunque la base diga otra cosa.
+// Va como función pura para probarla sin sesión.
+export function esJefatura(usuario: Pick<Usuario, "rol" | "jefatura">): boolean {
+  return usuario.rol === "EQUIPO" && usuario.jefatura;
+}
+
+// Para server actions de la jefatura: equipo con la marca «jefatura», si no «Sin permiso».
+export async function jefaturaEnAccion(): Promise<Usuario> {
+  const usuario = await usuarioActual();
+  if (!usuario || !esJefatura(usuario)) throw new Error("Sin permiso");
   return usuario;
 }
 
@@ -108,27 +128,3 @@ export async function clienteEnAccion(): Promise<Usuario> {
   if (!usuario || usuario.rol !== "CLIENTE") throw new Error("Sin permiso");
   return usuario;
 }
-
-// El cliente que el equipo está mirando, o null si quien entró no es del equipo o todavía no
-// hay clientes. Se guarda en una cookie, pero la cookie no se cree: se comprueba contra la
-// tabla Organizacion (que sea un cliente y esté activo). Si falta o ya no vale, se usa el
-// primer cliente activo por nombre.
-// `cache` evita repetir la consulta cuando el layout y la página lo piden en la misma petición.
-export const clienteActivo = cache(async (): Promise<{ id: string; nombre: string } | null> => {
-  const usuario = await usuarioActual();
-  if (!usuario || usuario.rol !== "EQUIPO") return null;
-
-  const elegido = (await cookies()).get(COOKIE_CLIENTE_ACTIVO)?.value;
-  if (elegido) {
-    const cliente = await db.organizacion.findFirst({
-      where: { id: elegido, tipo: "CLIENTE", activa: true },
-      select: { id: true, nombre: true },
-    });
-    if (cliente) return cliente;
-  }
-  return db.organizacion.findFirst({
-    where: { tipo: "CLIENTE", activa: true },
-    orderBy: { nombre: "asc" },
-    select: { id: true, nombre: true },
-  });
-});

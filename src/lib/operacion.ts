@@ -1,9 +1,9 @@
-// Las ÚNICAS consultas del portal que cruzan clientes.
+// Las consultas de «Trabajo del equipo» (la pantalla /operacion) que cruzan clientes.
 //
-// Todo el resto del portal lee un solo espacio (el de `getOrgId()`): es como un edificio donde
-// cada cliente solo puede entrar a su piso. Acá, en cambio, el equipo de Proges mira todos los
-// pisos a la vez (la bandeja de solicitudes y la pantalla de Operación). Por eso este archivo
-// es el único lugar donde se consulta sin filtrar por `getOrgId()`, y por eso REGLA:
+// El resto del portal filtra por los espacios que se pueden leer (`espaciosQueLee()` de
+// `src/lib/org.ts`). Acá el equipo de Proges mira todos los pisos a la vez (los proyectos por
+// revisar y las cifras de hoy) y arma sus propios filtros por cliente. Las tareas, en cambio,
+// salen de `src/lib/tareas.ts` con `espaciosQueLee()`. REGLA de este archivo:
 //
 //   Cada función de este archivo parte exigiendo que quien llama sea del EQUIPO.
 //   Un CLIENTE (o nadie) recibe Error("Sin permiso") antes de que se toque la base.
@@ -71,47 +71,48 @@ function delServicio(filtro: FiltroOperacion) {
 }
 
 // ---------------------------------------------------------------------------
-// La bandeja de solicitudes
+// Los proyectos por revisar (los pedidos de los clientes)
 // ---------------------------------------------------------------------------
 
-// Cuántas solicitudes esperan respuesta: el número rojo del menú.
-export async function contarSolicitudesNuevas(): Promise<number> {
+// Cuántos proyectos esperan revisión: el número rojo de «Trabajo del equipo» en el menú.
+export async function contarPorRevisar(): Promise<number> {
   await exigirEquipo();
-  return db.solicitud.count({ where: { estado: "NUEVA", organizationId: { in: await idsClientesActivos() } } });
+  return db.servicioEnCurso.count({
+    where: { porRevisar: true, estado: "ABIERTO", organizationId: { in: await idsClientesActivos() } },
+  });
 }
 
-// Las solicitudes NUEVA de todos los clientes, las más antiguas primero (llevan más esperando).
-export async function solicitudesNuevas() {
+// Los proyectos «por revisar» (nacen del pedido de un cliente), los más antiguos primero
+// (llevan más esperando), con lo que el cliente pidió. `clienteId` filtra por cliente.
+export async function proyectosPorRevisar(clienteId: string | null) {
   await exigirEquipo();
-  const [solicitudes, clientes] = await Promise.all([
-    db.solicitud.findMany({
-      where: { estado: "NUEVA", organizationId: { in: await idsClientesActivos() } },
-      orderBy: { createdAt: "asc" },
-      select: {
-        id: true,
-        organizationId: true,
-        tipo: true,
-        descripcion: true,
-        createdAt: true,
-        property: { select: { id: true, direccion: true, comuna: true } },
-        pedidaPor: { select: { nombre: true } },
-      },
-    }),
-    // La tabla Solicitud guarda el cliente como texto (sin relación): el nombre se busca aparte.
-    db.organizacion.findMany({
-      where: { tipo: "CLIENTE" },
-      select: { id: true, nombre: true },
-    }),
-  ]);
+  const clientes = await clientesDeOperacion();
+  const proyectos = await db.servicioEnCurso.findMany({
+    where: {
+      porRevisar: true,
+      estado: "ABIERTO",
+      organizationId: espaciosAConsultar(clientes, clienteId),
+    },
+    orderBy: { abiertoEl: "asc" },
+    select: {
+      id: true,
+      organizationId: true,
+      tipo: true,
+      servicioId: true,
+      abiertoEl: true,
+      property: { select: { id: true, direccion: true, comuna: true } },
+      solicitud: { select: { descripcion: true, pedidaPor: { select: { nombre: true } } } },
+    },
+  });
   const nombres = new Map(clientes.map((c) => [c.id, c.nombre]));
-  return solicitudes.map((s) => ({
-    ...s,
-    cliente: nombres.get(s.organizationId) ?? "Cliente desconocido",
+  return proyectos.map((p) => ({
+    ...p,
+    cliente: nombres.get(p.organizationId) ?? "Cliente desconocido",
   }));
 }
 
-// El catálogo activo de Proges, para elegir qué servicio abre una solicitud aceptada.
-export async function catalogoParaAceptar() {
+// El catálogo activo de Proges, para elegir qué servicio es el proyecto al revisarlo.
+export async function catalogoParaRevisar() {
   await exigirEquipo();
   return db.servicio.findMany({
     where: { organizationId: ORG_PROGES, activo: true },
@@ -154,6 +155,8 @@ export async function serviciosAbiertos(
     where: {
       organizationId: espaciosAConsultar(clientes, filtro.cliente),
       estado: "ABIERTO",
+      // Los «por revisar» tienen su propia sección arriba: acá solo lo que ya se repartió.
+      porRevisar: false,
       ...delServicio(filtro),
     },
     select: {

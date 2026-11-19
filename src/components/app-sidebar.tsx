@@ -29,10 +29,6 @@ export function AppSidebar({
 }) {
   const pathname = usePathname();
 
-  // "/" solo activo exacto; el resto activo si la ruta empieza con el href.
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
-
   // Cada rol ve su menú: lo marcado soloEquipo, soloCliente o soloAdmin no se muestra a los
   // demás. El permiso real se exige igual en el servidor: esto solo evita mostrar un enlace
   // que no les sirve.
@@ -43,6 +39,15 @@ export function AppSidebar({
   const gruposVisibles = navGroups
     .map((g) => ({ ...g, items: g.items.filter(visible) }))
     .filter((g) => g.items.length > 0);
+
+  // Un ítem está activo si la ruta es la suya o cuelga de ella (`/equipo/maestros/...`), y no hay
+  // otro ítem visible con una ruta más específica que también calce: así estando en
+  // `/equipo/maestros` se marca «Maestros» y no «Equipo y clientes». «/» solo cuenta exacto.
+  const hrefs = gruposVisibles.flatMap((g) => g.items.map((i) => i.href));
+  const calza = (href: string) =>
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = (href: string) =>
+    calza(href) && !hrefs.some((otro) => otro.length > href.length && otro.startsWith(href) && calza(otro));
 
   return (
     <Sidebar collapsible="icon">

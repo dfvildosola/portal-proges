@@ -11,7 +11,8 @@ import {
   terminoRenovado,
   terminoVigente,
 } from "@/lib/contratos";
-import { getOrgId } from "@/lib/org";
+import { puedeLeerEn } from "@/lib/org";
+import { ModificadoPor } from "@/components/modificado-por";
 import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,10 +63,9 @@ export default async function ContratoDetallePage({
   params,
 }: PageProps<"/contratos/[id]">) {
   const { id } = await params;
-  const orgId = await getOrgId();
   const hoy = hoyChile();
-  const c = await db.leaseContract.findFirst({
-    where: { id, organizationId: orgId },
+  const c = await db.leaseContract.findUnique({
+    where: { id },
     include: {
       property: { select: { id: true, rolSII: true, direccion: true, comuna: true } },
       tenant: {
@@ -74,7 +74,8 @@ export default async function ContratoDetallePage({
       charges: { orderBy: { periodo: "desc" } },
     },
   });
-  if (!c) notFound();
+  // Se busca por su id y se comprueba que su espacio se puede leer: si no, no existe.
+  if (!c || !(await puedeLeerEn(c.organizationId))) notFound();
   const estado = estadoContrato(c, hoy);
 
   const vigente = terminoVigente(c, hoy);
@@ -116,6 +117,7 @@ export default async function ContratoDetallePage({
           <p className="mt-1 text-sm text-muted-foreground">
             {c.property.rolSII ?? "Sin ROL"} · {c.tenant.nombre}
           </p>
+          <ModificadoPor usuarioId={c.modificadoPorId} fecha={c.updatedAt} className="mt-1 text-xs text-muted-foreground" />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button

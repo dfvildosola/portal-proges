@@ -4,7 +4,11 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
+import {
+  espacioParaCrear,
+  espacioParaEscribirEnPropiedad,
+} from "@/lib/org";
+import { usuarioEnAccion } from "@/lib/sesion";
 import {
   enumField,
   moneyField,
@@ -110,12 +114,14 @@ export async function createProperty(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const orgId = espacio.orgId;
-  const data = parsed.data;
+  // El dueño crea en lo suyo; el equipo elige el cliente en el formulario (y es obligatorio).
+  const usuario = await usuarioEnAccion();
+  const orgId = await espacioParaCrear(String(formData.get("clienteId") ?? "") || null);
+  if (!orgId) {
+    return { error: "Revisa los campos.", fieldErrors: { clienteId: "Elige el cliente de la propiedad" } };
+  }
   const created = await db.property.create({
-    data: { ...data, organizationId: orgId },
+    data: { ...parsed.data, organizationId: orgId, modificadoPorId: usuario.id },
   });
 
   revalidatePath("/propiedades");
@@ -134,13 +140,14 @@ export async function updateProperty(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const orgId = espacio.orgId;
-  // updateMany con where { id, organizationId } refuerza el aislamiento multi-tenant.
+  // El espacio sale de la propiedad que se edita, no del formulario.
+  const usuario = await usuarioEnAccion();
+  const orgId = await espacioParaEscribirEnPropiedad(id);
+  if (!orgId) return { error: "Propiedad no encontrada." };
+  // updateMany con where { id, organizationId } refuerza el aislamiento entre clientes.
   const res = await db.property.updateMany({
     where: { id, organizationId: orgId },
-    data: parsed.data,
+    data: { ...parsed.data, modificadoPorId: usuario.id },
   });
   if (res.count === 0) return { error: "Propiedad no encontrada." };
 
@@ -154,10 +161,12 @@ export async function updatePropertyStatus(formData: FormData): Promise<void> {
   const estado = formData.get("estado") as PropertyStatus;
   if (!id || !Object.values(PropertyStatus).includes(estado)) return;
 
-  const orgId = await orgParaEscribir();
+  const usuario = await usuarioEnAccion();
+  const orgId = await espacioParaEscribirEnPropiedad(id);
+  if (!orgId) return;
   await db.property.updateMany({
     where: { id, organizationId: orgId },
-    data: { estado },
+    data: { estado, modificadoPorId: usuario.id },
   });
 
   revalidatePath("/propiedades");
@@ -169,7 +178,8 @@ export async function deleteProperty(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  const orgId = await orgParaEscribir();
+  const orgId = await espacioParaEscribirEnPropiedad(id);
+  if (!orgId) return;
   // Borrar la propiedad se llevaría en cadena el historial de sus servicios (etapas, precios,
   // visitas, ofertas). Igual que una etapa con servicios, no se borra: se cancelan sus servicios.
   const servicios = await db.servicioEnCurso.count({ where: { propertyId: id, organizationId: orgId } });

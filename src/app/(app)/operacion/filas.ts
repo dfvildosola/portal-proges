@@ -41,8 +41,8 @@ export type FilaVisita = {
   evaluacion: number | null; // 1 a 5
 };
 
-// Enlace a la página de un servicio. Solo abre si el cliente activo es el dueño de la
-// propiedad: por eso junto a cada servicio va el botón «Abrir», que primero cambia de cliente.
+// Enlace a la página de un servicio. El equipo ve todos los clientes, así que abre directo:
+// no hace falta cambiar de cliente antes.
 export function enlaceServicio(propertyId: string, servicioId: string): string {
   return `/propiedades/${propertyId}/servicios/${servicioId}`;
 }

@@ -2,6 +2,8 @@
 
 Fecha: 2026-11-18 · Estado: aceptada (plan v3 de la etapa 1; la solicitud se suma en la v4, aprobada por Diego el mismo día)
 
+> **Nota de la v6 (2026-11-19).** Para el **equipo**, la etapa deja de ser lo principal de la página del proyecto: lo que manda ahora son las **tareas** y la **bitácora** (ADR 0013), y en una obra, la orden, los presupuestos y la recepción (ADR 0014). La etapa y el historial siguen existiendo, pero van al final de la pantalla. Y el proyecto puede **nacer «por revisar»**: cuando un cliente pide un servicio, se abre solo, con una tarea para la jefatura, y la «bandeja de solicitudes» descrita más abajo pasa a ser la lista de proyectos por revisar. En pantalla, el servicio en curso se llama «proyecto» (ADR 0012).
+
 ## Contexto
 
 Proges no hace un recorrido fijo con cada propiedad. Una propiedad usa solo los servicios que necesita: a veces solo papeles, a veces solo la toma de posesión, a veces venta, arriendo, o las dos a la vez. La v2 del plan suponía una sola etapa por propiedad que avanzaba en fila (evaluación → reparación → venta); Diego lo corrigió: no hay etapas consecutivas.

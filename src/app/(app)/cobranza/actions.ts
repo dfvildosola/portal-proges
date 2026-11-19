@@ -4,7 +4,8 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { espacioDeEscritura, orgParaEscribir } from "@/lib/org";
+import { espacioParaEscribirEnRegistro, espaciosParaEscribir } from "@/lib/org";
+import { usuarioEnAccion } from "@/lib/sesion";
 import { vencimientoDelMes } from "@/lib/fechas";
 import { saldoCobro } from "@/lib/cobros";
 import { whereCubreMes } from "@/lib/contratos";
@@ -42,23 +43,26 @@ const paymentSchema = z.object({
     .transform((v) => (v === undefined || v === "" ? null : v)),
 });
 
-// Genera un RentCharge por cada contrato VIGENTE que cubra el período dado.
-// Usa upsert para no sobrescribir cobros ya existentes.
+// Genera un RentCharge por cada contrato VIGENTE que cubra el período dado, en los espacios
+// donde se puede escribir (el cliente, el suyo; el equipo, todos los clientes o solo el que
+// el filtro de la pantalla eligió). Usa upsert para no sobrescribir cobros ya existentes.
 export async function generateMonthCharges(formData: FormData): Promise<void> {
   const mes = String(formData.get("mes") ?? "");
   if (!/^\d{4}-\d{2}$/.test(mes)) return;
 
-  const orgId = await orgParaEscribir();
+  const filtro = String(formData.get("cliente") ?? "") || null;
+  const usuario = await usuarioEnAccion();
   const contracts = await db.leaseContract.findMany({
-    where: { organizationId: orgId, ...whereCubreMes(mes) },
-    select: { id: true, monto: true, moneda: true, diaPago: true },
+    where: { organizationId: { in: await espaciosParaEscribir(filtro) }, ...whereCubreMes(mes) },
+    select: { id: true, organizationId: true, monto: true, moneda: true, diaPago: true },
   });
 
   for (const c of contracts) {
     await db.rentCharge.upsert({
       where: { contractId_periodo: { contractId: c.id, periodo: mes } },
       create: {
-        organizationId: orgId,
+        organizationId: c.organizationId,
+        modificadoPorId: usuario.id,
         contractId: c.id,
         periodo: mes,
         montoEsperado: c.monto,
@@ -71,7 +75,7 @@ export async function generateMonthCharges(formData: FormData): Promise<void> {
   }
 
   revalidatePath("/cobranza");
-  redirect(`/cobranza?mes=${mes}`);
+  redirect(`/cobranza?mes=${mes}${filtro ? `&cliente=${encodeURIComponent(filtro)}` : ""}`);
 }
 
 export async function registerPayment(
@@ -91,9 +95,13 @@ export async function registerPayment(
     return { error: "Revisa los campos.", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const orgId = espacio.orgId;
+  // El espacio sale del cobro mismo, no de algo que mande el navegador. Marcar un arriendo
+  // pagado lo puede hacer el dueño o el equipo (d25).
+  const usuario = await usuarioEnAccion();
+  const orgId = await espacioParaEscribirEnRegistro(
+    await db.rentCharge.findUnique({ where: { id: chargeId }, select: { organizationId: true } }),
+  );
+  if (!orgId) return { error: "Cobro no encontrado." };
   const { notas } = parsed.data;
 
   // Dos abonos a la vez (o un reintento) no se pueden pisar: la transacción
@@ -126,6 +134,7 @@ export async function registerPayment(
       where: { id: chargeId },
       data: {
         estado: cubierto ? ChargeStatus.PAGADO : charge.estado,
+        modificadoPorId: usuario.id,
         fechaPago: parsed.data.fechaPago,
         montoPagado: totalPagado,
         ...(parsed.data.interesMora !== null && {
@@ -150,18 +159,23 @@ export async function updateChargeStatus(formData: FormData): Promise<void> {
   const estado = String(formData.get("estado") ?? "");
   if (!id || !["PENDIENTE", "ATRASADO"].includes(estado)) return;
 
-  const orgId = await orgParaEscribir();
+  const usuario = await usuarioEnAccion();
+  const orgId = await espacioParaEscribirEnRegistro(
+    await db.rentCharge.findUnique({ where: { id }, select: { organizationId: true } }),
+  );
+  if (!orgId) return;
   await db.rentCharge.updateMany({
     where: { id, organizationId: orgId },
     data:
       estado === "PENDIENTE"
         ? {
+            modificadoPorId: usuario.id,
             estado: ChargeStatus.PENDIENTE,
             fechaPago: null,
             montoPagado: null,
             interesMora: null,
           }
-        : { estado: ChargeStatus.ATRASADO },
+        : { estado: ChargeStatus.ATRASADO, modificadoPorId: usuario.id },
   });
 
   revalidatePath("/cobranza");
@@ -172,7 +186,10 @@ export async function deleteCharge(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  const orgId = await orgParaEscribir();
+  const orgId = await espacioParaEscribirEnRegistro(
+    await db.rentCharge.findUnique({ where: { id }, select: { organizationId: true } }),
+  );
+  if (!orgId) return;
   await db.rentCharge.deleteMany({ where: { id, organizationId: orgId } });
 
   revalidatePath("/cobranza");

@@ -12,9 +12,12 @@ import { formatMoney, toDateInputValue } from "@/lib/format";
 export function AgendaLinea({
   item,
   conPropiedad = true,
+  cliente,
 }: {
   item: ItemAgenda;
   conPropiedad?: boolean;
+  // El nombre del cliente dueño: solo lo pasa el equipo, que ve varios clientes juntos.
+  cliente?: string;
 }) {
   const { propiedad, contrato, accion } = item;
   // En la ficha, un botón que lleva a esa misma ficha no sirve de nada.
@@ -27,6 +30,7 @@ export function AgendaLinea({
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           <Badge variant="secondary">{tipoItemLabels[item.tipo]}</Badge>
           <span>{item.texto}</span>
+          {cliente && <Badge variant="outline">{cliente}</Badge>}
         </p>
         {((conPropiedad && propiedad) || contrato) && (
           <p className="text-xs text-muted-foreground">

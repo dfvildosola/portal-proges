@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/table";
 import { TIPOS_SERVICIO } from "@/lib/servicios";
 import { Badge } from "@/components/ui/badge";
-import { AbrirEnCliente } from "./abrir-en-cliente";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { enlaceServicio, type FilaVisita } from "./filas";
 
 export function VisitasSemana({ visitas }: { visitas: FilaVisita[] }) {
@@ -55,10 +56,14 @@ export function VisitasSemana({ visitas }: { visitas: FilaVisita[] }) {
                 {v.evaluacion !== null ? `${v.evaluacion} de 5` : "—"}
               </TableCell>
               <TableCell className="text-right">
-                <AbrirEnCliente
-                  clienteId={v.clienteId}
-                  href={enlaceServicio(v.propertyId, v.servicioId)}
-                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link href={enlaceServicio(v.propertyId, v.servicioId)} />}
+                >
+                  Abrir
+                </Button>
               </TableCell>
             </TableRow>
           ))}

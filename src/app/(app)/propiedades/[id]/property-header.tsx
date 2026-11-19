@@ -3,15 +3,15 @@ import { FolderOpen, Pencil } from "lucide-react";
 import type { Property } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { propertyTypeLabels, propertyGoalLabels, propertyStatusLabels } from "@/lib/domain";
+import { propertyTypeLabels, propertyGoalLabels } from "@/lib/domain";
 import { formatM2 } from "@/lib/format";
 import { DeletePropertyButton } from "./delete-button";
 import { StatusQuickEdit } from "./status-quick-edit";
 
 // Encabezado de la ficha: la dirección es el título; debajo, tipo · comuna · m² ·
 // ROL; a la derecha, el estado (editable), el objetivo y las acciones.
-// El cliente edita su propiedad; el equipo la ve en solo lectura (ADR 0010) y es el único
-// que ve el enlace a la carpeta del Drive de Proges.
+// El dueño y el equipo editan la propiedad (ADR 0010); el equipo es además el único que ve el
+// enlace a la carpeta del Drive de Proges.
 export function PropertyHeader({
   property,
   esEquipo,
@@ -57,11 +57,7 @@ export function PropertyHeader({
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {esEquipo ? (
-          <Badge variant="outline">{propertyStatusLabels[property.estado]}</Badge>
-        ) : (
-          <StatusQuickEdit propertyId={property.id} current={property.estado} />
-        )}
+        <StatusQuickEdit propertyId={property.id} current={property.estado} />
         <Badge variant="outline">
           Objetivo: {propertyGoalLabels[property.objetivo]}
         </Badge>
@@ -82,8 +78,6 @@ export function PropertyHeader({
             Carpeta en Drive
           </Button>
         )}
-        {!esEquipo && (
-          <>
         <Button
           variant="outline"
           nativeButton={false}
@@ -93,8 +87,6 @@ export function PropertyHeader({
           Editar
         </Button>
         <DeletePropertyButton id={property.id} />
-          </>
-        )}
       </div>
     </div>
   );

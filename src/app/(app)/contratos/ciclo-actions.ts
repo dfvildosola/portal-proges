@@ -3,7 +3,8 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { espacioDeEscritura } from "@/lib/org";
+import { espacioParaEscribirEnRegistro } from "@/lib/org";
+import { usuarioEnAccion } from "@/lib/sesion";
 import { hoyChile, mesActual } from "@/lib/fechas";
 import { formatDate } from "@/lib/format";
 import {
@@ -24,17 +25,17 @@ export type CicloFormState = {
 const SIN_PAGO = { montoPagado: null, estado: { not: "PAGADO" } } as const;
 
 
-// Busca el contrato para modificarlo, así que lo busca en el espacio de escritura.
-async function cargarContrato(id: string, orgId: string) {
-  const c = await db.leaseContract.findFirst({
-    where: { id, organizationId: orgId },
-  });
-  if (!c) return null;
+// Busca el contrato por su id y comprueba que el usuario puede escribir en su espacio (el del
+// propio contrato, nunca uno que mande el navegador). Devuelve null si no existe.
+async function cargarContrato(id: string) {
+  const c = await db.leaseContract.findUnique({ where: { id } });
+  const orgId = await espacioParaEscribirEnRegistro(c);
+  if (!c || !orgId) return null;
   return { c, orgId };
 }
 
 const NO_ENCONTRADO: CicloFormState = {
-  error: "Contrato no encontrado en esta organización.",
+  error: "Contrato no encontrado.",
 };
 
 function revalidar(id: string, propertyId: string) {
@@ -47,9 +48,8 @@ function revalidar(id: string, propertyId: string) {
 }
 
 export async function renovarContrato(id: string): Promise<CicloFormState> {
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const cargado = await cargarContrato(id, espacio.orgId);
+  const usuario = await usuarioEnAccion();
+  const cargado = await cargarContrato(id);
   if (!cargado) return NO_ENCONTRADO;
   const { c, orgId } = cargado;
   const hoy = hoyChile();
@@ -59,7 +59,7 @@ export async function renovarContrato(id: string): Promise<CicloFormState> {
   }
   const res = await db.leaseContract.updateMany({
     where: { id, organizationId: orgId },
-    data: { fechaTermino: terminoRenovado(c, hoy) },
+    data: { fechaTermino: terminoRenovado(c, hoy), modificadoPorId: usuario.id },
   });
   if (res.count === 0) {
     return { error: "No se pudo renovar: el contrato ya no existe." };
@@ -85,9 +85,8 @@ export async function terminarContrato(
   }
   const { fechaSalida } = parsed.data;
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const cargado = await cargarContrato(id, espacio.orgId);
+  const usuario = await usuarioEnAccion();
+  const cargado = await cargarContrato(id);
   if (!cargado) return NO_ENCONTRADO;
   const { c, orgId } = cargado;
   if (c.fechaSalida) {
@@ -101,7 +100,7 @@ export async function terminarContrato(
 
   const mesSalida = fechaSalida.toISOString().slice(0, 7);
   await db.$transaction([
-    db.leaseContract.update({ where: { id }, data: { fechaSalida } }),
+    db.leaseContract.update({ where: { id }, data: { fechaSalida, modificadoPorId: usuario.id } }),
     db.rentCharge.deleteMany({
       where: {
         contractId: id,
@@ -142,9 +141,8 @@ export async function reajustarContrato(
   }
   const { porcentaje, fechaEfectiva } = parsed.data;
 
-  const espacio = await espacioDeEscritura();
-  if ("error" in espacio) return { error: espacio.error };
-  const cargado = await cargarContrato(id, espacio.orgId);
+  const usuario = await usuarioEnAccion();
+  const cargado = await cargarContrato(id);
   if (!cargado) return NO_ENCONTRADO;
   const { c, orgId } = cargado;
   if (!c.aplicaReajuste) {
@@ -172,7 +170,7 @@ export async function reajustarContrato(
   await db.$transaction([
     db.leaseContract.update({
       where: { id },
-      data: { monto: nuevo, ultimoReajuste: fechaEfectiva },
+      data: { monto: nuevo, ultimoReajuste: fechaEfectiva, modificadoPorId: usuario.id },
     }),
     db.rentCharge.updateMany({
       where: {

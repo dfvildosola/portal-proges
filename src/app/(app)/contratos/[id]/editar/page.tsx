@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { clientesParaElegir, nombresPorId, puedeLeerEn } from "@/lib/org";
 import { BackLink } from "@/components/back-link";
 import { PageHeader } from "@/components/page-header";
 import { toDateInputValue } from "@/lib/format";
@@ -11,21 +11,24 @@ export default async function EditarContratoPage({
   params,
 }: PageProps<"/contratos/[id]/editar">) {
   const { id } = await params;
-  const orgId = await getOrgId();
-  const [c, properties, tenants] = await Promise.all([
-    db.leaseContract.findFirst({ where: { id, organizationId: orgId } }),
+  // Primero el contrato por su id; su espacio decide qué propiedades y contactos se ofrecen
+  // (un contrato nunca mezcla clientes).
+  const c = await db.leaseContract.findUnique({ where: { id } });
+  if (!c || !(await puedeLeerEn(c.organizationId))) notFound();
+  const nombreDe = nombresPorId(await clientesParaElegir());
+  const cliente = nombreDe.has(c.organizationId) ? `${nombreDe.get(c.organizationId)} · ` : "";
+  const [properties, tenants] = await Promise.all([
     db.property.findMany({
-      where: { organizationId: orgId },
+      where: { organizationId: c.organizationId },
       orderBy: { rolSII: "asc" },
       select: { id: true, rolSII: true, direccion: true },
     }),
     db.tenant.findMany({
-      where: { organizationId: orgId },
+      where: { organizationId: c.organizationId },
       orderBy: { nombre: "asc" },
       select: { id: true, nombre: true, rut: true },
     }),
   ]);
-  if (!c) notFound();
 
   return (
     <>
@@ -58,11 +61,11 @@ export default async function EditarContratoPage({
         }}
         properties={properties.map((p) => ({
           value: p.id,
-          label: `${p.rolSII ?? "Sin ROL"} · ${p.direccion}`,
+          label: `${cliente}${p.rolSII ?? "Sin ROL"} · ${p.direccion}`,
         }))}
         tenants={tenants.map((t) => ({
           value: t.id,
-          label: `${t.nombre} · ${t.rut}`,
+          label: `${cliente}${t.nombre} · ${t.rut}`,
         }))}
       />
     </>

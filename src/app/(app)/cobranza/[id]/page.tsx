@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Building2, User } from "lucide-react";
 import { db } from "@/lib/db";
-import { getOrgId } from "@/lib/org";
+import { puedeLeerEn } from "@/lib/org";
 import { BackLink } from "@/components/back-link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,9 +40,8 @@ export default async function CobroDetallePage({
   params,
 }: PageProps<"/cobranza/[id]">) {
   const { id } = await params;
-  const orgId = await getOrgId();
-  const charge = await db.rentCharge.findFirst({
-    where: { id, organizationId: orgId },
+  const charge = await db.rentCharge.findUnique({
+    where: { id },
     include: {
       contract: {
         include: {
@@ -62,7 +61,8 @@ export default async function CobroDetallePage({
       },
     },
   });
-  if (!charge) notFound();
+  // El cobro se busca por su id y se comprueba que su espacio se puede leer: si no, no existe.
+  if (!charge || !(await puedeLeerEn(charge.organizationId))) notFound();
 
   const c = charge.contract;
   const isPaid = charge.estado === "PAGADO";
