@@ -33,9 +33,11 @@ import { FactsCard } from "./facts-card";
 import { LeaseTab } from "./lease-tab";
 import { FinanceTab } from "./finance-tab";
 import { DocumentsTab } from "./documents-tab";
+import { ServiciosTab } from "./servicios-tab";
 
 const TABS = [
   { value: "resumen", label: "Resumen" },
+  { value: "servicios", label: "Servicios" },
   { value: "arriendo", label: "Arriendo" },
   { value: "finanzas", label: "Finanzas" },
   { value: "documentos", label: "Documentos" },
@@ -43,8 +45,12 @@ const TABS = [
 
 export default async function PropiedadDetallePage({
   params,
+  searchParams,
 }: PageProps<"/propiedades/[id]">) {
   const { id } = await params;
+  // ?pestana=servicios abre la ficha directo en esa pestaña (al volver desde un servicio).
+  const { pestana } = await searchParams;
+  const pestanaInicial = TABS.some((t) => t.value === pestana) ? String(pestana) : "resumen";
   const orgId = await getOrgId();
 
   const [p, uf, entidades, items] = await Promise.all([
@@ -138,7 +144,7 @@ export default async function PropiedadDetallePage({
       <PropertyHeader property={p} />
       <AttentionStrip items={pendientes} />
 
-      <Tabs defaultValue="resumen">
+      <Tabs defaultValue={pestanaInicial}>
         <TabsList className="flex-wrap">
           {TABS.map((t) => (
             <TabsTrigger key={t.value} value={t.value}>
@@ -206,6 +212,10 @@ export default async function PropiedadDetallePage({
               <PropertyMap direccion={p.direccion} comuna={p.comuna} />
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="servicios" className="mt-6">
+          <ServiciosTab propertyId={p.id} />
         </TabsContent>
 
         <TabsContent value="arriendo" className="mt-6">

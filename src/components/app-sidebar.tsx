@@ -16,12 +16,24 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 
-export function AppSidebar({ pendientes = 0 }: { pendientes?: number }) {
+export function AppSidebar({
+  pendientes = 0,
+  esAdmin = false,
+}: {
+  pendientes?: number;
+  esAdmin?: boolean;
+}) {
   const pathname = usePathname();
 
   // "/" solo activo exacto; el resto activo si la ruta empieza con el href.
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  // Lo marcado soloAdmin (como «Equipo») no se muestra a los demás. El permiso real
+  // se exige igual en el servidor: esto solo evita mostrar un enlace que no les sirve.
+  const gruposVisibles = navGroups
+    .map((g) => ({ ...g, items: g.items.filter((i) => !i.soloAdmin || esAdmin) }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <Sidebar collapsible="icon">
@@ -53,7 +65,7 @@ export function AppSidebar({ pendientes = 0 }: { pendientes?: number }) {
       </SidebarHeader>
 
       <SidebarContent>
-        {navGroups.map((group) => (
+        {gruposVisibles.map((group) => (
           <SidebarGroup key={group.label}>
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarMenu>

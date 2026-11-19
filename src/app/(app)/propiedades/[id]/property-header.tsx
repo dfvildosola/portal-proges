@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Pencil } from "lucide-react";
+import { FolderOpen, Pencil } from "lucide-react";
 import type { Property } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ export function PropertyHeader({
     | "objetivo"
     | "m2Construidos"
     | "m2Terreno"
+    | "driveCarpetaId"
   >;
 }) {
   // Se muestra la superficie que mejor describe la propiedad: lo construido si
@@ -56,6 +57,23 @@ export function PropertyHeader({
         <Badge variant="outline">
           Objetivo: {propertyGoalLabels[property.objetivo]}
         </Badge>
+        {property.driveCarpetaId && (
+          // Se abre en otra pestaña: cada persona del equipo entra con su propia cuenta de Google.
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={
+              <a
+                href={`https://drive.google.com/drive/folders/${property.driveCarpetaId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            }
+          >
+            <FolderOpen className="size-4" />
+            Carpeta en Drive
+          </Button>
+        )}
         <Button
           variant="outline"
           nativeButton={false}

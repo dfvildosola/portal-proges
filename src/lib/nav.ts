@@ -11,6 +11,8 @@ import {
   Network,
   PieChart,
   Receipt,
+  UserCog,
+  ClipboardList,
   type LucideIcon,
 } from "lucide-react";
 
@@ -19,6 +21,7 @@ export type NavItem = {
   label: string;
   icon: LucideIcon;
   badge?: boolean; // muestra el contador de pendientes
+  soloAdmin?: boolean; // solo lo ve quien tiene la marca de admin
 };
 
 export type NavGroup = {
@@ -32,6 +35,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/", label: "Inicio", icon: Home },
       { href: "/pendientes", label: "Pendientes", icon: Bell, badge: true },
+      { href: "/operacion", label: "Operación", icon: ClipboardList },
       { href: "/cobranza", label: "Cobranza", icon: Wallet },
       { href: "/cuentas", label: "Cuentas", icon: Receipt },
     ],
@@ -45,5 +49,9 @@ export const navGroups: NavGroup[] = [
       { href: "/duenos", label: "Dueños", icon: Network },
       { href: "/contactos", label: "Contactos", icon: Users },
     ],
+  },
+  {
+    label: "Administración",
+    items: [{ href: "/equipo", label: "Equipo", icon: UserCog, soloAdmin: true }],
   },
 ];

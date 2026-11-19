@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment } from "react";
+import { UserButton } from "@clerk/nextjs";
 
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -25,6 +26,7 @@ const segmentLabels: Record<string, string> = {
   propiedades: "Propiedades",
   contratos: "Contratos",
   duenos: "Dueños",
+  equipo: "Equipo",
   contactos: "Contactos",
   nueva: "Nueva",
   nuevo: "Nuevo",
@@ -71,8 +73,10 @@ export function AppHeader() {
           ))}
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-2">
         <ThemeToggle />
+        {/* Foto de la persona; al tocarla ofrece salir. */}
+        <UserButton />
       </div>
     </header>
   );
