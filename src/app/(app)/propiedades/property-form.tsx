@@ -36,6 +36,7 @@ export type PropertyValues = {
   rolSII?: string;
   tipo?: string;
   direccion?: string;
+  edificio?: string;
   comuna?: string;
   region?: string;
   objetivo?: string;
@@ -127,6 +128,15 @@ export function PropertyForm({
             name="direccion"
             defaultValue={initial?.direccion}
             placeholder="Av. Providencia 123, depto 45"
+          />
+        </Field>
+
+        <Field label="Edificio (opcional)" htmlFor="edificio" error={err("edificio")}>
+          <Input
+            id="edificio"
+            name="edificio"
+            defaultValue={initial?.edificio}
+            placeholder="Edificio Monjitas 550"
           />
         </Field>
 

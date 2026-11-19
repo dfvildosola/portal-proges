@@ -26,6 +26,7 @@ export default async function EditarPropiedadPage({
           rolSII: p.rolSII ?? undefined,
           tipo: p.tipo,
           direccion: p.direccion,
+          edificio: p.edificio ?? undefined,
           comuna: p.comuna,
           region: p.region,
           objetivo: p.objetivo,

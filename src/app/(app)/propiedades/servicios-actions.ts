@@ -204,6 +204,20 @@ export async function moverEtapa(
   });
   if (!nueva) return { error: "Esa etapa no existe o no es de este tipo de servicio." };
 
+  // Una obra con partidas no se cierra moviendo la etapa: se cierra en «Cierre de la obra»,
+  // que exige todas las partidas recibidas conformes y la marca de jefatura (d16, d14).
+  if (nueva.cierraServicio && servicio.tipo === "OBRA") {
+    const partidas = await db.partida.count({
+      where: { servicioEnCursoId: servicio.id, quitadaEnOdoo: false },
+    });
+    if (partidas > 0) {
+      return {
+        error: "Esta obra se cierra en «Cierre de la obra», con todas sus partidas recibidas.",
+        fieldErrors: { etapaId: "Usa el cierre de la obra" },
+      };
+    }
+  }
+
   // Todo en una transacción. El `updateMany` con `estado: ABIERTO` evita pisar a otra
   // persona que cerró el servicio justo antes: si no actualiza nada, se deshace todo.
   const ahora = new Date();

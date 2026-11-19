@@ -35,6 +35,7 @@ const propertySchema = z.object({
   rolSII: optionalText, // el ROL puede faltar (el inventario del Drive no lo trae)
   tipo: enumField(PropertyType),
   direccion: z.string().trim().min(1, "La dirección es obligatoria"),
+  edificio: optionalText, // agrupa unidades del mismo edificio para buscarlas juntas (ADR 0012)
   comuna: z.string().trim().min(1, "La comuna es obligatoria"),
   region: z.string().trim().min(1, "La región es obligatoria"),
   objetivo: enumField(PropertyGoal),
@@ -78,6 +79,7 @@ function parse(formData: FormData) {
     rolSII: formData.get("rolSII"),
     tipo: formData.get("tipo"),
     direccion: formData.get("direccion"),
+    edificio: formData.get("edificio"),
     comuna: formData.get("comuna"),
     region: formData.get("region"),
     objetivo: formData.get("objetivo"),

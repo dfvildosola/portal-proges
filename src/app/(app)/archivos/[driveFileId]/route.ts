@@ -8,8 +8,8 @@
 //    Un id cualquiera de Drive (aunque la cuenta de servicio lo pueda abrir) da «No encontrado».
 //  - El espacio se comprueba con el organizationId del registro (exigirLectura), no con nada
 //    que mande el navegador.
-//  - Un CLIENTE solo ve fotos de notas marcadas para el dueño y fotos de partidas
-//    (recepción); nunca el PDF del presupuesto del maestro.
+//  - Un CLIENTE solo ve fotos de notas marcadas para el dueño (d15); nunca las fotos de la
+//    recepción ni el PDF del presupuesto del maestro.
 //  - Todo lo que no se puede mostrar responde «No encontrado», para no confirmar que existe.
 //  - `?miniatura=1` entrega la miniatura que genera Drive (para las listas); si no la tiene
 //    todavía, entrega el original.
@@ -33,7 +33,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ driveFileId
   });
   if (foto) {
     // Un cliente: solo la foto de una nota marcada para él, o la de una partida.
-    if (esCliente && !(foto.nota?.paraDueno || foto.partidaId)) return NO_ENCONTRADO();
+    if (esCliente && !foto.nota?.paraDueno) return NO_ENCONTRADO();
     organizationId = foto.organizationId;
   } else {
     // El PDF de un presupuesto es solo del equipo: trae el costo del maestro.
