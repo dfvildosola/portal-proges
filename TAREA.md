@@ -1,8 +1,40 @@
 # TAREA — Etapa 1: el portal con dos caras (equipo Proges + cliente)
 
-**Estado: plan v5 (rehecho: «el portal interno primero») ESPERANDO APROBACIÓN de Diego (2026-11-19).** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v5). Branch: `plan/etapa-1-dos-caras` (sin mezclar; la v4 está construida y cerrada, commits `19ef648` a `92bcc14`; el plano de la v4 queda en git, commit `92bcc14`).
+**Estado: plan v5 (rehecho: «el portal interno primero») APROBADO con cambios por Diego (2026-11-19); faltan cerrar las preguntas que abrieron sus respuestas.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v5). Branch: `plan/etapa-1-dos-caras` (sin mezclar; la v4 está construida y cerrada, commits `19ef648` a `92bcc14`; el plano de la v4 queda en git, commit `92bcc14`).
 
-**Paso siguiente exacto:** Diego recorre la página v5, marca d12 a d17 y d21, y los supuestos, y pega su respuesta. Con «ok, con workflow»: anotar la respuesta acá, commit, y lanzar el workflow de la sección 8 (molde: `~/.claude/projects/-Users-diegofigueroa-Code/6d01402a-ffd5-4528-a638-dead11bb388b/workflows/scripts/proges-etapa1-v4-wf_8cb15232-5e1.js`). La base de pruebas es `proges_dev_v4` (Diego todavía no eligió entre reiniciar `proges_dev` o pasar `.env` a esa base).
+**Paso siguiente exacto:** Diego respondió «ok, con workflow» (2026-11-19, abajo), pero con cuatro decisiones distintas de lo propuesto y cuatro supuestos «no es así» que cambian piezas A, C, D, E, M y W. Antes de lanzar: cerrar con él las preguntas abiertas (costos y pagos de maestros en Odoo, qué falta del listado de maestros, la cuenta de servicio del Drive, hasta dónde edita el dueño, y la solicitud que entra sola), ajustar este plano y la página, y pedir su ok final. Después, el workflow (molde: `~/.claude/projects/-Users-diegofigueroa-Code/6d01402a-ffd5-4528-a638-dead11bb388b/workflows/scripts/proges-etapa1-v4-wf_8cb15232-5e1.js`), sobre `proges_dev_v4`.
+
+**Respuesta de Diego a la v5 (2026-11-19), tal cual:**
+
+```
+ok, con workflow
+Plan: etapa 1 de Proges, versión 5
+
+Decisiones:
+- En una propiedad administrada, ¿quién recibe la plata del arriendo? El arrendatario le paga directo al dueño; Proges controla que pague y cobra su comisión aparte (distinto de lo propuesto)
+- ¿Qué hace el dueño en su portal, ahora que el equipo edita la cartera? También edita, igual que el equipo (distinto de lo propuesto)
+- ¿Dónde se guardan las fotos y los PDF? En la carpeta del Drive de la propiedad (distinto de lo propuesto)
+- ¿Cómo entra al portal la orden que el dueño aprobó en Odoo? El portal la lee de Odoo por su número
+- ¿Quién aprueba el presupuesto del maestro? Cecilia y Álvaro, con una marca «jefatura»
+- ¿Qué ve el dueño de la bitácora? Solo las notas que el equipo marca para él
+- ¿Cómo se recibe una obra? Partida por partida, conforme u observada con fotos; no se cierra con partidas pendientes
+
+Supuestos que no son así:
+- El equipo es el único que carga propiedades, contratos y pagos; el dueño no necesita corregir nada él mismo.
+- Los maestros son en general los mismos: basta un listado simple.
+- En una propiedad administrada, el arrendatario le paga a Proges y Proges le transfiere al dueño (si d21 a).
+- Los costos de los maestros hoy no están en Odoo (467 facturas de proveedor en borrador, ninguna publicada desde septiembre): se registran en el portal.
+
+Supuestos que no sé:
+- Cada propiedad tiene un solo cliente.
+- El presupuesto del maestro llega en PDF o por WhatsApp; en el portal se marca qué partidas de la orden cubre y su total, sin copiarlo línea por línea.
+- Las jefaturas son Cecilia y Álvaro.
+- Un cambio de alcance durante la obra es un presupuesto adicional, que se aprueba igual que el original.
+```
+
+Y agregó: «el caso de NPL o al cliente que le llevamos las propiedades es específico; una vez que abramos el portal a otros posibles usuarios, ellos nos van a poder solicitar los servicios y eso se nos debería cargar en el sistema de manera automática para que ellos lo gestionen».
+
+Lo que se vio en Odoo al leer la respuesta: los maestros sí entran a Odoo como facturas de proveedor (Sociedad Diseño y Espacios $13,3 M, John Franco Vera $7,6 M, Ingeniería del Mueble $6,9 M, Coyanco, LPF, Jess-Alum), casi todas en borrador y casi ninguna con la propiedad marcada (Diseño y Espacios 0 de 9 líneas; John Franco Vera 1 de 9). Hay una sola orden de compra (P00001, Remodelaciones M y L, $4.010.000, con propiedad). La propiedad ya guarda `driveCarpetaId`, pero el portal no tiene conexión con Google.
 
 ## Por qué hay una v5
 
