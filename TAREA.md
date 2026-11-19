@@ -1,8 +1,25 @@
 # TAREA — Etapa 1: el portal con dos caras (equipo Proges + cliente)
 
-**Estado: plan v6 (la v5 aprobada con cambios, con las preguntas abiertas ya cerradas) ESPERA el ok final de Diego.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v6). Branch: `plan/etapa-1-dos-caras` (sin mezclar; la v4 está construida y cerrada, commits `19ef648` a `92bcc14`; el plano de la v4 queda en git, commit `92bcc14`).
+**Estado: plan v6 APROBADO por Diego (2026-11-19, «ok, con workflow»); en construcción con workflow.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v6). Branch: `plan/etapa-1-dos-caras` (sin mezclar; la v4 está construida y cerrada, commits `19ef648` a `92bcc14`).
 
-**Paso siguiente exacto:** Diego marca en la página los cuatro supuestos nuevos (t30 a t33) y pega «ok, con workflow». Antes, idealmente, crea la cuenta de servicio de Google con la guía de Claude (ver pieza A). Después, el workflow (molde: `~/.claude/projects/-Users-diegofigueroa-Code/6d01402a-ffd5-4528-a638-dead11bb388b/workflows/scripts/proges-etapa1-v4-wf_8cb15232-5e1.js`), sobre `proges_dev_v4`.
+**Paso siguiente exacto:** correr el workflow de la v6 sobre `proges_dev_v4` (olas [A, W] → [B, C, D, O] → [E, P, V, M] → [F, G]); al terminar, leer informes, verificar, probar en el navegador, commit y cierre contra el plan (regla 6). La cuenta de servicio de Google todavía no existe: la subida real al Drive se prueba cuando Diego la cree.
+
+**Respuesta de Diego a la v6 (2026-11-19), tal cual:**
+
+```
+ok, con workflow
+Plan: etapa 1 de Proges, versión 6
+
+Decisiones:
+
+Supuestos que no son así:
+- ninguno marcado
+
+Supuestos que no sé:
+- Las facturas de los maestros terminan entrando a Odoo como facturas de proveedor, y su pago se registra en Odoo (aunque hoy muchas estén en borrador).
+```
+
+t31, t32 y t33 quedan como ciertos. **Por t30 «no sé» (decisión de Claude, 2026-11-19):** el diseño aguanta que una factura o pago del maestro no esté en Odoo. `FacturaMaestro` tiene el id de Odoo optativo: sin él, el equipo anota a mano el monto, la fecha y si está pagada, y la pantalla la marca «fuera de Odoo». Las cuentas de `obra.ts` suman las dos clases igual.
 
 **Respuesta de Diego a la v5 (2026-11-19), tal cual:**
 
@@ -100,7 +117,7 @@ Además dijo: las órdenes repetidas son de unidades distintas («muchas veces s
   - `Nota` (proyecto, autor, texto, fecha, la ve el dueño sí/no, tarea opcional) y `Foto` (nota, id del archivo en Drive, nombre).
   - `Maestro` (en `org_proges`: id del proveedor en Odoo, nombre copiado de Odoo, especialidad, activo). Son proveedores de Proges, no del cliente.
   - `PresupuestoMaestro` (proyecto, maestro, tipo ORIGINAL o ADICIONAL, plazo en días, PDF en Drive, estado RECIBIDO/APROBADO/RECHAZADO, quién y cuándo) que cubre partidas. `OrdenDueno` (número de Odoo, total, facturado) con sus `Partida` (recinto optativo, código, descripción, cantidad, unidad, precio al dueño, línea de Odoo, maestro, avance %, recepción: pendiente/conforme/observada, observación).
-  - `FacturaMaestro` (proyecto, maestro, id de la factura de proveedor en Odoo, monto asignado, quién la asignó). Solo la asignación: número, fecha, total, estado y pagado se leen de Odoo al mirar. Una factura puede repartirse entre dos proyectos, y la suma asignada nunca pasa su total.
+  - `FacturaMaestro` (proyecto, maestro, id de la factura de proveedor en Odoo —optativo, por t30—, monto asignado, quién la asignó; sin id de Odoo: monto, fecha, pagada sí/no y nota, anotados a mano). Con id, solo se guarda la asignación: número, fecha, total, estado y pagado se leen de Odoo al mirar. Una factura puede repartirse entre dos proyectos, y la suma asignada nunca pasa su total.
   - En `Property`: `edificio` (texto optativo) y la cuenta analítica de Odoo (número, puede repetirse). `driveCarpetaId` ya existe.
   - `Administracion` (propiedad, desde, hasta, comisión %). El arriendo del mes es el `RentCharge` de siempre, con su estado pagado o atrasado y quién lo marcó.
   - En `ServicioEnCurso`: estado «por revisar» cuando nace de un pedido, la solicitud de origen, y para la obra el presupuesto al dueño, fecha de inicio y fecha comprometida.
