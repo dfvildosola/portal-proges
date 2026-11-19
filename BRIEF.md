@@ -11,12 +11,16 @@ Excel con el que hoy se gestionan propiedades, arriendos y cobranza — y, sobre
 ---
 
 ## 1. Usuario y objetivo
-- **Usuarios (desde la etapa 1, 2026-11-18):** el equipo de Proges (Álvaro, Cecilia,
-  Leo, François, Diego), que gestiona la cartera, y el cliente que compra cartera de
-  deuda (unas 80 propiedades, 20 a 25 activas), que mira la suya en vivo en `/cliente`
-  en vez del Word semanal. Después, el piloto de propietarios (Diego y un amigo).
-- **Objetivo de la etapa 1:** que el equipo registre en el portal cada servicio que
-  lleva en cada propiedad (ADR 0011) y que el cliente vea su avance sin pedirlo (ADR 0010).
+- **Usuario:** el dueño de una cartera de propiedades, que la administra en su portal
+  (propiedades, contratos, cobranza, cuentas) y le pide servicios a Proges. Cada cliente
+  tiene su propio espacio y no ve el de otro (ADR 0010). Hoy: el piloto (Diego con una
+  propiedad, un amigo con tres) y NPL, que compra carteras de deuda (4 o 5 empresas
+  dueñas, unas 80 propiedades) y cuya cartera carga Proges con un usuario de NPL.
+- **Proges es el proveedor:** el equipo (Álvaro, Cecilia, Leo, François, Diego) ve la
+  cartera de cada cliente sin editarla, recibe los pedidos de todos en «Operación» y
+  lleva cada servicio por sus etapas (ADR 0011).
+- **Objetivo de la etapa 1:** que el cliente pida servicios desde su portal y vea su
+  avance en vivo, y que el equipo registre ahí cada servicio que lleva.
 
 ## 2. El núcleo (lo que justifica existir)
 **Autocontrol + cobranza son un solo producto:** el sistema cruza contratos con pagos y
@@ -33,11 +37,9 @@ No se puede saltar: para alertar "arriendo atrasado" hay que tener antes propied
 contratos cargados. Lo documental, en cambio, no saca a nadie del Excel → se difiere.
 
 ## 4. Arquitectura
-- **Single-tenant** para arrancar, pero con `organizationId` en cada tabla desde el día 1
-  (seguro barato). Sin roles ni cambio de organización todavía.
-- **Login:** Clerk.
-- **Multi-tenant real** (orgs, roles, switching) se agrega *aditivamente* cuando aparezca
-  el 2º cliente — sin reescribir, porque el modelo ya lleva `organizationId`.
+- **Un espacio por cliente** desde la etapa 1: el `organizationId` que cada tabla lleva
+  desde el día 1 es el del cliente. Catálogo y etapas viven en el espacio de Proges.
+- **Login:** Clerk; roles CLIENTE y EQUIPO en la tabla `Usuario` (ADR 0010).
 
 ## 5. Stack
 | Capa | Decisión |
@@ -45,7 +47,7 @@ contratos cargados. Lo documental, en cambio, no saca a nadie del Excel → se d
 | Framework | Next.js 16 (App Router) + TypeScript |
 | UI | Tailwind + shadcn/ui — tema neutro, color de marca se ajusta después |
 | Base de datos | **Neon / Postgres** + Prisma *(DuckDB descartado: es analítico, no transaccional, y no corre en serverless)* |
-| Auth | Clerk (single-tenant por ahora) |
+| Auth | Clerk + tabla `Usuario` (un espacio por cliente) |
 | Hosting | Vercel |
 | *(diferido)* | Vercel Blob (documentos), Resend (emails de alerta), AI SDK + Gateway (buscador) |
 
@@ -63,6 +65,7 @@ contratos cargados. Lo documental, en cambio, no saca a nadie del Excel → se d
 ## 7. Lo que NO hacemos ahora
 Pasarela de pago · auto-registro · portal de arrendatarios · RAG/OCR de documentos ·
 mora automática · boleta/factura SII · conciliación bancaria · roles por sección ·
-que el cliente administre a sus usuarios · pedir un servicio desde el panel ·
+usuarios que solo miran · límite por sociedad · que el cliente cree sus usuarios ·
+IA o correo para las solicitudes · cotizar o cobrar un servicio en el portal ·
 costos y resultado por propiedad · leer Nexxos · escribir en Odoo · DuckDB y dbt
 (hasta que entre Odoo) · correo semanal al cliente · API para clientes grandes.

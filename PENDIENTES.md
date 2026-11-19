@@ -4,15 +4,14 @@ Ordenados por prioridad el 2026-10-06 con Diego.
 
 ## 0. Poner en uso la etapa 1 (en este orden)
 
-Etapa 1 «dos caras» (ADR 0010 y 0011), construida en `plan/etapa-1-dos-caras`. Los datos de producción no se tocan hasta el paso 3.
+Etapa 1 «dos caras», v4: cada cliente en su portal, Proges en todos (ADR 0010 y 0011), construida en `plan/etapa-1-dos-caras`. Los datos de producción no se tocan hasta el paso 4.
 
-1. [diego] **Llaves de Clerk.** `.env` las tiene vacías: copiar las de desarrollo (`pk_test_…`, `sk_test_…`) desde dashboard.clerk.com → API Keys y revisar que Vercel tenga las de producción (`pk_live_…`). Sin ellas el portal local no abre. (2026-11-18)
-2. [diego] **Probar en local y mezclar.** Crear el primer admin (`npx tsx scripts/crear-usuario.ts --email … --nombre … --admin`), recorrer la lista «Qué revisar» de la página del plan y subir. Al subir, producción queda con login: antes, crear el usuario de Diego también en producción. (2026-11-18)
-3. [diego] **Crear los usuarios del equipo** en `/equipo` (correos `@progesspa.cl`). (2026-11-18)
-4. [diego] **Revisar las etapas con Leo, François y Cecilia** en `/equipo/etapas` antes de la carga real. (2026-11-18)
-5. [diego] **Borrar los datos inventados de producción, confirmar con el equipo la lista de las 42 y cargarlas** (`scripts/carga-inicial.ts`, después `scripts/cargar-catalogo.ts`). En `proges_dev` quedan además los datos de `scripts/probar-alcance.ts` (correos `@proges.test`). (2026-11-18)
-6. [diego] **Revisar en «Operación» los servicios «por confirmar»** y los tipos de propiedad supuestos; resolver los posibles duplicados (Mirador 1851, unidades de Agustinas 715 y Monjitas 550). El cliente no ve un servicio hasta que se confirma. (2026-11-18)
-7. [diego] **Conversar con el equipo el registro de visitas** y después abrirle el panel al cliente (3 a 5 personas) y al piloto. Antes de abrirlo al cliente real: `/code-review` completo de la etapa 1 (decisión d7). (2026-11-18)
+1. [diego] **Probar en local y mezclar.** Recorrer la lista «Qué revisar» de la página del plan. Antes de subir, revisar que Vercel tenga las llaves de producción de Clerk (`pk_live_…`) y crear el usuario de Diego también en producción: al subir, producción queda con login. (2026-11-18)
+2. [diego] **Crear los clientes y sus usuarios** en `/equipo`: NPL (con un usuario de NPL a cargo de Proges, con un correo que controle Proges), Diego y su amigo; y el equipo (correos `@progesspa.cl`). (2026-11-18)
+3. [diego] **Revisar las etapas con Leo, François y Cecilia** en `/equipo/etapas` antes de la carga real. (2026-11-18)
+4. [diego] **Borrar los datos inventados de producción, confirmar con el equipo la lista de las 42 y cargarlas en NPL** (`scripts/cargar-catalogo.ts`, después `scripts/carga-inicial.ts --cliente NPL`). Quedan en «Sociedad por confirmar»: asignarle a cada una su empresa de NPL. (2026-11-18)
+5. [diego] **Revisar en «Operación» los servicios «por confirmar»** y los tipos de propiedad supuestos; resolver los posibles duplicados (Mirador 1851, unidades de Agustinas 715 y Monjitas 550). El cliente no ve un servicio hasta que se confirma. (2026-11-18)
+6. [diego] **Contarle al equipo cómo llegan los pedidos** (la bandeja de «Operación», mirarla cada día hábil) y el registro de visitas; después abrirle el portal al piloto y a NPL. Antes de abrirlo a NPL: `/code-review` completo de la etapa 1 (decisión d7). (2026-11-18)
 
 - [diego] **Respuesta de Convecta.** No ha respondido; el plan no depende de Nexxos. (2026-11-18)
 

@@ -1,6 +1,6 @@
 # 0011 — El servicio en curso como unidad
 
-Fecha: 2026-11-18 · Estado: aceptada (plan v3 de la etapa 1, aprobado por Diego)
+Fecha: 2026-11-18 · Estado: aceptada (plan v3 de la etapa 1; la solicitud se suma en la v4, aprobada por Diego el mismo día)
 
 ## Contexto
 
@@ -24,9 +24,13 @@ Lo que sí se repite es el **servicio**: el equipo vende uno del catálogo (el m
 
 **La etapa la mueve una persona.** El portal no la cambia solo, ni siquiera cuando se acepta una oferta.
 
+**El servicio nace de una solicitud del cliente** (v4). Hoy un dueño no le pide servicios a Proges por ningún canal; la idea es que empiece a pasar por el portal. El cliente pide desde la ficha de una propiedad suya: el tipo y qué necesita, en sus palabras, sin precio (se cotiza después, fuera del portal). La solicitud queda **nueva** en la bandeja de «Operación», y el menú del equipo muestra cuántas hay (decisión d8 a: sin correo ni IA por ahora). Es como el buzón de pedidos de un taller: el pedido no se pierde, espera ahí hasta que alguien lo toma. El equipo la **acepta** eligiendo el código del catálogo y el responsable, y en ese momento se abre el servicio en su primera etapa, enlazado a la solicitud. O la **rechaza** con un motivo que el cliente lee. Dos personas no pueden resolver la misma solicitud: la segunda recibe «Otra persona ya la resolvió». El equipo también puede abrir un servicio directo, sin solicitud (por ejemplo, lo que NPL pide en una reunión).
+
+**Catálogo y etapas son de Proges**: viven en el espacio `org_proges` y valen para todos los clientes. Los servicios en curso, en cambio, viven en el espacio del cliente dueño de la propiedad (ADR 0010).
+
 **Venta y arriendo son servicios con más datos** (tipos VENTA y ARRIENDO): precio vigente con su moneda y su historial, quién lo fijó (el propietario o sugerido por Proges), visitas con evaluación, ofertas con su estado, recomendación al propietario y el enlace del aviso.
 
-**Los indicadores se calculan al mirar** (días publicada, visitas de la semana, visitas por semana, días desde la última rebaja), en `src/lib/servicios.ts`, y los usan la ficha del equipo y el panel del cliente. Un número vive en un solo lugar. No se guardan.
+**Los indicadores se calculan al mirar** (días publicada, visitas de la semana, visitas por semana, días desde la última rebaja), en `src/lib/servicios.ts`, y los usan la vista del equipo y la del cliente de cada servicio. Un número vive en un solo lugar. No se guardan.
 
 **Nexxos solo publica los avisos.** Toda la gestión (visitas, ofertas, precio) se registra en el portal; del aviso se guarda solo el enlace.
 
@@ -42,7 +46,9 @@ Lo que sí se repite es el **servicio**: el equipo vende uno del catálogo (el m
 
 - **Seguimiento de la obra** (tareas, hitos, avance en %): cuelga del servicio OBRA. Es la tarea siguiente, pedida por Diego el 2026-11-18 (ver `PENDIENTES.md`).
 - **DuckDB y dbt:** cuando entre Odoo.
-- **Pedir un servicio desde el panel del cliente:** cuando el cliente lo pida.
+- **IA que dimensiona un pedido** (hace preguntas de vuelta según el tipo): cuando haya solicitudes reales de donde aprender qué información falta.
+- **Correo a Cecilia y Leo por cada solicitud:** si la bandeja no basta y los pedidos esperan.
+- **Pedir un servicio para una propiedad que todavía no está cargada:** por ahora el cliente primero la crea.
 - **Costos y resultado por propiedad:** cuando la obra y los cobros pasen por el portal.
 - **Correo semanal al cliente:** si el panel en vivo no reemplaza al Word.
 - **Tipos de servicio creados desde el portal:** si aparece un servicio que no calza en los seis.
