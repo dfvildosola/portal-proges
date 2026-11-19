@@ -2,7 +2,7 @@
 
 **Estado: plan v3 APROBADO por Diego el 2026-11-18 («ok, con workflow», d7 = a). En ejecución.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v3). Branch: `plan/etapa-1-dos-caras`.
 
-**Paso siguiente exacto:** parte 2 construida y guardada (`86e01fd`); ADR 0010 y 0011, `BRIEF.md` y `PENDIENTES.md` escritos. Falta: (1) los hallazgos del `revisor` enfocado; (2) que Diego ponga las llaves de Clerk de desarrollo en `.env` (están vacías); (3) crear su admin con `scripts/crear-usuario.ts`, probar en el navegador con un EQUIPO y los clientes de `scripts/probar-alcance.ts`; (4) cierre contra el plan y volver a publicar la página en estado de cierre.
+**Paso siguiente exacto:** parte 2 construida y guardada (`86e01fd`); ADR 0010 y 0011, `BRIEF.md` y `PENDIENTES.md` escritos. Falta: (1) `revisor` enfocado hecho: arreglados el comentario de la visita, borrar propiedad con servicios y el precio con dos personas a la vez; queda por ver en el navegador si un CLIENTE que abre una ruta del equipo va a /cliente o ve un error (hallazgo 5); (2) que Diego ponga las llaves de Clerk de desarrollo en `.env` (están vacías); (3) crear su admin con `scripts/crear-usuario.ts`, probar en el navegador con un EQUIPO y los clientes de `scripts/probar-alcance.ts`; (4) cierre contra el plan y volver a publicar la página en estado de cierre.
 
 Nada de esto se vuelve a planificar: el plan v3 está aprobado y las decisiones cerradas.
 

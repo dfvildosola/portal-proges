@@ -125,12 +125,15 @@ export async function cambiarPrecio(
     return { error: "El precio vigente ya es ese." };
   }
 
-  await db.$transaction([
-    db.servicioEnCurso.update({
-      where: { id: servicio.id },
+  // El cambio solo se guarda si el precio sigue siendo el que se leyó: si otra persona lo cambió
+  // entre medio, el «precio anterior» del historial quedaría mal anotado.
+  const guardado = await db.$transaction(async (tx) => {
+    const { count } = await tx.servicioEnCurso.updateMany({
+      where: { id: servicio.id, precio: servicio.precio, precioMoneda: servicio.precioMoneda },
       data: { precio: nuevo, precioMoneda: parsed.data.moneda },
-    }),
-    db.evento.create({
+    });
+    if (count === 0) return false;
+    await tx.evento.create({
       data: {
         organizationId: orgId,
         servicioEnCursoId: servicio.id,
@@ -142,8 +145,12 @@ export async function cambiarPrecio(
         motivo: parsed.data.motivo,
         autorId: usuario.id,
       },
-    }),
-  ]);
+    });
+    return true;
+  });
+  if (!guardado) {
+    return { error: "Otra persona cambió el precio recién. Recarga la página y vuelve a intentarlo." };
+  }
 
   refrescar(servicio.propertyId, servicio.id);
   return {};

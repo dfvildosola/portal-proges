@@ -165,6 +165,14 @@ export async function deleteProperty(formData: FormData): Promise<void> {
   if (!id) return;
 
   const orgId = await getOrgId();
+  // Borrar la propiedad se llevaría en cadena el historial de sus servicios (etapas, precios,
+  // visitas, ofertas). Igual que una etapa con servicios, no se borra: se cancelan sus servicios.
+  const servicios = await db.servicioEnCurso.count({ where: { propertyId: id, organizationId: orgId } });
+  if (servicios > 0) {
+    throw new Error(
+      "Esta propiedad tiene servicios con historial y no se puede eliminar. Cancela sus servicios en vez de borrarla.",
+    );
+  }
   await db.property.deleteMany({ where: { id, organizationId: orgId } });
 
   revalidatePath("/propiedades");

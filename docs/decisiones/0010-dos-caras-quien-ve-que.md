@@ -37,6 +37,8 @@ Hay que resolver tres preguntas: quién entra, qué ve cada uno y cómo se asegu
 ## Consecuencias
 
 - `scripts/probar-alcance.ts` prueba con tres clientes (otro grupo, todo el grupo, limitado a una sociedad) que nadie ve lo ajeno y que no sale ningún dato interno. Se corre antes de mezclar un cambio en `src/lib/cliente.ts`.
+- **Dar dueño es dar acceso.** El alcance se calcula con quién es dueño de cada propiedad y en qué grupo está cada sociedad. Cualquiera del equipo que agrega una sociedad como dueña de una propiedad (ficha) o mueve una sociedad de grupo (Dueños) le abre o le quita esa propiedad a los clientes de ese grupo, al tiro y sin aviso. El equipo tiene que saberlo.
+- **El comentario de una visita lo lee el cliente.** Es texto libre: el formulario lo advierte para que no se escriban ahí datos del interesado.
 - El primer admin no puede crearse desde `/equipo` (todavía no hay quien entre): se crea con `npx tsx scripts/crear-usuario.ts --email … --nombre … --admin`.
 - Local y producción usan instancias distintas de Clerk (llaves `pk_test` y `pk_live`); hay que revisarlas en Vercel antes de subir.
 - **Fuera por ahora:** roles por sección, que el cliente administre a sus usuarios, propietarios externos que se registran solos y la API para clientes grandes.

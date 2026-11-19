@@ -89,7 +89,7 @@ export function RegistrarVisitaForm({
           </Select>
         </Field>
       </div>
-      <Field label="Comentario (opcional)" htmlFor="visita-comentario" error={err("comentario")}>
+      <Field label="Comentario (opcional; lo lee el propietario, no pongas datos del interesado)" htmlFor="visita-comentario" error={err("comentario")}>
         <Textarea id="visita-comentario" name="comentario" rows={2} />
       </Field>
       {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
