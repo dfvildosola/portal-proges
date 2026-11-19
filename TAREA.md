@@ -1,8 +1,37 @@
 # TAREA — Etapa 1: el portal con dos caras (equipo Proges + cliente)
 
-**Estado: plan v4 ESPERANDO APROBACIÓN de Diego (2026-11-18).** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v4). Branch: `plan/etapa-1-dos-caras` (sin mezclar).
+**Estado: plan v4 APROBADO por Diego el 2026-11-18 («ok, con workflow», con los ajustes de abajo). En ejecución.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v4). Branch: `plan/etapa-1-dos-caras` (sin mezclar).
 
-**Paso siguiente exacto:** Diego recorre la página v4, marca d8 a d11 y los supuestos, y pega su respuesta. Con «ok, con workflow»: anotar la respuesta acá, commit, y lanzar el workflow de la sección 8 (molde: el script de la parte 2, `~/.claude/projects/-Users-diegofigueroa-Code/6d01402a-ffd5-4528-a638-dead11bb388b/workflows/scripts/proges-etapa1-parte2-wf_923d53be-386.js`).
+**Paso siguiente exacto:** workflow de la v4 en curso (M → W, U, S, P, O → X). Al terminar: enchufar `PedirServicioBoton` (P) en la pestaña Servicios (S), reiniciar `proges_dev` con seed + catálogo + carga NPL, build, prueba en el navegador, `revisor`, cierre contra el plan.
+
+## Respuesta de Diego a la v4 (2026-11-18), tal cual
+```
+ok, con workflow
+Plan: etapa 1 de Proges, versión 4
+
+Decisiones:
+- ¿Cómo se entera el equipo de una solicitud? Bandeja en Operación con contador en el menú, sin IA
+- ¿Qué puede hacer un usuario de cliente? Todos administran (distinto de lo propuesto)
+- ¿Se mantiene el límite por sociedad dentro de un cliente? (era d6) Por ahora no: cada usuario ve todo el espacio de su cliente
+- ¿Qué pasa con la vitrina /cliente de la v3? Se quita: el cliente ve todo en su portal
+
+Supuestos que no son así:
+- El equipo puede editar todo en el espacio de cualquier cliente (así carga la cartera de NPL).
+- Los usuarios de NPL solo miran.
+
+Supuestos que no sé:
+- Un usuario de cliente pertenece a un solo cliente.
+- La solicitud no lleva precio: se cotiza después, fuera del portal.
+- Una solicitud siempre es sobre una propiedad ya cargada; para evaluar una que todavía no tiene, el cliente primero la crea.
+```
+Y además: «NPL tiene 4 o 5 empresas dueñas de propiedades. NPL es un caso especial, no sé si tener un "usuario". Las propiedades que tenemos (las puedes ver en proges-web) ninguna es de Proges, todas pertenecen a alguna sociedad de NPL.» Al preguntarle si el equipo ve pero no edita la cartera de un cliente: «sí, así es. Una idea podría ser crear un usuario a NPL y llevarlo nosotros por ahí para crear las propiedades, o de frentón darles un usuario a ellos.»
+
+**Ajustes que esto hace al plan (mandan sobre lo de abajo):**
+- d9 = b: no hay permiso «administra/mira»: todo usuario de cliente administra su espacio. Sale el campo `permiso`.
+- **El equipo ve la cartera del cliente activo en solo lectura y no la edita** (t2 falso). Solo gestiona servicios, solicitudes y Operación. `orgParaEscribir()` exige un CLIENTE; al equipo, una franja arriba dice «Estás viendo la cartera de X: solo lectura».
+- **NPL es un cliente con su propio usuario.** Parte con uno a cargo de Proges (un correo que controle Proges) para cargar sus propiedades; después NPL puede tener usuarios propios. Sus 4 o 5 empresas son las sociedades (`Owner`) de su espacio; la carga inicial las deja «por confirmar» porque ninguna fuente dice qué empresa es dueña de cada propiedad.
+- Los «no sé» siguen con lo más simple: un usuario, un cliente; la solicitud sin precio; se pide sobre una propiedad ya cargada.
+- Los datos inventados quedan en `org_proges`, que no es un cliente y no se ofrece en el selector: en producción no se ven y se borran (pendiente); en local el seed los pone en el cliente «Demo».
 
 ## Por qué hay una v4
 
