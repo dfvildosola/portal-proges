@@ -1,8 +1,8 @@
 # TAREA — Etapa 1: el portal con dos caras (equipo Proges + cliente)
 
-**Estado: plan v5 ESPERANDO APROBACIÓN de Diego (2026-11-19).** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v5). Branch: `plan/etapa-1-dos-caras` (sin mezclar; la v4 está construida y cerrada, commits `19ef648` a `92bcc14`; el plano de la v4 queda en git, commit `92bcc14`).
+**Estado: plan v5 (rehecho: «el portal interno primero») ESPERANDO APROBACIÓN de Diego (2026-11-19).** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v5). Branch: `plan/etapa-1-dos-caras` (sin mezclar; la v4 está construida y cerrada, commits `19ef648` a `92bcc14`; el plano de la v4 queda en git, commit `92bcc14`).
 
-**Paso siguiente exacto:** Diego recorre la página v5, marca d12 a d16 y los supuestos, y pega su respuesta. Con «ok, con workflow»: anotar la respuesta acá, commit, y lanzar el workflow de la sección 8 (molde: `~/.claude/projects/-Users-diegofigueroa-Code/6d01402a-ffd5-4528-a638-dead11bb388b/workflows/scripts/proges-etapa1-v4-wf_8cb15232-5e1.js`). La base de pruebas es `proges_dev_v4` (Diego todavía no eligió entre reiniciar `proges_dev` o pasar `.env` a esa base).
+**Paso siguiente exacto:** Diego recorre la página v5, marca d12 a d17 y los supuestos, y pega su respuesta. Con «ok, con workflow»: anotar la respuesta acá, commit, y lanzar el workflow de la sección 8 (molde: `~/.claude/projects/-Users-diegofigueroa-Code/6d01402a-ffd5-4528-a638-dead11bb388b/workflows/scripts/proges-etapa1-v4-wf_8cb15232-5e1.js`). La base de pruebas es `proges_dev_v4` (Diego todavía no eligió entre reiniciar `proges_dev` o pasar `.env` a esa base).
 
 ## Por qué hay una v5
 
@@ -15,10 +15,14 @@ Cómo se trabaja hoy, según Diego (2026-11-19):
 - Lo que más problemas da: **las reparaciones y mantenimientos**, y **el reporte de una propiedad en venta** (visitas, anuncios, historial de precios) para que el dueño decida.
 - Reparaciones: los maestros son en general los mismos. El maestro manda un presupuesto que se aprueba: es gran parte del costo de Proges y la base del presupuesto que Proges le presenta al dueño. **Proges le paga al maestro y gestiona el trabajo.** Falta rigurosidad y trazabilidad durante la gestión, en la recepción del trabajo y después al comparar con lo planificado.
 
-**Lo de la v4 que sigue tal cual:** espacios por cliente, solicitudes, la vista del cliente, el catálogo, las etapas, venta y arriendo, los indicadores.
-**Lo que cambia:** la cara del equipo pasa a girar en torno a las tareas y la bitácora de cada servicio, y entra el módulo de reparaciones.
+Después de ver el mockup (https://claude.ai/artifact/7HVjcQdkz3etLXvdEGkFdB), Diego preguntó si había que rehacer el portal partiendo por el portal interno. Se acordó no rehacerlo de cero sino cambiarle el plano: **el portal es primero del equipo; el del dueño es una ventana a ese trabajo.** Y respondió (2026-11-19): **1. el equipo crea y edita las propiedades; 2. Proges administra arriendos** (los contratos y la cobranza son trabajo del equipo). También pidió el listado de propiedades del equipo: todo servicio queda ligado a una propiedad.
+
+**Se mantiene de la v4:** login, usuarios, un espacio por cliente, propiedades y dueños, servicios, etapas, visitas, ofertas, precios, pedidos de clientes, lo que el dueño no debe ver.
+**Cambia:** (1) el equipo trabaja con todos los clientes a la vez: el selector de «cliente activo» desaparece y las listas filtran por cliente; el equipo escribe la cartera (revierte el ajuste «el equipo no edita» de la v4); (2) el menú y el inicio parten por el trabajo: Mi trabajo, Trabajo del equipo, Propiedades, Pedidos; después Administración de arriendos (contratos, cobranza, cuentas, pendientes); (3) entran tareas, bitácora, reparaciones y maestros; (4) el dueño pasa a mirar y pedir (d17).
 
 ## 1. Qué va a existir
+- **Menú del equipo:** Trabajo (Mi trabajo, Trabajo del equipo, Pedidos de clientes) · Propiedades · Administración de arriendos (Contratos, Cobranza, Cuentas, Pendientes) · Configuración (Maestros, Equipo y clientes, Etapas). El inicio del equipo es Mi trabajo.
+- **Propiedades (equipo):** todas las de todos los clientes, filtradas por defecto a las que tienen trabajo en curso, con sus servicios, tareas y última novedad; al elegir una, todo lo que Proges ha hecho ahí. El equipo crea una propiedad (eligiendo el cliente) y la edita.
 - **Cecilia o Álvaro (jefatura):** al abrir o aceptar un servicio, le anotan las tareas: qué, quién y para cuándo. En «Trabajo del equipo» ven las tareas de todos: atrasadas, de la semana, por persona. Aprueban el presupuesto del maestro.
 - **Cada persona del equipo:** en «Mi trabajo» ve sus tareas abiertas y atrasadas. Desde el celular anota en la **bitácora** del servicio lo que pasa, con fotos, en el momento: «fui, faltaba la llave del medidor». Marca sus tareas hechas.
 - **Reparaciones** (servicios de tipo Obra): se cargan los maestros; el presupuesto de cada maestro, por partidas, con su PDF; se aprueba; se registran los adicionales y los pagos al maestro; el avance de cada partida; la **recepción** partida por partida, con fotos, conforme u observada; y al cerrar, **lo planificado contra lo real**: costo, plazo y partidas.
@@ -47,13 +51,15 @@ Cómo se trabaja hoy, según Diego (2026-11-19):
   - `PagoMaestro` (presupuesto, monto, fecha, concepto, comprobante opcional).
   - En `ServicioEnCurso` (obra): presupuesto al dueño (monto y moneda, número de Odoo), fecha de inicio y fecha comprometida.
 - Fotos y PDF: según d12.
+- Espacios para el equipo: `getOrgId()` deja de ser un solo cliente para el equipo. Nuevo `espaciosQueLee()` (para el cliente, el suyo; para el equipo, todos los clientes activos o el filtro elegido) que usan las listas; las acciones escriben en el espacio del registro que tocan (el de la propiedad), y al crear una propiedad, en el cliente elegido. `orgParaEscribir()` pasa a exigir EQUIPO (d17 a).
 - Servidor: `src/lib/obra.ts` con las cuentas como funciones puras (aprobado, adicionales, pagado, saldo, avance ponderado, plan contra real) que usan la pantalla y la prueba; `src/lib/vista-cliente.ts` suma el avance y las notas marcadas, nunca montos del maestro.
 - Pantallas: la página del servicio se reordena (tareas y bitácora arriba, el resto debajo); «Mi trabajo» y «Trabajo del equipo» (reemplaza la parte de cifras de «Operación», que queda con la bandeja de solicitudes); `/equipo/maestros`; la sección Obra del servicio.
 
 ## 4. Permisos
 - EQUIPO: crea tareas, notas, presupuestos, pagos y recepciones en el cliente activo; ve los costos.
 - Jefatura (marca nueva en el usuario, la pone el admin; d14): aprueba presupuestos de maestros y adicionales, y cierra la obra.
-- CLIENTE: ve el avance de sus obras y las notas marcadas «la ve el dueño», con sus fotos. Nada de montos del maestro, pagos ni presupuestos.
+- EQUIPO: además lee y escribe la cartera de todos los clientes (propiedades, contratos, cobranza, cuentas).
+- CLIENTE: mira su cartera y pide servicios (d17 a); ve el avance de sus obras y las notas marcadas «la ve el dueño», con sus fotos. Nada de montos del maestro, pagos ni presupuestos.
 - Todo en el servidor: las acciones nuevas exigen EQUIPO (y jefatura donde corresponde) y comprueban cada id contra el espacio; lo del cliente sale solo de `vista-cliente.ts`.
 
 ## 5. Decisiones
@@ -62,9 +68,13 @@ De Diego:
 - **d13. El presupuesto al dueño:** (a) se anota solo el total aprobado y el número de la cotización de Odoo [rec.]; (b) se arma en el portal, partida por partida con margen.
 - **d14. Quién aprueba el presupuesto del maestro:** (a) Cecilia y Álvaro, con una marca «jefatura» [rec.]; (b) cualquiera del equipo; (c) solo el admin.
 - **d15. Qué ve el dueño de la bitácora:** (a) solo las notas que el equipo marca para él [rec.]; (b) todas, menos los montos; (c) nada, solo el avance.
+- **d17. Qué hace el dueño en su portal ahora que el equipo edita:** (a) mira su cartera y sus servicios, y pide servicios; no edita [rec.]; (b) también edita, igual que el equipo.
 - **d16. Cómo se recibe una obra:** (a) partida por partida, conforme u observada con fotos; no se cierra con partidas sin recibir [rec.]; (b) un acta general con fotos.
 
 De Claude:
+- El equipo ve todos los clientes juntos, con un filtro por cliente; ya no elige un cliente activo.
+- Al editar, el espacio sale del registro que se toca (la propiedad), nunca de lo que manda el navegador.
+- Se reutiliza todo lo de la v4 que no contradice esto: no se reescribe de cero.
 - La tarea es lo mínimo: qué, quién, para cuándo, hecha. Sin estados intermedios ni dependencias entre tareas.
 - La bitácora reemplaza el Word final: el informe para el dueño se lee de ahí.
 - Las cuentas de la obra son funciones puras en `src/lib/obra.ts` y se calculan al mirar; no se guardan.
@@ -83,6 +93,8 @@ De Claude:
 - t14. La cotización al dueño se sigue haciendo en Odoo.
 - t15. Las jefaturas son Cecilia y Álvaro.
 - t16. El equipo anota desde el celular en terreno.
+- t18. El equipo es el único que carga propiedades, contratos y pagos; el dueño no necesita corregir nada él mismo (si d17 a).
+- t19. Cada propiedad tiene un solo cliente.
 - t17. Un cambio de alcance durante la obra se maneja como presupuesto adicional que se aprueba igual que el original.
 
 ## 7. Lo que no debe pasar
@@ -92,35 +104,43 @@ De Claude:
 - El saldo del maestro está mal. Cómo: `probar-obra.ts` con casos de anticipo, adicional y pago final.
 - Alguien sin la marca de jefatura aprueba un presupuesto. Cómo: la acción lo rechaza; prueba.
 - Las fotos quedan en una dirección pública. Cómo: revisar cómo se guardan (d12).
+- Un cliente ve algo de otro cliente ahora que el equipo lee todos a la vez. Cómo: `probar-espacios.ts` se amplía con `espaciosQueLee()`.
+- Una acción del equipo escribe en el cliente equivocado. Cómo: la prueba crea un contrato en una propiedad de A y comprueba que quedó en A.
 - La migración borra datos. Cómo: leer el SQL: solo crea y agrega.
 - Un archivo pasa de 800 líneas. Cómo: `wc -l`.
 
 ## 8. Piezas y orden
-Olas: [A] → [B, C, D] → [E] → [F, G]. 7 agentes en Sonnet. Verificación común: `npx tsc --noEmit && npm run lint`; build al final de cada ola.
-- ◻️ A. Modelo y archivos. `prisma/schema.prisma` y una migración nueva; `src/lib/archivos.ts` (subir y leer según d12); `src/lib/obra.ts` (las cuentas, funciones puras); marca de jefatura en `/equipo`.
-- ◻️ B. Tareas, Mi trabajo y Trabajo del equipo. Depende de A.
+Olas: [A, W] → [B, C, D] → [E, P] → [F, G]. 8 agentes en Sonnet. Verificación común: `npx tsc --noEmit && npm run lint`; build al final de cada ola.
+- ◻️ A. Modelo, archivos y cuentas. `prisma/schema.prisma` y una migración nueva; `src/lib/archivos.ts` (según d12); `src/lib/obra.ts` (cuentas, funciones puras); marca de jefatura en `/equipo`.
+- ◻️ W. El equipo en todos los clientes. `src/lib/org.ts` y `src/lib/sesion.ts` (`espaciosQueLee()`, escritura del equipo, el cliente solo mira según d17); quitar el selector de cliente activo; las ~23 pantallas y ~10 archivos de acciones de la cartera; crear propiedad eligiendo el cliente.
+- ◻️ B. Menú, inicio, tareas, Mi trabajo y Trabajo del equipo. Depende de A y W.
 - ◻️ C. Bitácora con fotos, pensada para el celular. Depende de A.
-- ◻️ D. Maestros y presupuestos (cargar, aprobar, adicionales, presupuesto al dueño). Depende de A.
+- ◻️ D. Maestros y presupuestos. Depende de A.
 - ◻️ E. Avance, pagos y recepción de la obra. Depende de D.
-- ◻️ F. Plan contra real, vista del dueño (avance y notas marcadas) y página del servicio reordenada. Depende de B, C y E.
-- ◻️ G. `scripts/probar-obra.ts`. Depende de E.
+- ◻️ P. Propiedades del equipo: listado con trabajo en curso e historial de cada propiedad. Depende de B y C.
+- ◻️ F. Cierre con plan contra real, vista del dueño y página del servicio reordenada. Depende de C y E.
+- ◻️ G. `scripts/probar-obra.ts` y `probar-espacios.ts` ampliado. Depende de W y E.
 
 ## 9. Riesgos
 - R7. El equipo no anota y vuelve a WhatsApp (p 3, i 3; uso). La nota tiene que ser tan rápida como un mensaje: un campo y las fotos, sin formulario largo. Se prueba en el celular.
 - R8. El dueño ve un costo (p 1, i 3; plata). Una sola puerta (`vista-cliente.ts`) y prueba.
 - R9. Las fotos quedan públicas (p 2, i 2; datos). d12 y revisión.
 - R10. Copiar el presupuesto del maestro por partidas da flojera y se salta (p 2, i 2; uso). Se puede cargar con una sola partida y el PDF; partir en más es opcional.
+- R12. Al abrir la lectura a todos los clientes, una pantalla del cliente queda leyendo de más (p 2, i 3; datos). `espaciosQueLee()` devuelve siempre un solo espacio para un cliente; prueba y revisor.
 - R11. Las cuentas del saldo fallan (p 1, i 2; plata). Funciones puras con prueba.
 
 ## 10. Documentos accesorios y qué queda fuera
 - ADR 0012 «El trabajo del equipo: tareas y bitácora».
 - ADR 0013 «Reparaciones: presupuesto del maestro, recepción y plan contra real».
+- ADR 0010: se reescribe otra vez (el equipo lee y escribe todos los clientes; el dueño mira y pide).
 - ADR 0011: la etapa deja de ser lo principal para el equipo.
 - `PENDIENTES.md`: la línea «seguimiento de obra» se reemplaza por lo que quede fuera.
 - Fuera: el reporte de venta para el dueño (tarea siguiente); traer la cotización desde Odoo; conectar WhatsApp; IA que pule la bitácora o arma el informe; plantillas de tareas por tipo de servicio (cuando se vea qué se repite); pagar al maestro desde el portal; que el maestro entre al portal.
 
 ## 11. Qué revisar una vez construido
 Diego:
+- v8. Entra como equipo: el inicio es Mi trabajo y el menú parte por el trabajo.
+- v9. En Propiedades, filtra por NPL, crea una propiedad nueva con su servicio y edítala.
 - v10. Como jefatura, abre un servicio y anota tres tareas para dos personas: cada una las ve en «Mi trabajo».
 - v11. Desde el celular, anota en la bitácora con dos fotos: se ven en el servicio.
 - v12. Carga un presupuesto de maestro con tres partidas y su PDF, y apruébalo.
