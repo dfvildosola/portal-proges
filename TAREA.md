@@ -1,27 +1,17 @@
 # TAREA — Etapa 1: el portal con dos caras (equipo Proges + cliente)
 
-**Estado: plan v6 APROBADO (2026-11-19) y CONSTRUIDO: las 12 piezas hechas (commit `679c99b`, arreglos `10477e0`); falta revisión y cierre contra el plan.** Tamaño: grande (regla 1). Página: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo (v6). Branch: `plan/etapa-1-dos-caras` (sin mezclar; la v4 está construida y cerrada, commits `19ef648` a `92bcc14`).
+**Estado: la v6 está construida (commits `679c99b` a `685a630`, sin mezclar ni publicar), pero a Diego NO le gusta cómo se ve (2026-11-19): «quedó muy confuso entre lo que había antes y lo que hay ahora». Decidió REDISEÑAR LO QUE SE VE DESDE CERO (opción 1): pantallas, menú y nombres nuevos, reutilizando lo de adentro (modelo de datos, Odoo, permisos, cuentas de la obra, pruebas).** Tamaño: grande. Página del plan v6: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo. Branch: `plan/etapa-1-dos-caras`.
 
-**Paso siguiente exacto:** Diego responde dos preguntas (¿presupuesto del maestro con o sin IVA? —rec. sin IVA, leyendo el neto de Odoo—; ¿comisión sobre lo esperado o lo pagado? —rec. lo pagado—); se ajusta; después, cierre contra el plan (regla 6): página en estado de cierre con la evidencia y la lista v8–v21 para Diego.
+**Paso siguiente exacto (sesión nueva después de `/clear`):** empezar el rediseño SIN código y sin mirar las pantallas de hoy:
+1. Preguntarle a Diego, pocas preguntas y concretas, cómo es un día de trabajo de cada uno (Cecilia y Álvaro como jefatura, el equipo en terreno, el dueño del piloto y NPL): qué hace primero, qué necesita ver, qué decide (regla 8).
+2. Con eso, una maqueta en blanco como página (regla 2 y `~/Code/.claude/guias/paginas.md`): menú e inicio, ficha de la propiedad, página del proyecto, y lo que ve el dueño. Que diga qué de lo de antes queda, se esconde o se borra (Resumen, Cuentas, Pendientes, Dueños, Contactos, etapas, «por confirmar»).
+3. Diego la corrige hasta que le guste; recién ahí un plan para reordenar el portal según la maqueta.
 
-**Revisión (`/code-review high`, 2026-11-19):** 10 hallazgos. Arreglados 7 (commit `685a630`): cierre por etapa de cualquier proyecto con recintos; facturas anuladas fuera de lo facturado; `cerrarObra` mueve a la etapa de cierre con su evento; no se cierra ni cancela un proyecto por revisar; tarea de revisión con campo `esRevision` (migración `20261119211217`); acciones de la obra niegan un proyecto cerrado; el dueño solo baja fotos de proyectos que ve. Descartados 3: solicitudes NUEVA anteriores (la v4 nunca llegó a producción, no hay); /propiedades carga todo el historial (con cientos de propiedades no pesa; comentario junto al código); parseo de pesos copiado dos veces (regla de tres). Pendiente aparte: `prisma/schema.prisma` pasó de 800 líneas (1.013): partirlo en varios archivos.
+**Lo que Claude vio como confuso (2026-11-19):** la página del proyecto es una columna de ~12 secciones, con lo de la v4 (mover etapa, confirmar servicio, historial) abajo; arriba conviven cinco formas de decir en qué está («Obra · Abierto · Por cotizar · Por confirmar» y «Etapa actual»); el menú tiene 15 entradas en 4 grupos que mezclan lo nuevo y lo viejo; se dice «servicio» y «proyecto» para lo mismo.
 
-**Respuesta de Diego a la v6 (2026-11-19), tal cual:**
+**Preguntas abiertas de antes (se cierran en el rediseño):** ¿el presupuesto del maestro con o sin IVA? (rec. sin IVA, leyendo el neto de Odoo); ¿la comisión de administración sobre el arriendo esperado o el pagado? (rec. el pagado). Pendiente técnico: `prisma/schema.prisma` pasó de 800 líneas (1.013): partirlo. Sin verificar: Drive (falta la cuenta de servicio), 390 px, acciones como cliente.
 
-```
-ok, con workflow
-Plan: etapa 1 de Proges, versión 6
-
-Decisiones:
-
-Supuestos que no son así:
-- ninguno marcado
-
-Supuestos que no sé:
-- Las facturas de los maestros terminan entrando a Odoo como facturas de proveedor, y su pago se registra en Odoo (aunque hoy muchas estén en borrador).
-```
-
-t31, t32 y t33 quedan como ciertos. **Por t30 «no sé» (decisión de Claude, 2026-11-19):** el diseño aguanta que una factura o pago del maestro no esté en Odoo. `FacturaMaestro` tiene el id de Odoo optativo: sin él, el equipo anota a mano el monto, la fecha y si está pagada, y la pantalla la marca «fuera de Odoo». Las cuentas de `obra.ts` suman las dos clases igual.
+**Para verlo:** `npm run dev -- --port 3001` con `DATABASE_URL` apuntando a `proges_dev_v4` (ver el comando en el historial de esta tarea); entra a http://localhost:3001. La orden S00047 quedó enlazada en Agustinas 715 of 706 (NPL).
 
 **Respuesta de Diego a la v5 (2026-11-19), tal cual:**
 
