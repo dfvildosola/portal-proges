@@ -2,6 +2,8 @@
 
 Fecha: 2026-11-18 · Estado: aceptada (plan v4 de la etapa 1, aprobado por Diego; reemplaza la versión de la v3 del mismo día) · Reemplaza el pendiente «Producción es pública: falta el login»
 
+> **Cambia con el plan v6 de la etapa 1 (2026-11-19, aprobación pendiente):** el equipo deja de elegir un cliente activo y lee y escribe la cartera de todos los clientes; el dueño sigue editando la suya (d17 b), pero no toca tareas, bitácora ni la obra (d25 a). Si los dos cambian lo mismo, vale el último y queda quién lo cambió. Este ADR se reescribe en la pieza W del plan; hasta entonces vale lo de abajo.
+
 ## Contexto
 
 Hasta hoy el portal no tenía login: cualquiera con la dirección podía ver, crear y borrar. Servía porque los datos eran inventados. La etapa 1 trae datos reales, y con ellos hay que resolver quién entra, qué ve cada uno y cómo se asegura que un cliente nunca vea lo de otro.
