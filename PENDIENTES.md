@@ -16,6 +16,7 @@ El portal v7 (API propia en Railway y web nueva en Vercel; ADR 0016 y 0017) est�
 
 - [chica] **La fecha de inicio de un servicio abierto después de las 21:00 sale corrida un día.** `abiertoEl` se guarda como instante (`now()`), pero la API lo entrega cortándolo en UTC: en la ficha dice «empezó el 19» y la lista de propiedades dice «ayer» para el mismo servicio. Antes de arreglar, revisar cómo lo guardó la carga inicial (medianoche UTC o instante), porque pasarlo a hora de Chile correría un día las fechas guardadas a medianoche. (2026-11-20)
 - [chica] **Un PDF de más de 4,5 MB no va a subir desde la web publicada.** La subida pasa por una server action de Vercel, que tiene ese tope (en el Mac no se nota), aunque el ADR 0016 dice que no lo hay. Arreglo: que el navegador suba directo a la API con su token. Hacerlo antes del paso 7. (2026-11-19)
+- [mediana] **Cartera del dueño autónomo: reajustar un contrato y el libro de movimientos no tienen pantalla.** La API los tiene; faltan en «Cartera». Un pago de un mes anterior que no está entre los 10 últimos tampoco se puede deshacer desde ahí. (2026-11-20)
 - [diego] **Respuesta de Convecta.** No ha respondido; el plan no depende de Nexxos. (2026-11-18)
 
 ## 1. Lo que hace Diego (no es código)
@@ -58,6 +59,9 @@ Va al final porque necesita los campos de la tarea 2 y que funcione la subida de
 ## Esperan respuesta de Diego
 
 - **Cuatro detalles del portal v7.** Quedaron como se construyeron y Diego los confirma o cambia: el margen de una obra es la orden al dueño menos lo facturado por los maestros (y solo con costo aprobado); el comentario de una visita lo ve el dueño; el dueño no ve las fotos de recepción de las partidas (ADR 0015 lo permitiría); el total del presupuesto del maestro, ¿con o sin IVA? (ADR 0014). 2026-11-19.
+- [diego] **El texto de «esperamos a…» lo ve el dueño.** Lo que el equipo escribe al marcar a quién se espera llega al portal del dueño y a la API para terceros. ¿Se avisa en la pantalla del equipo («lo ve el dueño») o se le oculta al dueño? (2026-11-20)
+- [diego] **¿El cliente atendido lleva su cartera?** Hoy Vencimientos y Cartera lo mandan a su inicio (la API sí lo deja; el plan suponía que sí). Abrirlo es quitar ese bloqueo. (2026-11-20)
+- [diego] **Los textos de los seis tipos de pedido** en «Pedir a Proges» del dueño: revisar cómo se le explica cada uno. (2026-11-20)
 - **Cuentas: quién paga cada una.** En una propiedad arrendada, unas cuentas las paga el arrendatario (el dueño solo vigila que estén al día) y otras el dueño (son costo). Hoy todas se tratan igual. Primero preguntarle a Diego cómo se hace hoy (regla 8): quién las paga y quién revisa. Va antes que la línea anterior, porque solo las que paga el dueño deberían pasar a gasto. 2026-10-04.
 - **Cuentas pagadas no llegan a la rentabilidad.** Marcar pagada una `PropertyBill` no crea un `Movement` (gasto), así que ese gasto no aparece en la rentabilidad de la propiedad. Resolver cuando el flujo lleve un tiempo en uso real. 2026-10-01.
 - **Cobranza, lo que sigue.** Salió de la revisión del 2026-10-04 y espera respuestas de Diego (¿cómo se entera el dueño de que le pagaron: cartola, aviso de transferencia, comprobante? ¿cada sociedad cobra en su propia cuenta bancaria?):

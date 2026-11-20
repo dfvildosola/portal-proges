@@ -54,6 +54,8 @@ export async function cargarPresupuesto(
   let pdfDriveFileId: string | null = null;
   const [pdf, ...sobran] = archivosDe(pedido.pdf, "pdf");
   if (sobran.length > 0) throw new ErrorApi(400, "Adjunta un solo PDF.", { pdf: "Adjunta un solo PDF." });
+  // Si después falla la base, el PDF queda suelto en la carpeta de la propiedad; igual que las fotos
+  // de recepción (ver recepcion.ts), se aceptó así en el cierre de la v7.
   if (pdf) pdfDriveFileId = await subirPdf(drive, pdf, servicio.property, maestro.nombre);
 
   const creado = await db.presupuestoMaestro.create({

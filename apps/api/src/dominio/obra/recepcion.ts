@@ -52,7 +52,9 @@ export async function recibirPartida(
   const responsableId = pedido.responsableId ?? null;
   await exigirResponsableValido(responsableId);
 
-  // Las fotos, a la carpeta «Portal» de la propiedad, antes de guardar nada.
+  // Las fotos, a la carpeta «Portal» de la propiedad, antes de guardar nada. Si después falla la
+  // base, las fotos ya subidas quedan sueltas en esa carpeta (sin datos de nadie más): se aceptó
+  // así en el cierre de la v7; limpiarlas sería mandarlas a la papelera en el catch.
   const subidas: { driveFileId: string; nombre: string; mime: string }[] = [];
   for (const [i, foto] of fotos.entries()) {
     try {
