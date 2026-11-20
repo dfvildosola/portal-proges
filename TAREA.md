@@ -1,276 +1,232 @@
-# TAREA — Etapa 1: el portal con dos caras (equipo Proges + cliente)
+# TAREA — Etapa 1 de Proges: portal nuevo sobre una API propia (v7)
 
-**Estado: la v6 está construida (commits `679c99b` a `685a630`, sin mezclar ni publicar), pero a Diego NO le gusta cómo se ve (2026-11-19): «quedó muy confuso entre lo que había antes y lo que hay ahora». Decidió REDISEÑAR LO QUE SE VE DESDE CERO (opción 1): pantallas, menú y nombres nuevos, reutilizando lo de adentro (modelo de datos, Odoo, permisos, cuentas de la obra, pruebas).** Tamaño: grande. Página del plan v6: https://claude.ai/artifact/1dW6hvZhqjEXQxVoSB1Vgo. Branch: `plan/etapa-1-dos-caras`.
+**Estado (2026-11-19): plan v7 por aprobar.** Página del plan: https://claude.ai/artifact/Q5hLn7T56rPapBoimRFsEt. Maqueta aprobada: https://claude.ai/artifact/6oufJsWJ57469Ttg2X2RS8. Tamaño: grande, en tres etapas (un workflow por etapa). Branch: `plan/etapa-1-dos-caras`.
 
-**Paso siguiente exacto (sesión nueva después de `/clear`):** empezar el rediseño SIN código y sin mirar las pantallas de hoy:
-1. Preguntarle a Diego, pocas preguntas y concretas, cómo es un día de trabajo de cada uno (Cecilia y Álvaro como jefatura, el equipo en terreno, el dueño del piloto y NPL): qué hace primero, qué necesita ver, qué decide (regla 8).
-2. Con eso, una maqueta en blanco como página (regla 2 y `~/Code/.claude/guias/paginas.md`): menú e inicio, ficha de la propiedad, página del proyecto, y lo que ve el dueño. Que diga qué de lo de antes queda, se esconde o se borra (Resumen, Cuentas, Pendientes, Dueños, Contactos, etapas, «por confirmar»).
-3. Diego la corrige hasta que le guste; recién ahí un plan para reordenar el portal según la maqueta.
+**Paso siguiente exacto:** Diego marca en la página las decisiones d1–d9 y los supuestos, y pega la respuesta. Con «ok, con workflow»: pegar la respuesta aquí, commit del plano aprobado y lanzar el workflow de la etapa 1 (A → B → C a H a la vez). Sin el ok no se escribe código.
 
-**Cómo es el día de cada uno, según Diego (2026-11-19), para el rediseño:**
-- En la mañana lo fundamental es **organizar las tareas y ver qué entró nuevo**.
-- **Álvaro** es gerencial: poco en el portal, quiere ver **resultados y analíticas**; decide plata, gastos y estrategia.
-- **Cecilia** reparte el trabajo pero está a la par de los demás, no como jefatura formal; tiene más confianza y también decide gastos.
-- **El equipo vive en terreno** (conservadores, notarías, propiedades, home center): la gestión tiene que ser **celular primero**; el computador se usa mucho menos. Cambiar el hábito va a costar: tendrán que entrar al portal varias veces al día.
-- **Los dueños preguntan** por: avance de las reparaciones, venta, administración, y el avance de los servicios contratados (toma de posesión, si los papeles están pedidos, si el conservador puso un reparo). Si el portal está bien armado, entrarán a mirar; o se consulta por API desde sus plataformas.
-- **Frente desde cero:** no considerar ninguna pantalla de hoy. Amigable, sencillo, directo, fluido; fácil de gestionar y con buena visibilidad de los datos. Pidió **2 o 3 alternativas de diseño**.
+## Cómo se llegó a la v7
 
-**Maqueta v1 del rediseño (2026-11-19):** https://claude.ai/artifact/6oufJsWJ57469Ttg2X2RS8 — tres caminos: A «Mi día» (la lista de hoy manda; recomendado, sumando la ficha como línea de tiempo de B y el «esperando a…» de C), B «La propiedad manda», C «Seguimiento» (pasos por servicio y a quién se espera). Incluye qué queda de lo de antes y el nombre único (rec. «servicio»). Diego respondió (2026-11-19): «son 3 cosas que conviven», y quiere ver el computador: la gestión es de terreno, pero una parte importante y la analítica se hacen en el computador, y él va a mirar desde ahí. **Maqueta v2 (misma URL):** un portal con tres miradas sobre los mismos datos. Celular abre en «Hoy»; computador abre en «Inicio» (lo nuevo, lo trabado, el equipo), con Servicios (tablero por quién tiene la pelota), Propiedades (lista y ficha), Repartir, Resultados (solo gerencia: Álvaro y Diego). «Esperando a…» es un dato del servicio, no una lista de pasos. Diego (2026-11-19): «el approach está bastante mejor». Pidió que **la ficha de la propiedad tenga todo, como la ficha de un paciente en una clínica**: datos, ubicación, documentos, cada reparación con su costo y qué se hizo, todo el historial. **v2.1 (misma URL):** ficha con pestañas Resumen (cifras, alertas, lo último), Historial (filtrable por tipo), Reparaciones (cobrado, costo del maestro, margen, partidas por recinto con recepción), Documentos (dominio, municipales, planos, informes; vigente/falta), Datos y ubicación (mapa), Arriendo y venta. El dueño ve la misma ficha sin costos de maestro ni notas internas. Diego (2026-11-19): «también es importante el seguimiento del corretaje»: el dueño va a querer saber el estado de anuncios, visitas, ofertas y lo relativo a la venta. **v2.2 (misma URL):** servicio de venta (ejemplo José de Moraleda 4510) con precio publicado y ofertas en el tiempo, consultas y visitas por semana, anuncios por portal (anotados a mano cada lunes; conectar portales es otra decisión), visitas con interés y comentario, ofertas con estado y «esperando a: dueño», recomendación de precio. El dueño lo ve como «Reporte de venta», sin nombres ni notas internas; idea abierta: que responda la oferta en el portal. Sirve igual para buscar arrendatario. Esto adelanta el «reporte de venta para el dueño» que estaba fuera de la etapa 1. Cómo se hace hoy la venta, según Diego (2026-11-19): **todo se publica en Nexos**, y de ahí salen las visitas y esos datos; entiende que Nexos publica en los demás portales, pero no lo sabe con certeza. **La oferta se la hace llegar Proges al dueño**: el módulo de ofertas va en el portal (el dueño responde ahí). **Administración y arriendos recién están empezando**: es nuevo, se diseña cuando haya casos reales (regla 8). Abierto: qué es exactamente Nexos (¿NexoCRM?), si tiene API o exportación, y quién del equipo lo usa. v2.3 (misma URL) refleja esto. **La lógica comercial, según Diego (2026-11-19):** NPL es un cliente grande al que Proges le hace todos los servicios y que hoy no ve nada de esto; vendrán 2 o 3 más así. Pero lo que Proges hace es difícil de salir a vender: **lo que se vende es el portal**. Los dueños registran sus propiedades y llevan su propio control (arriendos, gastos, contribuciones, documentos, reparaciones) de forma autónoma, y desde ahí le piden servicios a Proges. El alcance del plan gratuito se decide después. **v2.4 (misma URL):** dos tipos de dueño con la misma ficha (cliente grande: Proges anota y el dueño mira; dueño que se registra solo: anota él y cada aviso trae «que Proges lo haga»); inicio y Vencimientos del dueño autónomo; Resumen, Cuentas y Pendientes pasan a quedar como herramientas del dueño (antes se iban a esconder o borrar). Choca con d26 («registro abierto fuera de esta etapa»): hay que decidir si el registro abierto entra en la etapa 1 o en una etapa 2. **Paso siguiente:** esperar la respuesta que Diego copia de la página, lo de Nexos y esa decisión; con eso, plan para construirla.
-
-**Lo que Claude vio como confuso (2026-11-19):** la página del proyecto es una columna de ~12 secciones, con lo de la v4 (mover etapa, confirmar servicio, historial) abajo; arriba conviven cinco formas de decir en qué está («Obra · Abierto · Por cotizar · Por confirmar» y «Etapa actual»); el menú tiene 15 entradas en 4 grupos que mezclan lo nuevo y lo viejo; se dice «servicio» y «proyecto» para lo mismo.
-
-**Preguntas abiertas de antes (se cierran en el rediseño):** ¿el presupuesto del maestro con o sin IVA? (rec. sin IVA, leyendo el neto de Odoo); ¿la comisión de administración sobre el arriendo esperado o el pagado? (rec. el pagado). Pendiente técnico: `prisma/schema.prisma` pasó de 800 líneas (1.013): partirlo. Sin verificar: Drive (falta la cuenta de servicio), 390 px, acciones como cliente.
-
-**Para verlo:** `npm run dev -- --port 3001` con `DATABASE_URL` apuntando a `proges_dev_v4` (ver el comando en el historial de esta tarea); entra a http://localhost:3001. La orden S00047 quedó enlazada en Agustinas 715 of 706 (NPL).
-
-**Respuesta de Diego a la v5 (2026-11-19), tal cual:**
-
-```
-ok, con workflow
-Plan: etapa 1 de Proges, versión 5
-
-Decisiones:
-- En una propiedad administrada, ¿quién recibe la plata del arriendo? El arrendatario le paga directo al dueño; Proges controla que pague y cobra su comisión aparte (distinto de lo propuesto)
-- ¿Qué hace el dueño en su portal, ahora que el equipo edita la cartera? También edita, igual que el equipo (distinto de lo propuesto)
-- ¿Dónde se guardan las fotos y los PDF? En la carpeta del Drive de la propiedad (distinto de lo propuesto)
-- ¿Cómo entra al portal la orden que el dueño aprobó en Odoo? El portal la lee de Odoo por su número
-- ¿Quién aprueba el presupuesto del maestro? Cecilia y Álvaro, con una marca «jefatura»
-- ¿Qué ve el dueño de la bitácora? Solo las notas que el equipo marca para él
-- ¿Cómo se recibe una obra? Partida por partida, conforme u observada con fotos; no se cierra con partidas pendientes
-
-Supuestos que no son así:
-- El equipo es el único que carga propiedades, contratos y pagos; el dueño no necesita corregir nada él mismo.
-- Los maestros son en general los mismos: basta un listado simple.
-- En una propiedad administrada, el arrendatario le paga a Proges y Proges le transfiere al dueño (si d21 a).
-- Los costos de los maestros hoy no están en Odoo (467 facturas de proveedor en borrador, ninguna publicada desde septiembre): se registran en el portal.
-
-Supuestos que no sé:
-- Cada propiedad tiene un solo cliente.
-- El presupuesto del maestro llega en PDF o por WhatsApp; en el portal se marca qué partidas de la orden cubre y su total, sin copiarlo línea por línea.
-- Las jefaturas son Cecilia y Álvaro.
-- Un cambio de alcance durante la obra es un presupuesto adicional, que se aprueba igual que el original.
-```
-
-Y agregó: «el caso de NPL o al cliente que le llevamos las propiedades es específico; una vez que abramos el portal a otros posibles usuarios, ellos nos van a poder solicitar los servicios y eso se nos debería cargar en el sistema de manera automática para que ellos lo gestionen».
-
-Lo que se vio en Odoo al leer la respuesta: los maestros sí entran a Odoo como facturas de proveedor (Sociedad Diseño y Espacios $13,3 M, John Franco Vera $7,6 M, Ingeniería del Mueble $6,9 M, Coyanco, LPF, Jess-Alum), casi todas en borrador y casi ninguna con la propiedad marcada (Diseño y Espacios 0 de 9 líneas; John Franco Vera 1 de 9). Hay una sola orden de compra (P00001, Remodelaciones M y L, $4.010.000, con propiedad). La propiedad ya guarda `driveCarpetaId`, pero el portal no tiene conexión con Google.
-
-## Por qué hay una v5
-
-Al ver la v4, Diego dijo (2026-11-19): «el portal interno para Proges no está enfocado en la gestión ni desarrollo de las actividades o tareas que ellos tienen a partir de los servicios ofrecidos». La v4 registra en qué etapa va cada servicio (un marcador), pero no ayuda a hacer el trabajo (una pizarra).
-
-Cómo se trabaja hoy, según Diego (2026-11-19):
-- Un servicio nuevo lo toma Cecilia o Álvaro, y ellos reparten quién hace qué. No hay un curso fijo: puede llegar una toma de posesión de una propiedad que no conocían, o un servicio nuevo para una propiedad donde ya trabajaron.
-- Lo más común: tomas de posesión, regularización documental, venta, mostrar propiedades, ir a ver o recepcionar para un cliente, y reparaciones y mantenimiento con maestros.
-- Hoy las tareas no se llevan en ningún lado: están en la cabeza de cada uno y en WhatsApp. Al terminar, alguien las vacía en un Word. No queda registro ni las jefaturas pueden seguirlas.
-- Lo que más problemas da: **las reparaciones y mantenimientos**, y **el reporte de una propiedad en venta** (visitas, anuncios, historial de precios) para que el dueño decida.
-- Reparaciones: los maestros son en general los mismos. El maestro manda un presupuesto que se aprueba: es gran parte del costo de Proges y la base del presupuesto que Proges le presenta al dueño. **Proges le paga al maestro y gestiona el trabajo.** Falta rigurosidad y trazabilidad durante la gestión, en la recepción del trabajo y después al comparar con lo planificado.
-
-Después de ver el mockup (https://claude.ai/artifact/7HVjcQdkz3etLXvdEGkFdB), Diego preguntó si había que rehacer el portal partiendo por el portal interno. Se acordó no rehacerlo de cero sino cambiarle el plano: **el portal es primero del equipo; el del dueño es una ventana a ese trabajo.** Y respondió (2026-11-19): **1. el equipo crea y edita las propiedades; 2. Proges administra arriendos** (los contratos y la cobranza son trabajo del equipo). También pidió el listado de propiedades del equipo: todo servicio queda ligado a una propiedad.
-
-**Se mantiene de la v4:** login, usuarios, un espacio por cliente, propiedades y dueños, servicios, etapas, visitas, ofertas, precios, pedidos de clientes, lo que el dueño no debe ver.
-**Cambia:** (1) el equipo trabaja con todos los clientes a la vez: el selector de «cliente activo» desaparece y las listas filtran por cliente; el equipo escribe la cartera (revierte el ajuste «el equipo no edita» de la v4); (2) el menú y el inicio parten por el trabajo: Mi trabajo, Trabajo del equipo, Propiedades, Pedidos; después Administración de arriendos (contratos, cobranza, cuentas, pendientes); (3) entran tareas, bitácora, reparaciones y maestros; (4) el dueño pasa a mirar y pedir (d17).
-
-**Ajuste del modelo (2026-11-19, ADR 0012).** Diego explicó por qué dejaron Odoo Proyectos: «no supimos cómo adecuar nuestros requerimientos al sistema de odoo… siempre la propiedad es lo que manda». Se vio con datos reales en la página https://claude.ai/artifact/9J7VHc187CPiRg1D8UznrN, y la respuesta de Diego, pegada tal cual:
-
-```
-Modelo propiedad → proyectos:
-d18 a: la propiedad es la unidad con su rol; el edificio solo agrupa
-d19 a: proyecto = un encargo con 0 o 1 orden de Odoo; el servicio suelto es un proyecto chico
-d20 b: diseñar ahora la condición «en administración»
-```
-
-Además dijo: las órdenes repetidas son de unidades distintas («muchas veces son 2 dptos, por ejemplo 13A y 13B»); un proyecto puede abrirse antes de que exista la orden; y hoy no administran ningún arriendo. Por d20 b entran la pieza M, la decisión d21 y los supuestos t24 a t29.
-
-**Respuestas de Diego a las preguntas abiertas (2026-11-19), tal cual:** «1 A / 2 A / 3 Si / 4 A / 5 A». Es decir: d22 a (presupuesto en el portal; facturas y pagos del maestro leídos de Odoo y asignados a su proyecto), d23 a (el maestro es el proveedor de Odoo), d24 sí (cuenta de servicio, subcarpeta «Portal», sin carpeta se pide enlazarla), d25 a (el dueño edita su cartera, no la obra; dueño o equipo marcan el arriendo pagado; la comisión se factura en Odoo) y d26 a (el pedido del cliente abre solo el proyecto «por revisar» con tarea a la jefatura).
+- La v6 está construida (`679c99b` a `685a630`), sin mezclar ni publicar. A Diego no le gustó cómo se ve («quedó muy confuso entre lo que había antes y lo que hay ahora») y pidió rediseñar el frente desde cero. El detalle de la v5 y la v6 está en git: `git show 664b5e6:TAREA.md`. Sus decisiones d12 a d26 siguen valiendo para el back (ADR 0012 a 0015).
+- **El día de cada uno (Diego, 2026-11-19):** en la mañana lo fundamental es organizar las tareas y ver qué entró nuevo. Álvaro es gerencial: mira resultados y decide plata. Cecilia reparte a la par de los demás y también decide gastos. El equipo vive en terreno (conservadores, notarías, propiedades, home center): celular primero. Los dueños preguntan por avances de reparaciones, venta, administración y trámites (¿el conservador puso reparo?).
+- **Tres miradas que conviven:** no son caminos para elegir sino formas de mirar lo mismo; el computador importa para la gestión de oficina y la analítica, y Diego mira desde el computador.
+- **La ficha de la propiedad es una ficha clínica:** datos, ubicación, documentos, cada reparación con su costo y qué se hizo, todo el historial.
+- **Corretaje:** todo se publica en Nexxos (Diego cree que de ahí salen las visitas, sin certeza; el 2026-11-18 quedó que Nexxos solo publica avisos: por confirmar). Proges le hace llegar las ofertas al dueño: el módulo va en el portal. Administración y arriendos recién empiezan: se diseñan con casos reales.
+- **La lógica comercial:** NPL es un cliente grande al que se le hacen todos los servicios (vendrán 2 o 3 más). Lo que Proges hace es difícil de vender solo: se vende el portal. Los dueños llevan gratis el control de sus propiedades y desde ahí le piden servicios a Proges. El alcance del plan gratuito se decide después.
+- **Al pedir el plan (2026-11-19):** «no quiero nada del front anterior; modifica lo que sea necesario del back; es fundamental tener nuestra propia API; quiero que sea monorepo». Y: «todos los datos que hay son ficticios».
 
 ## 1. Qué va a existir
-- **Menú del equipo:** Trabajo (Mi trabajo, Trabajo del equipo, Pedidos de clientes) · Propiedades · Administración de arriendos (En administración, Contratos, Cobranza, Cuentas, Pendientes) · Configuración (Maestros, Equipo y clientes, Etapas). El inicio del equipo es Mi trabajo.
-- **Propiedades (equipo):** todas las de todos los clientes, filtradas por defecto a las que tienen trabajo en curso, con sus proyectos, tareas y última novedad; al elegir una, todo lo que Proges ha hecho ahí. El equipo crea una propiedad (eligiendo el cliente) y la edita.
-- **Propiedad y proyectos (ADR 0012):** la propiedad es la unidad (un depto, una casa), con su rol; el edificio es un texto que agrupa. Cada encargo es un proyecto (el `ServicioEnCurso` de hoy, con otro nombre en pantalla), con 0 o 1 orden de Odoo que puede enlazarse después; al enlazarla, la cuenta analítica sugiere la unidad y el equipo confirma. Las líneas de la orden son lo que hay que hacer: por recinto en una reparación, una lista para marcar en un servicio suelto.
-- **El pedido del cliente abre el proyecto solo (d26 a):** cuando un cliente pide un servicio desde su portal, se crea el proyecto en su propiedad con estado «por revisar» y una tarea para la jefatura («revisar y repartir»). Si la propiedad no existe, el cliente la crea al pedir. La bandeja de pedidos queda como la lista de lo que está «por revisar». Los clientes siguen entrando por invitación.
-- **Administración de arriendos (pieza M, d21 b):** una propiedad se pone «en administración» (desde, hasta, comisión %). El arrendatario le paga directo al dueño; Proges controla que pague: cada mes el arriendo queda pagado o atrasado en la cobranza que ya existe (`RentCharge`), y lo puede marcar el equipo o el dueño. La comisión del mes se calcula al mirar (arriendo × %) y se factura en Odoo, como hoy. No hay liquidación ni transferencia al dueño. El dueño ve el estado de sus arriendos y la comisión.
-- **Cecilia o Álvaro (jefatura):** al abrir un proyecto (aunque no haya orden todavía), le anotan las tareas: qué, quién y para cuándo. En «Trabajo del equipo» ven las tareas de todos: atrasadas, de la semana, por persona. Aprueban el presupuesto del maestro.
-- **Cada persona del equipo:** en «Mi trabajo» ve sus tareas abiertas y atrasadas. Desde el celular anota en la **bitácora** del proyecto lo que pasa, con fotos, en el momento: «fui, faltaba la llave del medidor». Marca sus tareas hechas.
-- **Reparaciones:** el maestro es un **proveedor de Odoo** (d23 a): se busca entre los que ya existen ahí y el portal le agrega la especialidad. Su **presupuesto se lleva en el portal** (qué partidas cubre, total, PDF, plazo) y lo aprueba la jefatura; los adicionales igual. Las **facturas y pagos del maestro se leen de Odoo** (d22 a): el portal muestra las facturas de proveedor de ese maestro que no están asignadas, el equipo asigna cada una a su proyecto, y el pagado sale de Odoo. Además: avance de cada partida, **recepción** partida por partida con fotos (conforme u observada), y al cerrar, **lo planificado contra lo real**: costo, plazo y partidas.
-- **Fotos y PDF en el Drive de la propiedad (d12 b, d24):** se guardan en una subcarpeta «Portal» dentro de la carpeta del Drive de cada propiedad, con una cuenta de servicio de Google. Si la propiedad no tiene carpeta, se pide enlazarla antes de subir el primer archivo. En el portal se ven a través del servidor, nunca con un enlace público.
-- **El dueño (cliente, d17 b, d25 a):** edita su cartera igual que el equipo (propiedades, contratos, cobranza); no toca tareas, bitácora ni nada de la obra. En su proyecto ve el avance de la obra y las notas y fotos de la bitácora que el equipo marca para él. Pide servicios. Nunca ve el costo del maestro, sus facturas ni sus pagos.
-- **Listo:** pasan tipos, lint y build; un proyecto se abre sin orden y la orden se enlaza después, confirmando la unidad; un pedido del cliente abre su proyecto «por revisar» con la tarea para la jefatura; la comisión de una propiedad administrada cuadra con `probar-administracion.ts`; un cliente nunca ve costos, presupuestos, facturas ni pagos de maestros, ni notas no marcadas para él; una obra muestra aprobado, adicionales, facturado y pagado (de Odoo) y saldo, y la comparación plan contra real; no se cierra una obra con partidas sin recibir; una foto subida queda en la carpeta «Portal» de la propiedad; «Mi trabajo» muestra las atrasadas; la bitácora se usa bien a 390 px de ancho; ningún archivo sobre 800 líneas; ADRs y `PENDIENTES.md` al día.
+- **Equipo en terreno (François, Leo):** Abre el celular en «Hoy»: sus tareas atrasadas, de hoy y de mañana; Marca una tarea hecha con un toque y anota con foto en dos; Marca a quién se espera en cada servicio (conservador, notaría, maestro, dueño…); Lleva la obra (avance, recepción) y la venta (visitas, ofertas, precio, cifras de Nexxos).
+- **Jefatura (Cecilia, Álvaro):** Abre el computador en «Inicio»: lo nuevo, lo trabado y la carga del equipo; Reparte el trabajo en «Repartir»; Aprueba presupuestos de maestros y cierra obras; Mira «Resultados»: tiempos, esperas, márgenes y tareas a tiempo.
+- **Cliente grande (NPL y los que vengan):** Ve sus propiedades con su ficha clínica, sin costos internos ni notas privadas; Sigue cada servicio paso a paso y lee el reporte de venta; Responde las ofertas en el portal; Pide servicios nuevos.
+- **Dueño autónomo (por invitación):** Registra sus propiedades y lleva arriendos, gastos, contribuciones y documentos; Ve sus vencimientos, cada uno con «que Proges lo haga»; Pide servicios desde cualquier aviso.
+- **Sistema de un cliente:** Consulta con su llave las propiedades y servicios de su cliente, desde su propia plataforma.
+- **Diego (administrador):** Crea clientes, usuarios y llaves de la API; Mira todo lo que ve la jefatura.
+
+**Listo cuando:**
+- El repositorio es un monorepo con apps/api, apps/web y packages/db y packages/contrato, y no queda nada del frente anterior
+- `npm run verificar` pasa en la raíz: tipos, lint, pruebas de la API y build de la web
+- La web no toca la base: todo lo pide a la API (apps/web no depende de packages/db)
+- La documentación de la API está en /docs y lista todos los endpoints
+- Las pruebas de la API comprueban que un dueño o una llave nunca reciben costos, notas internas ni datos de otro cliente
+- Cada pantalla de la maqueta existe y se recorrió en el navegador, en computador (1280 px) y en celular (390 px)
+- ADR 0016 y 0017, docs/api.md, AGENTS.md, espacio.json y PENDIENTES.md al día; nada publicado en producción
 
 ## 2. Flujo de los usuarios
-0. El pedido llega: o el cliente lo pide en su portal (se abre solo el proyecto «por revisar», con tarea para jefatura; pieza B), o la jefatura abre el proyecto a mano apenas llega el encargo, aunque no haya orden: estado «por cotizar». Pieza B.
-1. Jefatura revisa el proyecto y le anota las tareas (qué, quién, para cuándo). Pieza B.
-2. Cada uno ve lo suyo en «Mi trabajo». Pieza B.
-3. En terreno, anota en la bitácora con fotos (al Drive de la propiedad). Pieza C.
-4. Marca la tarea hecha; la jefatura lo ve en «Trabajo del equipo». Pieza B.
-4b. Cuando la orden existe, se enlaza por su número (d13): la cuenta analítica sugiere la unidad y el equipo confirma. Los recintos y sus líneas quedan como partidas (en un servicio suelto, una lista para marcar); los anticipos, como lo facturado al dueño. Pieza O.
-5. (Obra) Elige el maestro entre los proveedores de Odoo y carga su presupuesto: qué partidas cubre, su total, el PDF y el plazo. Pieza D.
-6. (Obra) Jefatura lo aprueba: queda como el plan de costo y plazo. Pieza D.
-7. (Obra) Anota la fecha de inicio. Pieza D.
-8. (Obra) Durante el trabajo: avance por partida y adicionales aprobados; las facturas del maestro que llegan a Odoo se asignan al proyecto, y su pago se ve desde Odoo. Pieza E.
-9. (Obra) Recepción partida por partida, con fotos: conforme u observada; una observada abre una tarea para corregirla. Pieza E.
-10. (Obra) Cierre: lo planificado contra lo real. Pieza F.
-11. El dueño ve el avance y las notas marcadas para él. Pieza F.
-12. (Administración) El equipo pone la propiedad en administración con su comisión; cada mes el equipo o el dueño marca el arriendo pagado; el equipo ve los atrasados y la comisión del mes para facturarla en Odoo. Pieza M.
+1. **Dueño · Pide un servicio.** Desde la ficha de su propiedad, desde un vencimiento («que Proges lo haga») o desde «Pedir a Proges». Puede crear la propiedad al pedir. Dónde: Portal del dueño: ficha, vencimientos o /pedir. Queda: Pedido nuevo; abre el servicio «por revisar» con una tarea para la jefatura. Aviso: Aparece en «Entró nuevo» del Inicio de la jefatura. Permiso: Cliente o dueño autónomo, solo en sus propiedades. Pieza D, Q, R.
+2. **Jefatura · Revisa y reparte.** Abre lo nuevo, le pone responsable y anota las tareas: qué, quién y para cuándo. También puede abrir un servicio a mano. Dónde: Inicio → Repartir (computador). Queda: Servicio abierto, «nos toca». Aviso: Las tareas aparecen en «Hoy» de cada persona. Permiso: Equipo. Pieza D, K.
+3. **Equipo en terreno · Ve su día.** En el celular, sus tareas atrasadas, de hoy y de mañana, con la propiedad de cada una. Dónde: Hoy (celular). Permiso: Equipo. Pieza D, J.
+4. **Equipo en terreno · Anota con foto.** Saca la foto, escribe o dicta, y la nota se guarda en el servicio sugerido. Marca si la ve el dueño. La foto se achica en el teléfono y se guarda en el Drive de la propiedad. Dónde: Botón «Anotar» (celular). Queda: Nota en la bitácora. Aviso: Si es para el dueño, aparece en sus novedades. Permiso: Equipo. Pieza D, J.
+5. **Equipo en terreno · Marca a quién se espera.** Elige conservador, notaría, municipalidad, maestro, dueño, banco u otro. Queda la fecha desde cuándo. Dónde: Ficha del servicio (celular o computador). Queda: «Esperando a otro»; cada cambio queda en el historial. Aviso: Pasados 10 días aparece en «Trabado» del Inicio. Permiso: Equipo. Pieza D, L.
+6. **Jefatura · Aprueba lo de la obra.** Enlaza la orden de Odoo, revisa el presupuesto del maestro y lo aprueba; al final cierra la obra con todas las partidas recibidas. Dónde: Ficha del servicio, panel Obra. Queda: Presupuesto aprobado; obra cerrada. Permiso: Jefatura. Pieza E, M.
+7. **Equipo en terreno · Lleva la venta.** Anota visitas con su interés y comentario, ofertas, cambios de precio y, cada lunes, las vistas y consultas de cada anuncio que muestra Nexxos. Dónde: Ficha del servicio de venta. Permiso: Equipo. Pieza F, N.
+8. **Equipo en terreno · Le muestra la oferta al dueño.** Con un botón, la oferta queda visible para el dueño con la recomendación de Proges. Dónde: Ficha del servicio de venta. Queda: Oferta «esperando al dueño». Aviso: El dueño la ve destacada en su inicio. Permiso: Equipo. Pieza F, N.
+9. **Dueño · Responde la oferta.** Acepta, contraoferta (con monto) o rechaza. Dónde: Reporte de venta (portal del dueño). Queda: Oferta aceptada, contraofertada o rechazada. Aviso: Tarea para el corredor: «comunicar la respuesta». Permiso: Cliente, solo en su propiedad. Pieza F, Q.
+10. **Dueño · Mira su ficha y sus reportes.** La ficha clínica de cada propiedad (historial, reparaciones con lo que pagó, documentos, datos), el seguimiento de cada servicio y el reporte de venta. Dónde: Portal del dueño. Permiso: Cliente. Pieza C, O, Q.
+11. **Dueño · Lleva su cartera (autónomo).** Anota arriendos pagados, gastos, contribuciones y documentos; ve sus vencimientos. Dónde: Portal del dueño autónomo. Permiso: Dueño autónomo, solo lo suyo. Pieza G, R.
+12. **Jefatura · Mira resultados.** Servicios que entran y salen, días por tipo (trabajando o esperando a otros), obras plan contra real, tareas a tiempo. Dónde: Resultados (computador). Permiso: Jefatura o administrador. Pieza H, P.
+13. **Sistema del cliente · Consulta por la API.** El sistema del cliente pide sus propiedades y servicios con su llave, y recibe lo mismo que ve el dueño en el portal. Dónde: https://…/v1 con la llave en el encabezado. Permiso: Llave de solo lectura de ese cliente. Pieza B, H, S.
 
 ## 3. Flujo de datos
-- Postgres (nuevo, en el espacio del cliente salvo los maestros):
-  - `Tarea` (proyecto, qué, responsable, vence, hecha el, hecha por, creada por).
-  - `Nota` (proyecto, autor, texto, fecha, la ve el dueño sí/no, tarea opcional) y `Foto` (nota, id del archivo en Drive, nombre).
-  - `Maestro` (en `org_proges`: id del proveedor en Odoo, nombre copiado de Odoo, especialidad, activo). Son proveedores de Proges, no del cliente.
-  - `PresupuestoMaestro` (proyecto, maestro, tipo ORIGINAL o ADICIONAL, plazo en días, PDF en Drive, estado RECIBIDO/APROBADO/RECHAZADO, quién y cuándo) que cubre partidas. `OrdenDueno` (número de Odoo, total, facturado) con sus `Partida` (recinto optativo, código, descripción, cantidad, unidad, precio al dueño, línea de Odoo, maestro, avance %, recepción: pendiente/conforme/observada, observación).
-  - `FacturaMaestro` (proyecto, maestro, id de la factura de proveedor en Odoo —optativo, por t30—, monto asignado, quién la asignó; sin id de Odoo: monto, fecha, pagada sí/no y nota, anotados a mano). Con id, solo se guarda la asignación: número, fecha, total, estado y pagado se leen de Odoo al mirar. Una factura puede repartirse entre dos proyectos, y la suma asignada nunca pasa su total.
-  - En `Property`: `edificio` (texto optativo) y la cuenta analítica de Odoo (número, puede repetirse). `driveCarpetaId` ya existe.
-  - `Administracion` (propiedad, desde, hasta, comisión %). El arriendo del mes es el `RentCharge` de siempre, con su estado pagado o atrasado y quién lo marcó.
-  - En `ServicioEnCurso`: estado «por revisar» cuando nace de un pedido, la solicitud de origen, y para la obra el presupuesto al dueño, fecha de inicio y fecha comprometida.
-- Odoo, solo lectura (`src/lib/odoo.ts`): órdenes de venta (d13), proveedores (`res.partner` con facturas de proveedor) y facturas de proveedor (`account.move`, tipo `in_invoice`: número, fecha, total, estado y lo pendiente de pago). Nunca escribe.
-- Google Drive (`src/lib/archivos.ts`, d24): una cuenta de servicio con su llave en `.env`; sube a la subcarpeta «Portal» de la carpeta de la propiedad (la crea si falta) y entrega el archivo a través de una ruta del servidor que revisa el permiso.
-- Espacios: `getOrgId()` deja de ser un solo cliente para el equipo. Nuevo `espaciosQueLee()` (para el cliente, el suyo; para el equipo, todos los clientes activos o el filtro elegido) que usan las listas; las acciones escriben en el espacio del registro que tocan (el de la propiedad), y al crear una propiedad, en el cliente elegido. `orgParaEscribir()` deja pasar a los dos (d17 b): el cliente, en su espacio; el equipo, en el de la propiedad.
-- Servidor: `src/lib/administracion.ts` (comisión del mes y atrasos, funciones puras). `src/lib/obra.ts` con las cuentas como funciones puras (aprobado, adicionales, facturado y pagado, saldo, avance ponderado, plan contra real) que usan la pantalla y la prueba; `src/lib/vista-cliente.ts` suma el avance y las notas marcadas, nunca montos del maestro.
-- Pantallas: la página del proyecto se reordena (tareas y bitácora arriba, el resto debajo); «Mi trabajo» y «Trabajo del equipo» (reemplaza la parte de cifras de «Operación», que queda con los pedidos por revisar); `/equipo/maestros`; la sección Obra del proyecto.
+- **Fuentes** (Donde el dato nace):
+  - **Odoo**: Órdenes de venta, proveedores (maestros) y facturas de proveedor. Solo se lee. Dónde: apps/api/src/integraciones/odoo.ts (hoy src/lib/odoo.ts).
+  - 🆕 **Nexxos** (pieza F): Vistas y consultas de cada anuncio, copiadas a mano una vez por semana (si d7 a). Dónde: Formulario de cifras en la ficha de venta.
+  - 🆕 **El celular** (pieza J): Fotos y notas en terreno. La foto se achica en el teléfono antes de subir. Dónde: apps/web, botón Anotar.
+- **API** (La ventanilla única: recibe, revisa permisos y guarda):
+  - 🆕 **Acceso y permisos** (pieza B): Recibe la sesión de Clerk (web) o una llave (sistemas de afuera), encuentra a la persona o al cliente y decide qué puede leer y escribir. Es el portero único. Dónde: apps/api/src/acceso/.
+  - 🆕 **Endpoints /v1** (pieza C–H): Propiedades y ficha, servicios y tareas, obra, venta, cartera, configuración y resultados. Cada uno valida con el contrato y recorta lo que un dueño no debe ver. Dónde: apps/api/src/rutas/*.ts y dominio/.
+  - 🆕 **Documentación /docs** (pieza B): Se arma sola desde el contrato: lista cada endpoint, qué recibe y qué entrega. Dónde: apps/api, /openapi.json y /docs.
+  - 🆕 **packages/contrato** (pieza B): La lista de lo que la API recibe y entrega, escrita una vez. La API valida con ella y la web saca de ella sus tipos. Dónde: packages/contrato/src/.
+- **Postgres (Neon)** (Donde queda guardado lo que la gente hace):
+  - **Tablas de hoy**: Propiedades, cartera (contratos, cobros, gastos, contribuciones), servicios en curso, tareas, notas, fotos, obra, visitas, ofertas, pedidos, usuarios y clientes. Dónde: packages/db/prisma/ (hoy prisma/schema.prisma).
+  - 🆕 **Lo nuevo en la base** (pieza A): A quién se espera y desde cuándo; anuncios y sus cifras semanales; respuesta del dueño a la oferta; llaves de la API; modo del cliente (atendido o autónomo); quién anotó cada documento, gasto y contribución; enlace del usuario con Clerk. Dónde: Una migración nueva (pieza A).
+- **Archivos** (Fotos y PDF, fuera de la base):
+  - **Google Drive**: Fotos de la bitácora, en la subcarpeta «Portal» de cada propiedad. Se entregan por la API, nunca con enlace público. Dónde: apps/api/src/integraciones/drive.ts (hoy src/lib/archivos.ts).
+  - **Vercel Blob**: Los PDF de documentos. Suben directo desde el navegador con un permiso que firma la API. Dónde: apps/api/src/integraciones/blob.ts.
+- **Web** (Lo que corre en el navegador; pide todo a la API):
+  - 🆕 **Portal del equipo** (pieza I–P): Computador: Inicio, Servicios, Propiedades, Repartir, Resultados, Configuración. Celular: Hoy, Anotar, Servicios, Propiedades. Dónde: apps/web/src/app/(equipo)/.
+  - 🆕 **Portal del dueño** (pieza Q–R): Cliente grande: mis propiedades, seguimiento, reporte de venta, pedir. Autónomo: además, cartera y vencimientos. Dónde: apps/web/src/app/(dueno)/.
+- **Afuera** (Sistemas de los clientes):
+  - 🆕 **Sistema de NPL** (pieza S): Consulta con su llave de solo lectura. Dónde: Fuera de Proges.
 
 ## 4. Permisos
-- EQUIPO: lee y escribe la cartera de todos los clientes (propiedades, contratos, cobranza, cuentas); crea tareas, notas, presupuestos, asignaciones de facturas y recepciones; ve los costos; pone una propiedad en administración.
-- Jefatura (marca nueva en el usuario, la pone el admin; d14): aprueba presupuestos de maestros y adicionales, y cierra la obra.
-- CLIENTE (d17 b, d25 a): edita su cartera igual que el equipo (propiedades, contratos, cobranza, cuentas) y marca un arriendo pagado; pide servicios, y al pedir puede crear la propiedad; ve el avance de sus obras y las notas marcadas «la ve el dueño», con sus fotos; ve el estado de sus arriendos administrados y la comisión. No toca tareas, bitácora, presupuestos ni nada de la obra. Nada de montos del maestro.
-- Cuando el dueño y el equipo editan lo mismo, vale el último que guarda, y queda quién y cuándo cambió (el historial que ya tiene la cartera, o un campo «modificado por»). No hay bloqueo.
-- Todo en el servidor: las acciones nuevas exigen EQUIPO (y jefatura donde corresponde) y comprueban cada id contra el espacio; lo del cliente sale solo de `vista-cliente.ts`.
+- **Llave de la API:** De un cliente, solo lectura (si d4 a); se crea y se revoca en Configuración.
+- **Modo del cliente:** Atendido o autónomo: cambia la pantalla de inicio del dueño, no lo que puede hacer.
+
+| Qué | Equipo | Jefatura | Administrador | Cliente grande | Dueño autónomo | Sistema externo | Se exige |
+|---|---|---|---|---|---|---|---|
+| Ver propiedades y servicios | sí (De todos los clientes) | sí (De todos) | sí (De todos) | sí (Solo las suyas) | sí (Solo las suyas) | sí (Solo las de su cliente) | En la API: cada consulta filtra por cliente |
+| Ver costo del maestro, presupuestos, facturas y margen | sí | sí | sí | no (Ve lo que se le cobró) | no | no | En la API: el recorte para dueños los saca |
+| Ver notas de la bitácora | sí (Todas) | sí (Todas) | sí (Todas) | sí (Solo las marcadas para el dueño) | sí (Solo las marcadas) | sí (Solo las marcadas) | En la API |
+| Crear tareas, notas, «esperando a», visitas y ofertas | sí | sí | sí | no | no | no | En la API |
+| Aprobar presupuesto del maestro y cerrar una obra | no | sí | no (Salvo que también sea jefatura) | no | no | no | En la API |
+| Editar la cartera (propiedades, contratos, cobros, gastos, documentos) | sí (De todos) | sí (De todos) | sí (De todos) | sí (Solo la suya) | sí (Solo la suya) | no | En la API; queda quién y cuándo |
+| Pedir un servicio | sí (Abre el servicio a mano) | sí | sí | sí | sí | no (Si d4 a) | En la API |
+| Responder una oferta | no (Registra la oferta) | no | no | sí (Solo de su propiedad) | sí (Solo de su propiedad) | no | En la API |
+| Ver Resultados | no | sí | sí | no | no | no | En la API |
+| Crear clientes, usuarios y llaves | no | no | sí | no | no | no | En la API |
+
+El administrador marca jefatura y modo en Configuración → Equipo y clientes, y crea las llaves en Configuración → API. Crear la llave de NPL es un paso para después de publicar, y va a PENDIENTES.md.
 
 ## 5. Decisiones
-De Diego (todas cerradas):
-- **d12 (b):** fotos y PDF en la carpeta del Drive de la propiedad.
-- **d13 (a):** el portal lee la orden de Odoo por su número.
-- **d14 (a):** aprueban Cecilia y Álvaro, con una marca «jefatura».
-- **d15 (a):** el dueño ve solo las notas que el equipo marca para él.
-- **d16 (a):** se recibe partida por partida, conforme u observada con fotos; no se cierra con partidas pendientes.
-- **d17 (b):** el dueño también edita, igual que el equipo.
-- **d18 (a):** la propiedad es la unidad con su rol; el edificio solo agrupa.
-- **d19 (a):** proyecto = un encargo con 0 o 1 orden de Odoo; el servicio suelto es un proyecto chico.
-- **d20 (b):** se diseña ahora la condición «en administración».
-- **d21 (b):** el arrendatario le paga directo al dueño; Proges controla que pague y cobra su comisión aparte.
-- **d22 (a):** el presupuesto del maestro y su aprobación se llevan en el portal; las facturas y pagos del maestro se leen de Odoo, y el equipo asigna cada factura a su proyecto.
-- **d23 (a):** el maestro es el proveedor de Odoo; el portal le agrega la especialidad.
-- **d24 (sí):** cuenta de servicio de Google; todo en la subcarpeta «Portal» de la carpeta de la propiedad; sin carpeta, se pide enlazarla antes de subir.
-- **d25 (a):** el dueño edita su cartera (propiedades, contratos, cobranza), no la obra ni las tareas. Equipo y dueño pueden marcar un arriendo pagado; la comisión se factura en Odoo.
-- **d26 (a):** el pedido del cliente abre solo el proyecto «por revisar» con una tarea para la jefatura; el cliente puede crear la propiedad al pedir. El registro abierto queda fuera de esta etapa.
+De Diego (por marcar en la página; ⭐ = recomendada):
+- **d1. ¿Quién habla con la base de datos?**
+  - ⭐ a) Solo la API; la web le pide todo a la API (como en RASA). Pantalla: Igual para el usuario. Datos: Una sola puerta con las reglas: lo que la web puede hacer, la API ya lo sabe hacer y está probado. Riesgo: Cada pantalla hace un viaje más; más trabajo hoy.
+  - b) La web y la API usan el mismo paquete de reglas, cada una directo a la base. Pantalla: Igual. Datos: Dos puertas a la base con las mismas reglas. Riesgo: La API puede quedar atrás de la web sin que nadie lo note.
+- **d2. ¿Con qué se construye la API?**
+  - ⭐ a) Hono, en TypeScript. Pantalla: Documentación automática en /docs. Datos: Se reutiliza tal cual el back de hoy, que ya es TypeScript. Librerías nuevas: hono, @hono/zod-openapi, @hono/node-server, @clerk/backend, @scalar/hono-api-reference. Riesgo: Una herramienta más que aprender.
+  - b) Rutas de Next.js en una app aparte. Pantalla: Documentación escrita a mano. Datos: Sin librerías nuevas de servidor. Riesgo: Más pesado para una API y la documentación se desactualiza.
+  - c) FastAPI en Python, como rasa-api. Pantalla: Documentación automática. Datos: El mismo idioma que RASA. Riesgo: Hay que traducir a Python todo el back de hoy: el doble de trabajo.
+- **d3. ¿Dónde corre la API?**
+  - ⭐ a) Vercel, como un segundo proyecto del mismo repo. Pantalla: Una dirección propia (por ejemplo api.proges.cl). Datos: Las migraciones corren al publicar la API, como hoy. Riesgo: Límite de 4,5 MB por envío: las fotos se achican antes.
+  - b) Railway, como rasa-api. Pantalla: Igual. Datos: Un servidor siempre prendido. Riesgo: Otra plataforma que pagar y mirar.
+- **d4. ¿Qué pueden hacer los sistemas de afuera con su llave?**
+  - ⭐ a) Solo leer lo de su cliente. Pantalla: Configuración → API: crear y revocar llaves. Datos: La llave no puede escribir nada. Riesgo: Si NPL quiere pedir servicios desde su sistema, es otro paso.
+  - b) Leer y pedir servicios. Pantalla: Igual. Datos: La llave puede crear pedidos. Riesgo: Más superficie: una llave filtrada podría llenar la bandeja.
+- **d5. ¿El dueño autónomo entra en esta tarea?**
+  - ⭐ a) Sí, por invitación: sus pantallas y su cartera; sin registro abierto ni plan gratuito. Pantalla: Inicio del autónomo, Vencimientos y cartera editable. Datos: El modo del cliente decide su inicio. Riesgo: Una etapa más (la 3) antes de terminar.
+  - b) Después: esta tarea hace solo el cliente grande. Pantalla: Solo el portal del cliente grande. Datos: Igual en la base. Riesgo: La puerta comercial espera otra tarea.
+- **d6. ¿Cómo se llama lo que Proges hace en una propiedad?**
+  - ⭐ a) Servicio. Pantalla: «Servicios» en todo el portal y en la API. Datos: En la base sigue ServicioEnCurso.
+  - b) Proyecto. Pantalla: «Proyectos». Datos: Igual. Riesgo: Suena raro para un trámite.
+  - c) Encargo. Pantalla: «Encargos». Datos: Igual. Riesgo: Nadie lo dice hoy.
+- **d7. ¿Cómo entran las cifras de Nexxos (vistas y consultas por anuncio)?**
+  - ⭐ a) A mano, una vez por semana, en la ficha de venta. Pantalla: Un formulario de cifras por anuncio. Datos: Tabla de anuncios y sus cifras semanales. Riesgo: Si nadie las anota, el gráfico queda vacío (el reporte sigue con visitas y ofertas).
+  - b) Se deja fuera la sección de anuncios hasta saber si Nexxos se conecta. Pantalla: El reporte sin anuncios. Datos: Nada nuevo. Riesgo: El dueño no ve dónde está publicado ni cómo rinde.
+- **d8. ¿Cómo responde el dueño una oferta?**
+  - ⭐ a) En el portal: acepta, contraoferta o rechaza, y le llega una tarea al corredor. Pantalla: Botones en el reporte de venta del dueño. Datos: La oferta guarda cuándo se le mostró y su respuesta. Riesgo: Lo formal (promesa, firma) sigue fuera del portal.
+  - b) Proges anota lo que el dueño dijo por teléfono. Pantalla: Solo el equipo cambia el estado. Datos: Igual que hoy. Riesgo: Sigue el ida y vuelta por WhatsApp.
+- **d9. ¿Cuándo miras lo construido?**
+  - ⭐ a) Al terminar el portal del equipo (etapas 1 y 2 seguidas) y al final. Pantalla: Una revisión a mitad de camino y otra al cierre. Riesgo: La API no se ve hasta que la usa la web.
+  - b) Al terminar cada una de las tres etapas. Pantalla: Tres revisiones. Riesgo: La etapa 1 casi no tiene nada que mirar.
+  - c) Solo al final. Pantalla: Una revisión. Riesgo: Un error de rumbo se ve tarde.
 
 De Claude:
-- El edificio es un texto, no una tabla: basta para agrupar y buscar.
-- No se renombra `ServicioEnCurso` en la base; en pantalla se llama proyecto. Las etapas quedan optativas.
-- Una sola clase de línea (`Partida`, con recinto optativo) para reparaciones y servicios sueltos.
-- La orden se enlaza confirmando la unidad: la cuenta analítica sola no basta.
-- La comisión se calcula al mirar; no se guarda un total.
-- Lo puntual durante un arriendo (ADMP) es un proyecto más.
-- El equipo ve todos los clientes juntos, con un filtro por cliente; ya no elige un cliente activo.
-- Al editar, el espacio sale del registro que se toca (la propiedad), nunca de lo que manda el navegador.
-- Si el dueño y el equipo editan lo mismo, vale el último y queda quién cambió: no se construye un bloqueo para un choque que todavía no pasa.
-- Del Odoo solo se guarda la asignación de la factura al proyecto; el monto, el estado y el pago se leen cada vez, para que no haya dos versiones.
-- El portal nunca escribe en Odoo; las facturas sin propiedad se ordenan en el portal, no en Odoo.
-- Se reutiliza todo lo de la v4 que no contradice esto: no se reescribe de cero.
-- La tarea es lo mínimo: qué, quién, para cuándo, hecha. Sin estados intermedios ni dependencias entre tareas.
-- La bitácora reemplaza el Word final: el informe para el dueño se lee de ahí.
-- Las cuentas de la obra son funciones puras en `src/lib/obra.ts` y se calculan al mirar; no se guardan.
-- Los maestros viven en el espacio de Proges y valen para todos los clientes.
-- El costo del maestro nunca sale de `vista-cliente.ts`.
-- Plata en Decimal con su moneda; el presupuesto del maestro va en pesos.
-- Las etapas de la v4 siguen, pero dejan de ser lo principal de la pantalla del equipo.
-- WhatsApp no se conecta: se anota en el portal (conectarlo es otra herramienta y otro costo).
-- El reporte de venta para el dueño queda para la tarea siguiente: ya hay visitas, ofertas y precios; falta lo de los portales y el resumen.
-- Los «no sé» (t12, t15, t17, t19) no frenan: el presupuesto puede ir con una sola partida y su PDF; la marca de jefatura se le pone a quien sea; un adicional es opcional; cada propiedad sigue con un solo cliente, como en la v4.
+- **Un monorepo con npm workspaces, sin Turborepo.** Workspaces ya viene con npm. Son cuatro carpetas; un orquestador de builds se justifica cuando el build tarde.
+- **packages/contrato con zod.** Lo que la API recibe y entrega se escribe una vez: la API valida con él, la web saca sus tipos y la documentación se genera de ahí.
+- **La API se versiona: /v1.** Así un cambio futuro no rompe el sistema de NPL: lo nuevo va a /v2 y el /v1 sigue.
+- **Además de recursos, resúmenes por pantalla.** Inicio, ficha clínica, reporte de venta y resultados vienen en una sola llamada cada uno. Si no, cada pantalla haría diez viajes.
+- **Una sola migración, hecha al principio (pieza A).** Así las piezas que corren a la vez nunca tocan el esquema. Si una necesita un campo más, lo devuelve como duda.
+- **El esquema se parte en archivos por tema.** Pasaba de 800 líneas (1.016). Prisma permite una carpeta de esquemas.
+- **Pruebas con node:test y tsx, contra una base proges_test.** Sin librería nueva. Los scripts probar-*.ts de hoy pasan a ser pruebas de la API.
+- **El código de hoy se mueve a legado/ y se borra al cerrar la etapa 1.** Los agentes de la API lo leen para trasladar las reglas; ninguna pantalla vieja llega a la web nueva.
+- **Se quitan de la base las etapas de la v4.** «Esperando a…» y las tareas las reemplazan, y todos los datos son ficticios (lo confirmaste el 2026-11-19): no hay nada que cuidar. Las propiedades reales se cargan después de publicar.
+- **Las fotos se achican en el teléfono; los PDF suben directo a Blob.** Vercel no acepta envíos de más de 4,5 MB, y en terreno ahorra datos móviles.
+- **La respuesta del dueño a una oferta crea una tarea para el corredor.** Así nadie tiene que estar mirando la oferta para enterarse.
+- **Resultados se calcula al mirar.** Hay pocos datos: una tabla de resumen sería otra cosa que mantener al día.
+- **La identidad visual parte de la maqueta.** Colores pizarra de Proges y Plus Jakarta Sans; las pantallas se hacen desde cero, sin copiar ninguna de hoy.
+- **Se sigue en la branch plan/etapa-1-dos-caras.** Nunca se mezcló y ya tiene el back de la v6 que se reutiliza.
 
-## 6. Supuestos
-Diego los marcó en la v5. Los «no es así» cambiaron el plan (t10 → d23, t18 → d17 b, t23 → d22, t24 → d21 b) y salen de la lista.
-- Cierto: t11 (varios maestros por obra), t13 (Proges le paga al maestro fuera del portal), t14 (la cotización al dueño sigue en Odoo), t16 (se anota desde el celular), t20, t21, t22, t25 (comisión % fijo por propiedad), t28, t29 (hoy no hay ninguna administrada).
-- No sé: t12 (cómo llega el presupuesto), t15 (las jefaturas son Cecilia y Álvaro), t17 (el cambio de alcance es un adicional), t19 (un solo cliente por propiedad). El diseño aguanta las dos respuestas.
-- t26 y t27 (gastos y liquidación mensual) dejan de aplicar con d21 b.
-
-Nuevos en la v6, para marcar en la página:
-- t30. Las facturas de los maestros terminan entrando a Odoo como facturas de proveedor, y su pago se registra en Odoo (aunque hoy muchas estén en borrador).
-- t31. Los maestros con que se trabaja ya están, o se crean, como proveedores en Odoo.
-- t32. Es raro que el dueño y el equipo cambien el mismo dato el mismo día.
-- t33. Proges tiene, o puede usar, una carpeta del Drive por propiedad, dentro de una unidad compartida donde se puede dar acceso a la cuenta de servicio.
-
-**Lo que se vio en Odoo (2026-11-19, `scripts/leer-odoo.ts`):** Odoo 19 Enterprise, la API funciona (d13 a). La S00047 trae 14 recintos, 61 líneas, notas por línea y los 3 anticipos con sus facturas. En la app Proyectos intentaron llevar las obras (José de Moraleda: 12 tareas de cotizaciones a maestros, anticipos y saldos; Avenida Portales Oriente: 25 tareas por fase), pero no hay tareas nuevas desde el 2026-08-25. Diego: se dejó porque no supieron acomodar ahí cómo trabajan (ver ADR 0012). Las facturas de maestros están como facturas de proveedor, casi sin propiedad marcada.
+## 6. Supuestos (por marcar: cierto, no es así, no sé)
+- s1. La cuenta de Vercel admite un segundo proyecto (la API) sin cambiar de plan.
+- s2. NPL u otro cliente grande va a querer consultar la API desde su sistema.
+- s3. El equipo en terreno usa celulares con cámara y datos móviles.
+- s4. Clerk sigue siendo el login, para el equipo y para los dueños.
+- s5. La lista «conservador, notaría, municipalidad, maestro, dueño, banco, otro» cubre a quién se espera.
+- s6. Las vistas y consultas de cada anuncio se pueden ver en Nexxos y copiar una vez por semana.
+- s7. El dueño puede responder una oferta en el portal sin firma; lo formal sigue por correo o promesa.
+- s8. Un cliente grande y un dueño autónomo pueden hacer lo mismo con su cartera; solo cambia la pantalla de inicio.
+- s9. Cecilia, como jefatura, puede ver Resultados, incluidos los márgenes de las obras.
+- s10. El equipo es Cecilia y Álvaro (jefatura), François y Leo.
 
 ## 7. Lo que no debe pasar
-- Un dueño ve el costo del maestro, sus facturas, pagos o el presupuesto. Cómo: `scripts/probar-obra.ts` recorre lo que entrega `vista-cliente.ts`.
-- Un dueño ve una nota no marcada para él. Cómo: la misma prueba.
-- Un dueño escribe una tarea, una nota o algo de la obra. Cómo: la prueba llama esas acciones como cliente y deben rechazarse.
-- Un dueño edita la cartera de otro cliente. Cómo: `probar-espacios.ts`.
-- Se cierra una obra con partidas sin recibir u observadas. Cómo: prueba de la acción.
-- El saldo del maestro está mal, o una factura se asigna por más de su total. Cómo: `probar-obra.ts` con presupuesto, adicional, factura repartida y pago.
-- Alguien sin la marca de jefatura aprueba un presupuesto. Cómo: la acción lo rechaza; prueba.
-- El portal escribe en Odoo. Cómo: `src/lib/odoo.ts` solo acepta métodos de lectura (como `scripts/leer-odoo.ts`); revisión.
-- Una foto queda con enlace público en Drive. Cómo: se sube sin compartir y se entrega por una ruta del servidor que revisa el permiso; revisión.
-- La llave de la cuenta de servicio o de Odoo aparece en el código o en un log. Cómo: solo en `.env`; revisión.
-- Un cliente ve algo de otro cliente ahora que el equipo lee todos a la vez. Cómo: `probar-espacios.ts` se amplía con `espaciosQueLee()`.
-- Una acción del equipo escribe en el cliente equivocado. Cómo: la prueba crea un contrato en una propiedad de A y comprueba que quedó en A.
-- Un pedido del cliente crea el proyecto en otro cliente, o dos veces. Cómo: prueba de la acción del pedido.
-- La comisión del mes no cuadra. Cómo: `scripts/probar-administracion.ts` con un mes pagado, uno atrasado y uno fuera del período.
-- La migración borra datos. Cómo: leer el SQL: solo crea y agrega.
-- Un archivo pasa de 800 líneas. Cómo: `wc -l`.
+- Un dueño o una llave externa recibe el costo del maestro, presupuestos, facturas o margen. Cómo se comprueba: Pruebas de la API que piden cada recurso como cliente y como llave y buscan esos campos en la respuesta.
+- Un cliente, o su llave, recibe algo de otro cliente. Cómo se comprueba: Prueba con dos clientes (la de probar-espacios.ts, trasladada) sobre cada endpoint de lectura.
+- Un dueño ve una nota no marcada para él. Cómo se comprueba: Prueba de la bitácora, el historial y las novedades como cliente.
+- Una llave externa escribe algo. Cómo se comprueba: Prueba: cada POST, PATCH y DELETE con llave responde 403.
+- La web lee o escribe la base sin pasar por la API. Cómo se comprueba: apps/web no depende de packages/db ni de prisma (revisión de package.json y búsqueda en apps/web).
+- Se pierde o se reescribe una migración ya aplicada. Cómo se comprueba: El diff de packages/db/prisma/migrations solo agrega la nueva; `prisma migrate status` al día en proges_dev.
+- La migración quita algo que sí se usa. Cómo se comprueba: Leer el SQL: solo crea y agrega, y quita únicamente las etapas de la v4.
+- El portal escribe en Odoo. Cómo se comprueba: integraciones/odoo.ts solo acepta métodos de lectura; revisión.
+- Una llave de la API se guarda legible o aparece en un log. Cómo se comprueba: Se guarda solo su huella (hash); la llave completa se muestra una vez al crearla; revisión.
+- Una foto o un PDF queda con enlace público. Cómo se comprueba: Se entregan por la API revisando el permiso; revisión.
+- Queda algo del frente anterior. Cómo se comprueba: legado/ borrado al cerrar la etapa 1; apps/web nace vacía.
+- Un archivo pasa de 800 líneas. Cómo se comprueba: Un chequeo en `npm run verificar`.
+- Se publica algo en producción. Cómo se comprueba: Nada se sube a main sin que Diego lo pida; publicar va como pasos en PENDIENTES.md.
 
 ## 8. Piezas y orden
-Olas: [A, W] → [B, C, D, O] → [E, P, V, M] → [F, G]. 12 agentes en Sonnet, uno por pieza (un poco sobre los ~10 de la regla 10: se acepta porque M es independiente y no alarga el camino). Verificación común: `npx tsc --noEmit && npm run lint`; build al final de cada ola.
-- ✅ A. Modelo, archivos y cuentas. `prisma/schema.prisma` y una migración nueva (Tarea, Nota, Foto, Maestro con id de Odoo, PresupuestoMaestro, OrdenDueno, Partida, FacturaMaestro, Administracion, campos nuevos en Property y ServicioEnCurso); `src/lib/archivos.ts` (Drive con cuenta de servicio, subcarpeta «Portal», ruta del servidor para ver el archivo; sin llave en `.env`, falla con un mensaje claro); `src/lib/obra.ts` (cuentas, funciones puras); marca de jefatura en `/equipo`; `src/lib/odoo.ts` (solo lectura, parte de `scripts/leer-odoo.ts`: leer una orden, buscar proveedores, listar las facturas de proveedor de un maestro con su estado y lo pagado; verifica que las de Sociedad Diseño y Espacios sumen lo que muestra Odoo). Va en A para que D, O y E lo usen sin tocar el mismo archivo.
-- ✅ W. El equipo y el dueño escriben la cartera. `src/lib/org.ts` y `src/lib/sesion.ts` (`espaciosQueLee()`, escritura del equipo en el espacio de la propiedad, el cliente en el suyo, d17 b); quitar el selector de cliente activo; las ~23 pantallas y ~10 archivos de acciones de la cartera; crear propiedad eligiendo el cliente; quién modificó.
-- ✅ B. Menú, inicio, tareas, Mi trabajo, Trabajo del equipo y el pedido que abre el proyecto (d26: proyecto «por revisar» y tarea a jefatura; el cliente crea la propiedad al pedir). Depende de A y W.
-- ✅ C. Bitácora con fotos al Drive, pensada para el celular. Depende de A.
-- ✅ D. Maestros (buscar proveedores de Odoo y sumarles especialidad) y presupuestos (aprobar con jefatura, adicionales). Depende de A.
-- ✅ O. Traer la orden de Odoo por su número (recintos → partidas, anticipos → facturado; volver a traerla sin perder avance) y enlazarla con la unidad por su cuenta analítica. Verifica: la S00047 cuadra 14 recintos y $22.764.048. Depende de A.
-- ✅ E. Avance (por recinto, y por línea si hace falta), facturas del maestro asignadas al proyecto con su pago desde Odoo, y recepción de la obra. Depende de D y O.
-- ✅ V. La página de la venta: resumen arriba, registrar visita en el celular con oferta y tarea de seguimiento (visitas, ofertas y precio ya existen). Depende de B y C.
-- ✅ P. Propiedades del equipo: listado con trabajo en curso e historial de cada propiedad. Depende de B y C.
-- ✅ M. Administración de arriendos: `src/lib/administracion.ts` (comisión del mes y atrasos, funciones puras); poner y sacar una propiedad de administración (desde, hasta, comisión); marcar el arriendo pagado (equipo o dueño) en la cobranza; vista de atrasados y comisiones del mes para facturar en Odoo; filtro «en administración» en Propiedades; estado y comisión en la vista del dueño. Verifica: un mes pagado y uno atrasado. Depende de A y W.
-- ✅ F. Cierre con plan contra real, vista del dueño y página del proyecto reordenada. Depende de C y E.
-- ✅ G. `scripts/probar-obra.ts`, `scripts/probar-administracion.ts` y `probar-espacios.ts` ampliado (el dueño edita su cartera pero no la obra; el pedido abre el proyecto en su espacio). Depende de W, B, E y M.
+Tandas: 1) A · 2) B · 3) C D E F G H · 4) I · 5) J K L M N O P · 6) Q R S. Etapa 1 = A–H, etapa 2 = I–P, etapa 3 = Q–S (un workflow por etapa).
 
-**Cómo se lanzó (2026-11-19, workflow `wf_f8d88587-03a`):** en vez de olas fijas, cada pieza arranca cuando terminan las que necesita: A → W, C, D, O; W → B; D+O → E; W → M; W+M+B → P; W+B → V; B+C+E+V → F; F+P+M → G. Cambios de reparto respecto de la lista de arriba, para que dos agentes nunca toquen el mismo archivo: el lector de Odoo y las funciones nuevas de espacios (`espaciosQueLee`, `exigirLectura`, `espacioParaEscribirEn`, `jefaturaEnAccion`) van en A; W migra todo lo que usaba el cliente activo; la página del proyecto (`[sid]/page.tsx`) la arma solo F con las secciones que deja cada pieza; la tarjeta de administración la hace M y la pone P en la ficha. Los ADR los escribe la pieza que decide (A 0015, W 0010, B 0013, F 0014 y 0011). El build corre el coordinador al final, no por ola.
+- ◻️ **A. Etapa 1 · Monorepo y base** (Sonnet). Archivos: package.json raíz con workspaces; legado/ (el código de hoy, solo para consultar); packages/db: prisma/schema/*.prisma, migrations intactas, cliente, scripts de carga y migrar-produccion.mjs; una migración nueva: agrega lo de la v7 y quita las etapas de la v4. Verificación: npm install; npx prisma migrate dev en proges_dev aplica sin pérdida; prisma migrate status al día.
+- ◻️ **B. Etapa 1 · Esqueleto de la API y acceso** (Opus), espera a A. Archivos: apps/api/src/app.ts, acceso/ (Clerk y llaves), permisos.ts, errores.ts; apps/api/src/rutas/*.ts vacías, ya registradas; packages/contrato/; apps/api/test/ con la base proges_test; /openapi.json y /docs; espacio.json y script raíz verificar. Verificación: npm run verificar; curl /v1/salud; pruebas: sin sesión 401, cliente A no lee a B, llave no escribe.
+- ◻️ **C. Etapa 1 · API de propiedades y ficha clínica** (Sonnet), espera a B. Archivos: apps/api/src/rutas/propiedades.ts; apps/api/src/dominio/ficha/ (historial, reparaciones, alertas y vencimientos); packages/contrato/src/propiedades.ts; apps/api/test/propiedades.test.ts. Verificación: npm run verificar -w apps/api.
+- ◻️ **D. Etapa 1 · API de servicios, tareas, bitácora y pedidos** (Sonnet), espera a B. Archivos: apps/api/src/rutas/{servicios,tareas,notas,pedidos,inicio}.ts; apps/api/src/dominio/trabajo/; apps/api/src/integraciones/drive.ts; packages/contrato/src/trabajo.ts; apps/api/test/trabajo.test.ts. Verificación: npm run verificar -w apps/api.
+- ◻️ **E. Etapa 1 · API de la obra** (Sonnet), espera a B. Archivos: apps/api/src/rutas/{obra,maestros}.ts; apps/api/src/dominio/obra/; apps/api/src/integraciones/odoo.ts; packages/contrato/src/obra.ts; apps/api/test/obra.test.ts (ex probar-obra.ts). Verificación: npm run verificar -w apps/api.
+- ◻️ **F. Etapa 1 · API del corretaje** (Sonnet), espera a B. Archivos: apps/api/src/rutas/venta.ts; apps/api/src/dominio/venta/ (visitas, ofertas y respuesta del dueño, precios, anuncios y cifras, reporte); packages/contrato/src/venta.ts; apps/api/test/venta.test.ts. Verificación: npm run verificar -w apps/api.
+- ◻️ **G. Etapa 1 · API de la cartera del dueño** (Sonnet), espera a B. Archivos: apps/api/src/rutas/{cartera,administracion}.ts; apps/api/src/dominio/cartera/ (contratos, cobros, gastos, contribuciones, movimientos, resumen del mes); packages/contrato/src/cartera.ts; apps/api/test/cartera.test.ts (ex probar-administracion.ts). Verificación: npm run verificar -w apps/api.
+- ◻️ **H. Etapa 1 · API de configuración, llaves y resultados** (Sonnet), espera a B. Archivos: apps/api/src/rutas/{config,llaves,resultados}.ts; apps/api/src/dominio/resultados/; packages/contrato/src/config.ts; apps/api/test/config.test.ts. Verificación: npm run verificar -w apps/api.
+- ◻️ **I. Etapa 2 · Base de la web** (Sonnet), espera a C, D, E, F, G, H. Archivos: apps/web/ nueva (Next 16, Clerk); apps/web/src/lib/api.ts (cliente tipado desde el contrato); menú del computador y barra del celular, identidad visual, componentes base; rutas vacías de cada pantalla; borrar legado/. Verificación: npm run verificar; entrar y ver el menú a 1280 y 390 px.
+- ◻️ **J. Etapa 2 · Hoy y Anotar (celular)** (Sonnet), espera a I. Archivos: apps/web/src/app/(equipo)/hoy/; apps/web/src/app/(equipo)/anotar/; apps/web/src/componentes/tareas/ y foto-achicada.ts. Verificación: npm run verificar -w apps/web y recorrer a 390 px.
+- ◻️ **K. Etapa 2 · Inicio y Repartir (computador)** (Sonnet), espera a I. Archivos: apps/web/src/app/(equipo)/inicio/; apps/web/src/app/(equipo)/repartir/. Verificación: npm run verificar -w apps/web y recorrer a 1280 px.
+- ◻️ **L. Etapa 2 · Tablero y ficha del servicio** (Sonnet), espera a I. Archivos: apps/web/src/app/(equipo)/servicios/; apps/web/src/componentes/servicio/ (tareas, bitácora, esperando a). Verificación: npm run verificar -w apps/web y recorrer en los dos tamaños.
+- ◻️ **M. Etapa 2 · Panel de la obra** (Sonnet), espera a I. Archivos: apps/web/src/componentes/obra/ (orden, partidas, presupuestos, facturas, recepción, cierre). Verificación: npm run verificar -w apps/web y recorrer con la orden S00047.
+- ◻️ **N. Etapa 2 · Corretaje** (Sonnet), espera a I. Archivos: apps/web/src/componentes/venta/ (precio y ofertas, consultas por semana, anuncios, visitas, ofertas; con modo dueño). Verificación: npm run verificar -w apps/web y recorrer.
+- ◻️ **O. Etapa 2 · Propiedades y ficha clínica** (Sonnet), espera a I. Archivos: apps/web/src/app/(equipo)/propiedades/; apps/web/src/componentes/ficha/ (seis pestañas; con modo dueño). Verificación: npm run verificar -w apps/web y recorrer.
+- ◻️ **P. Etapa 2 · Resultados y Configuración** (Sonnet), espera a I. Archivos: apps/web/src/app/(equipo)/resultados/; apps/web/src/app/(equipo)/configuracion/ (equipo, clientes, maestros, llaves). Verificación: npm run verificar -w apps/web y recorrer.
+- ◻️ **Q. Etapa 3 · Portal del cliente grande** (Sonnet), espera a J, K, L, M, N, O, P. Archivos: apps/web/src/app/(dueno)/ inicio atendido, propiedades/[id], servicios/[id], venta (responder ofertas), pedir. Verificación: npm run verificar y recorrer como NPL.
+- ◻️ **R. Etapa 3 · Portal del dueño autónomo** (Sonnet), espera a J, K, L, M, N, O, P. Archivos: apps/web/src/app/(dueno)/ inicio autónomo, vencimientos, cartera (contratos, cobros, gastos, contribuciones, documentos). Verificación: npm run verificar y recorrer como dueño autónomo.
+- ◻️ **S. Etapa 3 · La API para terceros** (Sonnet), espera a J, K, L, M, N, O, P. Archivos: /docs con ejemplos; docs/api.md (cómo pedir una llave y consultar); prueba de punta a punta con curl y una llave de prueba. Verificación: npm run verificar y la prueba con curl.
 
-**Antes de lanzar (Diego):** crear la cuenta de servicio de Google y dejar su llave en `.env` (Claude lo guía paso a paso). Si no está, el workflow construye igual y la subida real al Drive se prueba cuando esté la llave (se dice en el cierre).
-
-## 9. Riesgos
-- R7. El equipo no anota y vuelve a WhatsApp (p 3, i 3; uso). La nota tiene que ser tan rápida como un mensaje: un campo y las fotos, sin formulario largo. Se prueba en el celular.
-- R8. El dueño ve un costo (p 1, i 3; plata). Una sola puerta (`vista-cliente.ts`) y prueba.
-- R9. Una foto queda pública en Drive (p 2, i 2; datos). Se sube sin compartir y se ve por el servidor; revisión.
-- R16. Las fotos se ven lentas porque pasan por Drive (p 2, i 1; uso). Miniaturas de Drive en las listas; el original solo al abrir.
-- R17. Las facturas de proveedor siguen en borrador o sin pagar en Odoo, y el saldo del maestro se ve peor de lo que es (p 3, i 2; uso). Se muestra el estado de cada factura (borrador, publicada, pagada) y el pago solo cuenta lo que Odoo marca pagado.
-- R18. El dueño y el equipo se pisan un dato (p 1, i 2; datos). Vale el último y queda quién cambió; si pasa seguido, se revisa.
-- R12. Al abrir la lectura a todos los clientes, una pantalla del cliente queda leyendo de más (p 2, i 3; datos). `espaciosQueLee()` devuelve siempre un solo espacio para un cliente; prueba y revisor.
-- R14. La administración se diseña sin caso real y no calza con el primero (p 3, i 2; uso). Lo mínimo y se revisa con la primera propiedad administrada.
-- R13. Al volver a traer la orden se pierde el avance o la recepción (p 2, i 3; datos). Las partidas se reconocen por su línea de Odoo; las nuevas se suman y las borradas se marcan, nunca se borran.
-- R11. Las cuentas del saldo fallan (p 1, i 2; plata). Funciones puras con prueba.
+## 9. Riesgos (probabilidad × impacto, de 1 a 3)
+- **R1** (3×2) Rehacer todo el frente y mover el back es mucho trabajo y se alarga. Tres etapas; cada una deja el repo funcionando y en un commit. Nada se publica hasta el final.
+- **R2** (2×3, toca datos, plata) Al trasladar una regla, un dueño termina viendo un costo o una nota interna. Las pruebas de hoy pasan a ser pruebas de la API antes de borrar legado/, y cada pieza agrega las suyas como cliente y como llave.
+- **R3** (2×2, toca producción) La web no logra entrar a la API, o al publicar falta una variable. La pieza B prueba la sesión de punta a punta en local. Publicar es una lista paso a paso en PENDIENTES.md, contigo.
+- **R4** (2×1, toca producción) Las pantallas se sienten lentas por el viaje extra web → API → base. API y web en la misma región que Neon, y una llamada por pantalla con los resúmenes.
+- **R5** (2×2, toca producción) Fotos del celular de más de 4,5 MB chocan con el límite de Vercel. Se achican en el teléfono antes de subir; los PDF suben directo a Blob.
+- **R6** (1×3, toca datos, producción) La migración nueva falla o borra algo en producción. Todos los datos son ficticios. Si falla, el build se detiene y queda la versión anterior (ADR 0009).
+- **R7** (1×3, toca datos, producción) Al mover prisma/ se pierde el historial de migraciones. La carpeta se mueve intacta con git mv; prisma migrate status lo comprueba en proges_dev.
+- **R8** (3×1) Las cifras de Nexxos no se anotan y el reporte queda a medias. El reporte funciona con visitas, ofertas y precio aunque falten las cifras.
+- **R9** (1×3, toca datos) Una llave filtrada expone los datos de un cliente. Solo lectura, de un cliente, guardada como huella, revocable y con fecha de último uso.
+- **R10** (2×1) Next 16 trae cambios y un agente escribe código de una versión vieja. Cada encargo exige leer la guía de node_modules/next/dist/docs; el build lo detecta.
 
 ## 10. Documentos accesorios y qué queda fuera
-- ADR 0012 «La propiedad manda» (revisado en la v6: sin liquidación, d21 b).
-- ADR 0013 «El trabajo del equipo: tareas, bitácora y el pedido que abre el proyecto».
-- ADR 0014 «Reparaciones: maestros de Odoo, presupuesto, facturas asignadas, recepción y plan contra real».
-- ADR 0015 «Fotos y PDF en el Drive de la propiedad».
-- ADR 0010: se reescribe otra vez (el equipo lee y escribe todos los clientes; el dueño edita su cartera y pide).
-- ADR 0011: la etapa deja de ser lo principal para el equipo.
-- `PENDIENTES.md`: la línea «seguimiento de obra» se reemplaza por lo que quede fuera; cambiar la llave de Odoo por un usuario de solo lectura antes de producción.
-- Fuera: el reporte de venta para el dueño (tarea siguiente); traer la cotización desde Odoo; escribir en Odoo (crear facturas o marcar la propiedad); conectar WhatsApp; IA que pule la bitácora o arma el informe; plantillas de tareas por tipo de servicio; pagar al maestro desde el portal; que el maestro entre al portal; conectar el banco; registro abierto de clientes nuevos; facturar la comisión desde el portal.
+- **ADR 0016:** Monorepo y API propia: d1 a d4, el contrato, las llaves y el /v1. Nuevo.
+- **ADR 0017:** El frente nuevo: tres miradas, ficha clínica, «esperando a…», corretaje y ofertas, dos tipos de dueño. Dice qué partes de los ADR 0010, 0011 y 0013 quedan reemplazadas. Nuevo.
+- **docs/api.md:** Cómo se pide una llave y cómo se consulta, con ejemplos. Nuevo.
+- **AGENTS.md:** La estructura del monorepo, los comandos y «Antes de decir listo».
+- **espacio.json:** Dos servicios (web y api) con sus puertos, y las rutas nuevas.
+- **PENDIENTES.md:** Los pasos de la v4 se reemplazan por los de publicar la v7: dos proyectos en Vercel, variables, dominio de la API, cargar las propiedades reales, crear la llave de NPL.
+- **~/Code/CLAUDE.md:** La fila de portal-proges en la tabla: monorepo con web y API (repo code-raiz, commit aparte).
+- **TAREA.md:** El plano de esta tarea. Se borra en el último commit.
+
+**Fuera:** Registro abierto y plan gratuito; Conexión automática con Nexxos; Pedir servicios con la llave (si d4 a); Escribir en Odoo; Avisos por correo o WhatsApp; Una app nativa de celular (se usa la web); Pasos fijos por tipo de servicio; Administración de arriendos más allá de lo que ya existe; Pagos en línea; IA que pule la bitácora o arma informes; Publicar en producción: queda como pasos en PENDIENTES.md.
 
 ## 11. Qué revisar una vez construido
 Diego:
-- v8. Entra como equipo: el inicio es Mi trabajo y el menú parte por el trabajo.
-- v9. En Propiedades, filtra por NPL, crea una propiedad nueva con su proyecto y edítala.
-- v10. Como jefatura, abre un proyecto y anota tres tareas para dos personas: cada una las ve en «Mi trabajo».
-- v11. Desde el celular, anota en la bitácora con dos fotos: se ven en el proyecto y quedan en la carpeta «Portal» del Drive de la propiedad.
-- v12. Elige un maestro de los proveedores de Odoo, carga su presupuesto con tres partidas y su PDF, y apruébalo.
-- v13. Asigna al proyecto una factura de ese maestro desde Odoo y registra un adicional: el saldo calza con tu cuenta y el pagado es el de Odoo.
-- v14. Recibe dos partidas conformes y una observada: la obra no se deja cerrar y la observada abrió una tarea.
-- v15. Cierra la obra: ves lo planificado contra lo real.
-- v16. Como dueño, abre la obra: ves el avance y la nota marcada para ti, y ningún monto del maestro.
-- v17. Abre un proyecto de toma de posesión sin orden y después enlaza la S00045: la orden se suma con su línea para marcar.
-- v18. Enlaza la S00023 de Monjitas 550: el portal pide elegir a cuál de los dos deptos va.
-- v19. Pon una propiedad en administración con 8% de comisión; como dueño marca el arriendo pagado: el equipo lo ve pagado y la comisión del mes calza.
-- v20. Como dueño, edita un contrato de tu propiedad; como equipo, ves el cambio y quién lo hizo.
-- v21. Como dueño, pide un servicio para una propiedad nueva: el equipo ve el proyecto «por revisar» y la jefatura su tarea.
-Claude: tipos, lint y build; `npx tsx scripts/probar-obra.ts`; `npx tsx scripts/probar-espacios.ts`; `npx tsx scripts/probar-administracion.ts`; SQL leído; `wc -l`.
+- v1. Entra en el computador como Cecilia y mira el Inicio. Debe pasar: Ves lo que entró nuevo, lo trabado (con los días) y la carga de cada persona.
+- v2. Reparte un pedido nuevo con dos tareas para François. Debe pasar: El pedido deja «Entró nuevo» y las tareas aparecen en el Hoy de François.
+- v3. En el celular como François: marca una tarea hecha y anota con una foto. Debe pasar: La tarea se marca con un toque; la nota queda en la bitácora con la foto, en dos toques.
+- v4. Marca «esperando al conservador» en un servicio. Debe pasar: En el tablero pasa a «Esperando a otro» y cuenta los días.
+- v5. Abre la ficha de Agustinas 715. Debe pasar: Historial completo, reparaciones con costo y margen, documentos con lo que falta, datos y ubicación.
+- v6. Entra como NPL y abre la misma ficha. Debe pasar: Lo mismo, sin costo del maestro, sin margen y sin notas internas.
+- v7. En una venta, registra una oferta y muéstrasela al dueño; como NPL, contraoferta. Debe pasar: Al corredor le llega una tarea con la contraoferta.
+- v8. Como dueño autónomo, agrega una propiedad, anota un arriendo pagado y pide algo desde un vencimiento. Debe pasar: El pedido aparece en «Entró nuevo» de Cecilia.
+- v9. Abre /docs de la API y consulta con la llave de prueba de NPL. Debe pasar: Solo salen las propiedades de NPL, sin costos internos.
+- v10. Mira Resultados como administrador. Debe pasar: Servicios por semana, días trabajando y esperando por tipo, obras plan contra real y tareas a tiempo.
 
-## Historia
-- v1 y v2: commits `8feafed` a `2a0b1e9`. v3 aprobada y construida el 2026-11-18: commits `740d374` a `a478988`.
-- v4 aprobada el 2026-11-18 («ok, con workflow»: d8 a, d9 b todos administran, d10 a, d11 a; el equipo ve la cartera sin editarla; NPL con su propio usuario, a cargo de Proges al principio). Construida, revisada y cerrada: commits `9107728` a `92bcc14`; su cierre es la versión 6 de la página.
-- Lo que ya cerró Diego y sigue en pie: Nexxos solo publica; cobrar según cada contrato en espera; DuckDB y dbt con Odoo; el cliente ve las visitas sin los datos del interesado (d2 b); carga inicial de las 42 sin las 20 posiblemente vendidas (d3 b); el cliente ve en vivo (d4 a); etapas propias por tipo de servicio, editables (d5 b); revisión enfocada y completa antes de abrirle el portal al cliente real (d7 a); ningún archivo sobre 800 líneas.
-- v5 aprobada con cambios el 2026-11-19 (commit `e2b5edf`); sus preguntas abiertas se cerraron en la v6.
+Claude:
+- Pruebas de la API: npm test -w apps/api.
+- Tipos, lint y build de todo el monorepo: npm run verificar.
+- Ningún archivo pasa de 800 líneas: el chequeo dentro de verificar.
+- Migraciones al día y sin pérdida: npx prisma migrate status en proges_dev y lectura del SQL nuevo.
+- Cada pantalla en el navegador: recorrido a 1280 y 390 px como equipo, jefatura, NPL y dueño autónomo.
+- La llave externa: curl con una llave de prueba: lee lo suyo, no lee otro cliente, no escribe.
