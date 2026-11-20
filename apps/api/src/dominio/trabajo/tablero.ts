@@ -2,8 +2,10 @@
 //
 //   NUEVO       viene de un pedido y la jefatura todavía no lo reparte (porRevisar).
 //   ESPERANDO   se espera a alguien de afuera (conservador, notaría, maestro…).
-//   NOS_TOCA    no se espera a nadie y hay tareas pendientes: le toca al equipo.
-//   POR_ENTREGAR no se espera a nadie y no quedan tareas: falta entregarlo o darlo por terminado.
+//   NOS_TOCA    no se espera a nadie y hay tareas pendientes, o todavía no tiene ninguna tarea:
+//               le toca al equipo (un servicio sin tareas nunca se trabajó, no está terminado).
+//   POR_ENTREGAR no se espera a nadie, tiene tareas y todas están hechas: falta entregarlo o
+//               darlo por terminado.
 import type { ServicioTableroItem } from "@proges/contrato";
 
 // Desde cuántos días de espera un servicio se considera «trabado» (Inicio de la jefatura).
@@ -15,13 +17,16 @@ export function grupoDelTablero(s: {
   porRevisar: boolean;
   esperando: boolean;
   tareasPendientes: number;
+  tareasTotal: number;
 }): GrupoDelTablero {
   if (s.porRevisar) return "nuevo";
   if (s.esperando) return "esperando";
-  return s.tareasPendientes > 0 ? "nosToca" : "porEntregar";
+  return s.tareasPendientes > 0 || s.tareasTotal === 0 ? "nosToca" : "porEntregar";
 }
 
-export type FilaDeTablero = { porRevisar: boolean; item: ServicioTableroItem };
+// `tareasTotal` cuenta las hechas y las pendientes: sirve solo para distinguir «sin tareas»
+// de «todas hechas»; no sale hacia la web.
+export type FilaDeTablero = { porRevisar: boolean; tareasTotal: number; item: ServicioTableroItem };
 
 export type TableroAgrupado = {
   nuevo: ServicioTableroItem[];
@@ -34,11 +39,12 @@ export type TableroAgrupado = {
 // en «esperando»; en los demás, los más antiguos primero (llevan más tiempo abiertos).
 export function agruparTablero(filas: readonly FilaDeTablero[]): TableroAgrupado {
   const grupos: TableroAgrupado = { nuevo: [], nosToca: [], esperando: [], porEntregar: [] };
-  for (const { porRevisar, item } of filas) {
+  for (const { porRevisar, tareasTotal, item } of filas) {
     const grupo = grupoDelTablero({
       porRevisar,
       esperando: item.esperando !== null,
       tareasPendientes: item.tareasPendientes,
+      tareasTotal,
     });
     grupos[grupo].push(item);
   }

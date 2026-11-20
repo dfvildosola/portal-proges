@@ -31,7 +31,7 @@ export async function equipoActivo(): Promise<{ id: string; nombre: string }[]> 
 export type FiltroTablero = { tipo?: ServicioTipo; responsable?: string };
 
 // Los servicios abiertos de esos espacios, listos para agrupar en el tablero (con sus tareas
-// pendientes contadas). Entran también los «por revisar»: son el grupo NUEVO.
+// pendientes y totales contadas). Entran también los «por revisar»: son el grupo NUEVO.
 export async function filasDelTablero(orgIds: string[], filtro: FiltroTablero, hoy: Date): Promise<FilaDeTablero[]> {
   const servicios = await db.servicioEnCurso.findMany({
     where: {
@@ -42,12 +42,13 @@ export async function filasDelTablero(orgIds: string[], filtro: FiltroTablero, h
         ? { responsableId: filtro.responsable === "sin" ? null : filtro.responsable }
         : {}),
     },
-    select: { ...seleccionFila, _count: { select: { tareas: { where: { hechaEl: null } } } } },
+    select: { ...seleccionFila, tareas: { select: { hechaEl: true } } },
   });
   const clienteDe = await clientesPorId(servicios.map((s) => s.organizationId));
   return servicios.map((s) => ({
     porRevisar: s.porRevisar,
-    item: itemDelTablero(s, hoy, clienteDe(s.organizationId), s._count.tareas),
+    tareasTotal: s.tareas.length,
+    item: itemDelTablero(s, hoy, clienteDe(s.organizationId), s.tareas.filter((t) => t.hechaEl === null).length),
   }));
 }
 

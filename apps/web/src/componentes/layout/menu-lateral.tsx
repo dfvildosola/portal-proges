@@ -1,7 +1,7 @@
 "use client";
 // El menú de la izquierda, solo en computador (1024 px o más). En el celular lo reemplaza la barra
-// de abajo. Resultados lo ven la jefatura y el administrador; Configuración, solo el administrador
-// (es lo que la API permite a cada uno).
+// de abajo. Resultados lo ven la jefatura y el administrador; Configuración, todo el equipo (los
+// maestros los registra cualquiera; el resto de la pantalla lo ve solo el administrador).
 import { Building2, ChartColumn, ClipboardList, LayoutDashboard, ListChecks, Settings, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -48,7 +48,7 @@ function Grupo({ titulo, entradas }: { titulo: string; entradas: Entrada[] }) {
   );
 }
 
-export function MenuLateral({ verResultados, verConfiguracion }: { verResultados: boolean; verConfiguracion: boolean }) {
+export function MenuLateral({ verResultados }: { verResultados: boolean }) {
   return (
     <nav
       aria-label="Menú principal"
@@ -61,7 +61,7 @@ export function MenuLateral({ verResultados, verConfiguracion }: { verResultados
         <EnlaceDelMenu key={e.href} entrada={e} />
       ))}
       {verResultados && <Grupo titulo="Mirar" entradas={[RESULTADOS]} />}
-      {verConfiguracion && <Grupo titulo="Administrar" entradas={[CONFIGURACION]} />}
+      <Grupo titulo="Ajustes" entradas={[CONFIGURACION]} />
     </nav>
   );
 }

@@ -53,6 +53,12 @@ export function aprobado(presupuestos: PresupuestoCuenta[]): number {
   return suma(presupuestos.filter((p) => p.estado === "APROBADO" && p.tipo === "ORIGINAL").map((p) => p.total));
 }
 
+// Si hay al menos un presupuesto de maestro aprobado (original o adicional). Sin eso el costo de la
+// obra es «no se sabe», no cero: el margen no se calcula (si no, saldría casi 100 %).
+export function hayCostoAprobado(presupuestos: PresupuestoCuenta[]): boolean {
+  return presupuestos.some((p) => p.estado === "APROBADO");
+}
+
 // Lo aprobado como cambio de alcance durante la obra.
 export function adicionales(presupuestos: PresupuestoCuenta[]): number {
   return suma(presupuestos.filter((p) => p.estado === "APROBADO" && p.tipo === "ADICIONAL").map((p) => p.total));

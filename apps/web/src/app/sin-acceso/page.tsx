@@ -2,6 +2,7 @@
 // invitado, o su cuenta está desactivada. Muestra el mensaje que escribió la API. Si la API ya sí lo
 // deja pasar (le dieron acceso mientras tanto), lo manda al inicio.
 import { SignOutButton } from "@clerk/nextjs";
+import type { Yo } from "@proges/contrato";
 import { redirect } from "next/navigation";
 import { Boton } from "@/componentes/ui/boton";
 import { Tarjeta } from "@/componentes/ui/tarjeta";
@@ -12,7 +13,12 @@ export const metadata = { title: "Sin acceso" };
 export default async function SinAcceso() {
   let mensaje: string | null = null;
   try {
-    await llamar("GET", "/v1/yo");
+    const quien = await llamar<Yo>("GET", "/v1/yo");
+    // Una cuenta de cliente sin cliente asignado no tiene portal al que ir: sin este aviso
+    // «/» la mandaría a /mi y /mi de vuelta aquí, en círculo.
+    if (quien.tipo === "usuario" && quien.rol === "CLIENTE" && !quien.cliente) {
+      mensaje = "Tu cuenta todavía no está asociada a un cliente de Proges. Pídele a Proges que la revise.";
+    }
   } catch (error) {
     if (!(error instanceof ErrorDeApi)) throw error;
     if (error.status === 401) redirect("/entrar");

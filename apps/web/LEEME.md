@@ -24,7 +24,8 @@ apps/web/src/
     layout.tsx              raíz: tipografías, Clerk, tooltips
     globals.css             LOS COLORES (tokens de la maqueta) y su conexión con Tailwind
     page.tsx                «/» manda a cada uno a su inicio
-    entrar/  sin-acceso/  mi/  archivos/[tipo]/[id]/
+    entrar/  sin-acceso/  archivos/[tipo]/[id]/
+    (dueno)/mi/             el portal del dueño; layout.tsx pone nombre del cliente, menú y barra
     (equipo)/               las pantallas del equipo; layout.tsx pone menú, barra y cabecera
       hoy anotar inicio repartir servicios servicios/[id] propiedades propiedades/[id] resultados configuracion
   lib/
@@ -196,7 +197,6 @@ En `componentes/comunes/` (piezas de Proges):
 | `EncabezadoDePagina` | Título de la pantalla, línea de apoyo y botones |
 | `CampoFormulario` | Etiqueta + control + ayuda + error de ese campo (si hay error, el borde se pone rojo solo) |
 | `ErrorDeFormulario` | El mensaje general de un formulario que falló |
-| `EnConstruccion` | El esqueleto provisorio que cada pieza reemplaza |
 
 Los colores se usan por nombre, nunca en hex: `bg-bg`, `bg-card`, `bg-scr` (fondo de un elemento dentro de una tarjeta), `text-fg`, `text-soft`, `border-line`, `bg-ink` / `text-ink` / `bg-ink-soft` (marca), `text-ok` `bg-ok-soft`, `text-warn` `bg-warn-soft`, `text-bad` `bg-bad-soft`. Cambian solos en modo oscuro. Si falta un color, no lo inventes: anótalo. Los íconos son de `lucide-react`. Para juntar clases: `cn(...)` de `lib/utils`.
 
@@ -217,4 +217,16 @@ Los colores se usan por nombre, nunca en hex: `bg-bg`, `bg-card`, `bg-scr` (fond
 
 `app/(equipo)/layout.tsx` pregunta `yo()`: si quien entra no es del equipo (un dueño o una llave), lo manda a `/mi`. El menú lateral muestra **Resultados** a la jefatura y al administrador (como exige la API) y **Configuración** solo al administrador. «/» manda al equipo a **Hoy** en celular y a **Inicio** en computador (por el tipo de aparato).
 
-Las pantallas del dueño (`app/(dueno)/`, etapa 3) usarán su propio layout; hoy un dueño solo ve `/mi` («Tu portal está en construcción»).
+El portal del dueño tiene su propio marco, descrito abajo.
+
+## Portal del dueño
+
+Vive en `app/(dueno)/mi/` y tiene su propio marco (`app/(dueno)/layout.tsx`): el nombre del cliente arriba, menú lateral en computador y barra de abajo en celular (`componentes/dueno/`). Si entra alguien del equipo, el layout lo manda a `/inicio`; y el layout del equipo manda a un usuario de cliente a `/mi`. Las entradas del menú salen de `componentes/dueno/entradas-del-menu.ts`: Inicio, Propiedades y Pedir a Proges para todos; Vencimientos y Cartera solo para el dueño autónomo (modo `AUTONOMO` en `yo()`). `/mi` muestra `InicioAtendido` o `InicioAutonomo` según ese modo.
+
+| Pieza | Carpetas |
+|---|---|
+| Q (cliente grande, atendido) | `app/(dueno)/mi/propiedades/`, `app/(dueno)/mi/servicios/`, `app/(dueno)/mi/pedir/`, `componentes/dueno/inicio-atendido.tsx`, `componentes/dueno/atendido/` |
+| R (dueño autónomo) | `app/(dueno)/mi/vencimientos/`, `app/(dueno)/mi/cartera/`, `componentes/dueno/inicio-autonomo.tsx`, `componentes/dueno/autonomo/` |
+| Q0 (la base) | Todo lo demás de `(dueno)`: layouts, `app/(dueno)/mi/page.tsx`, menú, barra y cabecera de `componentes/dueno/` |
+
+**Se reusa, no se edita.** Los componentes de la ficha, la obra y la venta (`componentes/ficha`, `componentes/obra`, `componentes/venta`) se usan en el portal del dueño con `modo="dueno"` y no se editan desde Q ni R. Si un cambio hace falta ahí, se anota como duda con el cambio exacto.

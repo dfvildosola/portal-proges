@@ -1,5 +1,6 @@
-// Configuración: lo que se toca poco y solo lo hace el administrador: quién tiene acceso, los
-// clientes, los maestros y las llaves de la API. Cada pestaña es una lista con sus botones.
+// Configuración: lo que se toca poco. Los maestros los puede registrar todo el equipo; los accesos
+// de las personas, los clientes y las llaves de la API son solo del administrador. Cada pestaña es
+// una lista con sus botones.
 import type { Metadata } from "next";
 import type { ClientesLista, LlavesLista, MaestrosRespuesta, UsuariosLista } from "@proges/contrato";
 import { EncabezadoDePagina } from "@/componentes/comunes/encabezado-de-pagina";
@@ -15,12 +16,30 @@ export const metadata: Metadata = { title: "Configuración" };
 
 export default async function Pagina() {
   const quien = await yo();
-  // La API también lo exige (403), pero aquí se explica en vez de mandar a otra pantalla.
-  if (quien.tipo !== "usuario" || !quien.marcas.admin) {
+  // La API también lo exige (403), pero aquí se muestra solo lo que cada uno puede usar.
+  if (quien.tipo !== "usuario") {
     return (
       <div className="flex flex-col gap-4">
         <EncabezadoDePagina titulo="Configuración" />
-        <Vacio texto="Configuración es solo para administradores. Pídele a un administrador lo que necesites cambiar." />
+        <Vacio texto="Esta pantalla es solo para el equipo de Proges." />
+      </div>
+    );
+  }
+
+  // Quien no es administrador ve solo los maestros, que es lo que puede registrar.
+  if (!quien.marcas.admin) {
+    const maestros = await pedir<MaestrosRespuesta>("/v1/maestros");
+    return (
+      <div className="flex flex-col gap-4">
+        <EncabezadoDePagina titulo="Configuración" subtitulo="Los maestros que hacen los trabajos de las obras." />
+        <Pestanas defaultValue="maestros">
+          <PestanasLista>
+            <Pestana value="maestros">Maestros</Pestana>
+          </PestanasLista>
+          <PestanaPanel value="maestros">
+            <MaestrosConfig maestros={maestros.items} />
+          </PestanaPanel>
+        </Pestanas>
       </div>
     );
   }

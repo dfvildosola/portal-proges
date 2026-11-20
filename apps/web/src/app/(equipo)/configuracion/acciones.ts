@@ -1,7 +1,8 @@
 "use server";
 // Las acciones de Configuración: cada una recibe un formulario, llama a la API y devuelve el
-// resultado para que el formulario muestre el error o se cierre. Todo esto lo puede hacer solo el
-// administrador; si no lo es, la API responde 403 y ese mensaje es el que se ve.
+// resultado para que el formulario muestre el error o se cierre. Los maestros los puede registrar
+// todo el equipo; usuarios, clientes y llaves, solo el administrador (si no lo es, la API responde
+// 403 y ese mensaje es el que se ve).
 import { revalidatePath } from "next/cache";
 import type { LlaveCreada, ProveedorOdoo, ProveedoresRespuesta } from "@proges/contrato";
 import { casillaDe, ejecutar, textoDe, type ResultadoAccion } from "@/lib/acciones";

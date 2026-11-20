@@ -79,12 +79,12 @@ describe("reglas puras", () => {
   });
 
   test("margen: solo con orden en pesos; las cifras separan monedas", () => {
-    assert.deepEqual(margenDeObra({ total: "1000", moneda: "CLP" }, 600), { valor: "400", moneda: "CLP" });
-    assert.equal(margenDeObra({ total: "10", moneda: "UF" }, 600), null);
-    assert.equal(margenDeObra(null, 600), null);
+    assert.deepEqual(margenDeObra({ total: "1000", moneda: "CLP" }, 600, true), { valor: "400", moneda: "CLP" });
+    assert.equal(margenDeObra({ total: "10", moneda: "UF" }, 600, true), null);
+    assert.equal(margenDeObra(null, 600, true), null);
     const c = cifrasDeObras([
-      { orden: { total: "1000", moneda: "CLP" }, costo: 600 },
-      { orden: { total: "10", moneda: "UF" }, costo: 100 },
+      { orden: { total: "1000", moneda: "CLP" }, costo: 600, conCostoAprobado: true },
+      { orden: { total: "10", moneda: "UF" }, costo: 100, conCostoAprobado: true },
     ]);
     assert.deepEqual(c.cobrado, [
       { valor: "1000", moneda: "CLP" },
@@ -92,7 +92,18 @@ describe("reglas puras", () => {
     ]);
     assert.deepEqual(c.costo, { valor: "700", moneda: "CLP" });
     assert.deepEqual(c.margen, { valor: "400", moneda: "CLP" });
-    assert.equal(cifrasDeObras([{ orden: null, costo: 5 }]).margen, null);
+    assert.equal(cifrasDeObras([{ orden: null, costo: 5, conCostoAprobado: true }]).margen, null);
+  });
+
+  test("margen: sin presupuesto de maestro aprobado no hay margen (el costo no es cero, es desconocido)", () => {
+    assert.equal(margenDeObra({ total: "1000", moneda: "CLP" }, 0, false), null);
+    // Una obra sin costo aprobado no entra al margen de la propiedad; la otra sí.
+    const c = cifrasDeObras([
+      { orden: { total: "1000", moneda: "CLP" }, costo: 600, conCostoAprobado: true },
+      { orden: { total: "5000", moneda: "CLP" }, costo: 0, conCostoAprobado: false },
+    ]);
+    assert.deepEqual(c.margen, { valor: "400", moneda: "CLP" });
+    assert.equal(cifrasDeObras([{ orden: { total: "5000", moneda: "CLP" }, costo: 0, conCostoAprobado: false }]).margen, null);
     assert.deepEqual(sumarPorMoneda([{ valor: "0.1", moneda: "CLP" }, { valor: "0.2", moneda: "CLP" }]), [{ valor: "0.3", moneda: "CLP" }]);
   });
 

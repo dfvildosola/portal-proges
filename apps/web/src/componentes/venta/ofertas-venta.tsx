@@ -72,11 +72,10 @@ export function OfertasVenta({
                 <BotonMostrarOferta servicioId={servicioId} ofertaId={o.id} recomendacionActual={o.recomendacion} />
               </div>
             )}
-            {/* ETAPA 3 (portal del dueño): aquí van los botones «Aceptar», «Contraofertar» y «Rechazar»
-                cuando `modo === "dueno"` y `sinResponder`. Llaman a POST /v1/ofertas/{id}/responder.
-                Todavía no se construyen: el equipo no responde por el dueño. */}
+            {/* Los botones de responder viven en «Para decidir», arriba del panel (componentes/dueno/atendido),
+                porque ahí el dueño ve todo lo pendiente junto; aquí solo se avisa dónde. */}
             {modo === "dueno" && sinResponder && (
-              <p className="text-xs text-soft">Pronto podrás responder esta oferta desde aquí.</p>
+              <p className="text-xs text-soft">Respóndela en «Para decidir», arriba.</p>
             )}
           </li>
         );

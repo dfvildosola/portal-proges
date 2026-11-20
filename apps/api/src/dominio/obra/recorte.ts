@@ -13,6 +13,7 @@ import type { DatosObra } from "./datos";
 import {
   avancePonderado,
   cuentasDeObra,
+  hayCostoAprobado,
   margenDeObra,
   obraSePuedeCerrar,
   planContraReal,
@@ -125,9 +126,10 @@ export function obraParaEquipo(datos: DatosObra): contrato.ObraEquipo {
   const cuentas = cuentasDeObra(presupuestos, facturas);
   const plan = planDeLaObra(datos);
 
-  // El margen solo se calcula si la orden está en pesos, como los maestros.
+  // El margen solo se calcula si la orden está en pesos, como los maestros, y hay un presupuesto de
+  // maestro aprobado: sin él el costo no es cero sino desconocido y el margen saldría casi 100 %.
   const margen =
-    datos.orden && datos.orden.moneda === "CLP"
+    datos.orden && datos.orden.moneda === "CLP" && hayCostoAprobado(presupuestos)
       ? (() => {
           const precio = aNumero(datos.orden.total);
           const m = margenDeObra(precio, plan.costo.planificado, plan.costo.real);

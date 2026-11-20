@@ -24,16 +24,22 @@ describe("reglas puras", () => {
   const d = (n: number) => new Date(Date.UTC(2026, 10, 19 + n));
 
   test("tablero: cada servicio cae en un solo grupo", () => {
-    assert.equal(grupoDelTablero({ porRevisar: true, esperando: false, tareasPendientes: 3 }), "nuevo");
-    assert.equal(grupoDelTablero({ porRevisar: false, esperando: true, tareasPendientes: 3 }), "esperando");
-    assert.equal(grupoDelTablero({ porRevisar: false, esperando: false, tareasPendientes: 1 }), "nosToca");
-    assert.equal(grupoDelTablero({ porRevisar: false, esperando: false, tareasPendientes: 0 }), "porEntregar");
+    assert.equal(grupoDelTablero({ porRevisar: true, esperando: false, tareasPendientes: 3, tareasTotal: 3 }), "nuevo");
+    assert.equal(grupoDelTablero({ porRevisar: false, esperando: true, tareasPendientes: 3, tareasTotal: 3 }), "esperando");
+    assert.equal(grupoDelTablero({ porRevisar: false, esperando: false, tareasPendientes: 1, tareasTotal: 4 }), "nosToca");
+    // Con tareas y todas hechas: falta entregarlo.
+    assert.equal(grupoDelTablero({ porRevisar: false, esperando: false, tareasPendientes: 0, tareasTotal: 4 }), "porEntregar");
+    // Sin ninguna tarea nunca se trabajó: nos toca (no está «por entregar»).
+    assert.equal(grupoDelTablero({ porRevisar: false, esperando: false, tareasPendientes: 0, tareasTotal: 0 }), "nosToca");
+    // Esperando a alguien gana aunque no tenga tareas.
+    assert.equal(grupoDelTablero({ porRevisar: false, esperando: true, tareasPendientes: 0, tareasTotal: 0 }), "esperando");
   });
 
   test("tablero: en «esperando» los que llevan más días van primero", () => {
     const item = (id: string, dias: number) =>
       ({
         porRevisar: false,
+        tareasTotal: 0,
         item: {
           id,
           tipo: "VENTA",
@@ -240,9 +246,10 @@ describe("catálogo y servicios", () => {
       (await e.pedir("equipo", "GET", `/v1/servicios?vista=tablero&cliente=${e.ids.clienteA}`)).cuerpo;
     const ids = (lista: { id: string }[]) => lista.map((i) => i.id);
 
-    // Recién abierto y sin tareas: «por entregar».
+    // Recién abierto y sin tareas: «nos toca» (nunca se trabajó, no está por entregar).
     const antes = await tablero();
-    assert.ok(ids(antes.porEntregar).includes(servicioA));
+    assert.ok(ids(antes.nosToca).includes(servicioA));
+    assert.ok(!ids(antes.porEntregar).includes(servicioA));
 
     const r = await e.pedir("equipo", "PATCH", `/v1/servicios/${servicioA}`, { esperandoA: "CONSERVADOR" });
     assert.equal(r.estado, 200, JSON.stringify(r.cuerpo));
@@ -272,6 +279,11 @@ describe("catálogo y servicios", () => {
     assert.equal(vuelve.cuerpo.historialEspera[0].a, null);
     const despues = await tablero();
     assert.ok(ids(despues.nosToca).includes(servicioA));
+    // Con la tarea hecha (y sin espera): «por entregar».
+    const hecha = await e.pedir("equipo", "PATCH", `/v1/tareas/${t.cuerpo.id}`, { hecha: true });
+    assert.equal(hecha.estado, 200, JSON.stringify(hecha.cuerpo));
+    const porEntregar = await tablero();
+    assert.ok(ids(porEntregar.porEntregar).includes(servicioA));
     await e.pedir("equipo", "DELETE", `/v1/tareas/${t.cuerpo.id}`);
   });
 

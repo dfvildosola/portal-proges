@@ -25,7 +25,7 @@ import { esperandoDe, datosDePropiedad } from "./recorte";
 import { alertasDeFicha } from "./alertas";
 import { construirHistorial, type DatosDeHistorial } from "./historial";
 import { cifrasDeObras, costoAprobado, margenDeObra, totalPorRecinto } from "./reparaciones";
-import { avancePonderado, planContraReal, type PartidaCuenta, type PresupuestoCuenta } from "../obra/obra";
+import { avancePonderado, hayCostoAprobado, planContraReal, type PartidaCuenta, type PresupuestoCuenta } from "../obra/obra";
 
 // Qué servicios existen para quien mira. Nadie ve los cancelados aquí; un dueño tampoco los que
 // el equipo todavía no revisó o no confirmó.
@@ -266,6 +266,7 @@ export async function fichaResumen(propiedad: Property, dueno: boolean, hoy: Dat
     .map((s) => ({
       orden: s.orden,
       costo: dueno ? 0 : costoAprobado((s.presupuestos ?? []).map(aPresupuestoCuenta)),
+      conCostoAprobado: !dueno && hayCostoAprobado((s.presupuestos ?? []).map(aPresupuestoCuenta)),
     }));
   const cifras = cifrasDeObras(obras);
 
@@ -381,7 +382,7 @@ export async function reparacionesDe(propertyId: string, dueno: boolean, hoy: Da
       inicioObra: s.inicioObra,
       hasta: s.cerradoEl ? dia(s.cerradoEl) : hoy,
     });
-    return { ...base, costoMaestro: aMonto(costo, "CLP"), margen: margenDeObra(s.orden, costo), dias: plan.plazo };
+    return { ...base, costoMaestro: aMonto(costo, "CLP"), margen: margenDeObra(s.orden, costo, hayCostoAprobado(presupuestos)), dias: plan.plazo };
   });
 
   return {

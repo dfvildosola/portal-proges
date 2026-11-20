@@ -29,18 +29,24 @@ export function costoAprobado(presupuestos: PresupuestoCuenta[]): number {
   return Math.round((aprobado(presupuestos) + adicionales(presupuestos)) * 100) / 100;
 }
 
-// Cobrado menos costo, solo si la orden está en pesos. Sin orden, o con orden en UF: null.
-export function margenDeObra(orden: { total: Valor; moneda: Currency } | null, costo: number): Monto | null {
-  if (!orden || orden.moneda !== "CLP") return null;
+// Cobrado menos costo, solo si la orden está en pesos y hay costo de maestro aprobado (sin
+// presupuesto aprobado el costo no es cero, es desconocido: el margen saldría casi 100 %).
+// Sin orden, con orden en UF o sin costo aprobado: null.
+export function margenDeObra(
+  orden: { total: Valor; moneda: Currency } | null,
+  costo: number,
+  conCostoAprobado: boolean,
+): Monto | null {
+  if (!orden || orden.moneda !== "CLP" || !conCostoAprobado) return null;
   return aMonto(new Prisma.Decimal(orden.total).minus(costo), "CLP");
 }
 
-export type ObraParaCifras = { orden: { total: Valor; moneda: Currency } | null; costo: number };
+export type ObraParaCifras = { orden: { total: Valor; moneda: Currency } | null; costo: number; conCostoAprobado: boolean };
 
-// Las cifras de toda la propiedad. `margen` suma solo las obras con orden en pesos (con su
-// propio costo); si ninguna lo es, null.
+// Las cifras de toda la propiedad. `margen` suma solo las obras con orden en pesos y costo de
+// maestro aprobado (con su propio costo); si ninguna lo tiene, null.
 export function cifrasDeObras(obras: ObraParaCifras[]): { cobrado: Monto[]; costo: Monto; margen: Monto | null } {
-  const conOrdenEnPesos = obras.filter((o) => o.orden?.moneda === "CLP");
+  const conOrdenEnPesos = obras.filter((o) => o.orden?.moneda === "CLP" && o.conCostoAprobado);
   const margen = conOrdenEnPesos.length
     ? aMonto(
         conOrdenEnPesos.reduce((acc, o) => acc.plus(o.orden!.total).minus(o.costo), new Prisma.Decimal(0)),

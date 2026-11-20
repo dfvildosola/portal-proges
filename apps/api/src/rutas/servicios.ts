@@ -46,7 +46,7 @@ servicios.openapi(
     tags: ["Servicios"],
     summary: "El tablero de servicios, o una lista",
     description:
-      "vista=tablero (solo el equipo): los servicios abiertos según quién tiene la pelota. NUEVO: vienen de un pedido y nadie los reparte. NOS_TOCA: no se espera a nadie y hay tareas pendientes. ESPERANDO: se espera a alguien, con los días que lleva. POR_ENTREGAR: sin tareas pendientes ni espera. vista=lista: una página de servicios; un dueño o una llave ve solo los suyos, sin responsable.",
+      "vista=tablero (solo el equipo): los servicios abiertos según quién tiene la pelota. NUEVO: vienen de un pedido y nadie los reparte. NOS_TOCA: no se espera a nadie y hay tareas pendientes, o aún no tiene tareas. ESPERANDO: se espera a alguien, con los días que lleva. POR_ENTREGAR: sin espera, con al menos una tarea y todas hechas. vista=lista: una página de servicios; un dueño o una llave ve solo los suyos, sin responsable.",
     request: { query: ServiciosConsulta },
     responses: { 200: json(ServiciosRespuesta, "El tablero o la página de servicios."), ...errores(400, 401, 403) },
   }),

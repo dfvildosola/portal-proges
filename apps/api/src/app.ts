@@ -41,8 +41,13 @@ export function crearApp(dep: Dependencias) {
     info: {
       title: "API de Proges",
       version: "v1",
-      description:
-        "Toda lectura y escritura de datos de Proges pasa por aquí. Con una llave de la API solo se lee, y solo lo del cliente de esa llave.",
+      description: [
+        "Toda lectura y escritura de datos de Proges pasa por aquí.",
+        "**Para el sistema de un cliente:** el administrador de Proges crea una llave (empieza con `prg_`) en Configuración → Llaves de la API. Se manda en cada consulta, en el encabezado `Authorization: Bearer prg_…`.",
+        "Una llave **solo lee**, y solo lo de su cliente: sus propiedades y servicios, recortados igual que los ve el dueño en el portal (sin costos de maestros, sin notas internas, sin datos de otros clientes). Escribir responde 403; una llave revocada o mal escrita, 401; algo de otro cliente, 404.",
+        "Los errores siempre tienen la forma `{ \"error\": { \"mensaje\", \"campos\"? } }`. Para empezar, prueba `GET /v1/yo`.",
+        "Guía completa, con ejemplos en curl: `docs/api.md` del repositorio de Proges.",
+      ].join("\n\n"),
     },
     security: [{ bearer: [] }],
   });

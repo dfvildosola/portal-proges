@@ -32,7 +32,7 @@ export function FormularioPresupuesto({
           <CampoFormulario
             etiqueta="Maestro"
             error={errorDe("maestroId")}
-            ayuda={maestros.length === 0 ? "Todavía no hay maestros registrados: el administrador los agrega en Configuración, pestaña Maestros." : undefined}
+            ayuda={maestros.length === 0 ? "Todavía no hay maestros registrados: agrégalos en Configuración, pestaña Maestros." : undefined}
           >
             <Select name="maestroId" required defaultValue="">
               <option value="" disabled>

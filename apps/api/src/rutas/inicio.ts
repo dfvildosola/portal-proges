@@ -50,24 +50,27 @@ inicio.openapi(
     tags: ["Inicio"],
     summary: "Las novedades de un dueño",
     description:
-      "Lo que pasó en los servicios de un dueño: las notas que el equipo marcó para él (con sus fotos) y los cambios de «esperando a», de lo más nuevo a lo más antiguo. Un dueño o una llave ve solo lo de su cliente; nunca notas internas, tareas ni servicios cancelados o por revisar.",
+      "Lo que pasó en los servicios de un dueño: las notas que el equipo marcó para él (con sus fotos) y los cambios de «esperando a», de lo más nuevo a lo más antiguo. Con `servicioId` trae solo lo de ese servicio. Un dueño o una llave ve solo lo de su cliente; nunca notas internas, tareas ni servicios cancelados o por revisar.",
     request: { query: NovedadesConsulta },
     responses: { 200: json(Novedades, "Las novedades."), ...errores(400, 401) },
   }),
   async (c) => {
     const quien = c.get("quien");
-    const { limite, cliente } = c.req.valid("query");
+    const { limite, cliente, servicioId } = c.req.valid("query");
     const orgIds = await espaciosQueLee(quien, cliente);
+    // Con servicioId solo salen las de ese servicio. El filtro de visibilidad no se afloja: si el
+    // servicio no es de este dueño o aún no es visible, la lista sale vacía, igual que sin filtro.
+    const delServicio = servicioId ? { ...VISIBLE_PARA_DUENO, id: servicioId } : VISIBLE_PARA_DUENO;
 
     const [notas, cambios] = await Promise.all([
       db.nota.findMany({
-        where: { organizationId: { in: orgIds }, paraDueno: true, servicioEnCurso: VISIBLE_PARA_DUENO },
+        where: { organizationId: { in: orgIds }, paraDueno: true, servicioEnCurso: delServicio },
         orderBy: { createdAt: "desc" },
         take: limite,
         select: { ...seleccionNota, servicioEnCurso: seleccionServicioDeNovedad },
       }),
       db.evento.findMany({
-        where: { organizationId: { in: orgIds }, tipo: "ESPERA", servicioEnCurso: VISIBLE_PARA_DUENO },
+        where: { organizationId: { in: orgIds }, tipo: "ESPERA", servicioEnCurso: delServicio },
         orderBy: { fecha: "desc" },
         take: limite,
         select: {

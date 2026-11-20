@@ -16,7 +16,7 @@ export default async function LayoutDelEquipo({ children }: { children: React.Re
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[196px_minmax(0,1fr)]">
-      <MenuLateral verResultados={jefatura || admin} verConfiguracion={admin} />
+      <MenuLateral verResultados={jefatura || admin} />
       <div className="flex min-w-0 flex-col">
         <Cabecera nombre={quien.usuario.nombre} rol={rol} />
         <main className="flex-1 px-4 pt-4 pb-28 lg:px-6 lg:pt-5 lg:pb-10">{children}</main>

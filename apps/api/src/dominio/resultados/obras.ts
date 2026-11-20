@@ -3,7 +3,7 @@
 // Las cuentas del maestro (aprobado, adicionales, facturado) vienen de dominio/obra/obra.ts,
 // que es donde vive esa cuenta: acá solo se importan para que la pantalla de la obra y
 // Resultados muestren siempre el mismo número. Funciones puras.
-import { planContraReal, type FacturaCuenta, type PresupuestoCuenta } from "../obra/obra";
+import { hayCostoAprobado, planContraReal, type FacturaCuenta, type PresupuestoCuenta } from "../obra/obra";
 import { aUnDecimal } from "./semanas";
 
 const centavos = (n: number) => Math.round(n * 100) / 100;
@@ -43,6 +43,9 @@ export function resultadoDeObra(o: ObraParaResultados): ResultadoDeObra {
   }).costo;
   // Una orden en UF no se mezcla con pesos: sin tipo de cambio no hay margen que calcular.
   const precioDueno = o.orden && o.orden.moneda === "CLP" ? centavos(o.orden.total) : null;
+  // Sin presupuesto de maestro aprobado el costo no es cero, es desconocido: sin margen (saldría ~100 %)
+  // y la obra no entra al margen total.
+  const conCostoAprobado = hayCostoAprobado(o.presupuestos);
   return {
     servicioId: o.servicioId,
     clienteId: o.clienteId,
@@ -53,11 +56,11 @@ export function resultadoDeObra(o: ObraParaResultados): ResultadoDeObra {
     facturado: costo.real,
     diferencia: costo.diferencia,
     precioDueno,
-    margen: precioDueno === null ? null : centavos(precioDueno - costo.real),
+    margen: precioDueno === null || !conCostoAprobado ? null : centavos(precioDueno - costo.real),
   };
 }
 
-// El margen de todas las obras que tienen orden en pesos, y qué porcentaje es de lo cobrado.
+// El margen de todas las obras que tienen orden en pesos y costo aprobado, y qué porcentaje es de lo cobrado.
 export function margenDeObras(obras: ResultadoDeObra[]): { margen: number | null; porcentaje: number | null } {
   const conMargen = obras.filter((o) => o.margen !== null && o.precioDueno !== null);
   if (conMargen.length === 0) return { margen: null, porcentaje: null };

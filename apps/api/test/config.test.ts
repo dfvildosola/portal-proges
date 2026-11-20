@@ -302,6 +302,17 @@ describe("resultados: las cuentas, con un caso armado a mano", () => {
 
     assert.deepEqual(margenDeObras([conOrden, enUf, sinOrden]), { margen: 700_000, porcentaje: 35 });
     assert.deepEqual(margenDeObras([enUf]), { margen: null, porcentaje: null });
+
+    // Sin ningún presupuesto aprobado el costo no es cero, es desconocido: sin margen, y no entra al total.
+    const sinAprobar = resultadoDeObra({
+      ...base,
+      servicioId: "d",
+      presupuestos: [{ tipo: "ORIGINAL" as const, estado: "RECIBIDO" as const, total: 1_000_000 }],
+      orden: { total: 2_000_000, moneda: "CLP" },
+    });
+    assert.equal(sinAprobar.margen, null);
+    assert.deepEqual(margenDeObras([conOrden, sinAprobar]), { margen: 700_000, porcentaje: 35 });
+    assert.deepEqual(margenDeObras([sinAprobar]), { margen: null, porcentaje: null });
   });
 });
 

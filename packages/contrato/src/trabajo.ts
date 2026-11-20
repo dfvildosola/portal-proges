@@ -319,11 +319,11 @@ export const ServiciosTablero = z
   .object({
     vista: z.literal("tablero"),
     nuevo: z.array(ServicioTableroItem).meta({ description: "Por revisar: vienen de un pedido y nadie los reparte." }),
-    nosToca: z.array(ServicioTableroItem).meta({ description: "Sin «esperando a» y con tareas pendientes: nos toca." }),
+    nosToca: z.array(ServicioTableroItem).meta({ description: "Sin «esperando a» y con tareas pendientes, o sin ninguna tarea todavía: nos toca." }),
     esperando: z.array(ServicioTableroItem).meta({ description: "Con «esperando a»; los que llevan más días, primero." }),
     porEntregar: z
       .array(ServicioTableroItem)
-      .meta({ description: "Abiertos, sin tareas pendientes y sin espera: falta entregarlos o darlos por terminados." }),
+      .meta({ description: "Abiertos, sin espera, con al menos una tarea y todas hechas: falta entregarlos o darlos por terminados." }),
   })
   .meta({ id: "ServiciosTablero", description: "Los servicios abiertos agrupados por quién tiene la pelota." });
 export type ServiciosTablero = z.infer<typeof ServiciosTablero>;
@@ -606,6 +606,7 @@ export type Novedad = z.infer<typeof Novedad>;
 export const NovedadesConsulta = z.object({
   limite: z.coerce.number().int().min(1).max(100).default(50).meta({ description: "Cuántas novedades traer (hasta 100)." }),
   cliente: Id.optional().meta({ description: "Solo el equipo: las de este cliente." }),
+  servicioId: Id.optional().meta({ description: "Solo las novedades de este servicio." }),
 });
 export type NovedadesConsulta = z.infer<typeof NovedadesConsulta>;
 
