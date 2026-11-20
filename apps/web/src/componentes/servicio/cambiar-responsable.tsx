@@ -50,7 +50,7 @@ export function CambiarResponsable({
     <div className={cn("flex flex-col gap-1", className)}>
       <Select
         aria-label={etiqueta}
-        className={compacto ? "h-9 text-[13px] lg:h-8 lg:text-xs" : undefined}
+        className={compacto ? "text-sm lg:h-8 lg:text-xs" : undefined}
         value={elegido}
         disabled={deshabilitado || pendiente}
         onChange={(e) => alElegir(e.target.value)}

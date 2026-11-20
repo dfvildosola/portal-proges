@@ -1,6 +1,6 @@
 // El aviso de arriba de la ficha: a quién se espera y desde cuándo (o que nos toca a nosotros),
-// con el botón para cambiarlo. Mientras el servicio está en la columna «Nuevo» del tablero (un
-// pedido sin aceptar, sin confirmar o sin responsable), el aviso dice eso y qué falta para
+// con el botón para cambiarlo. Mientras el servicio está en la columna «Nuevo» del tablero (lo
+// dice la API en `nuevo`, con la misma regla del tablero), el aviso dice eso y qué falta para
 // tomarlo, en vez de «nos toca»: si no, la ficha y el tablero se contradicen. Si falta confirmarlo,
 // trae el botón «Confirmar» como principal (así hay un solo aviso y no dos bandas apiladas).
 // Colores: naranja mientras es nuevo; si no, el de siempre: roja pasados 10 días de espera, ámbar
@@ -8,13 +8,13 @@
 import Link from "next/link";
 import type { Esperando } from "@proges/contrato";
 import { Fecha } from "@/componentes/comunes/fecha";
-import { DIAS_PARA_TRABADO, ETIQUETA_ESPERANDO_A } from "@/lib/etiquetas";
+import { aQuienSeEspera, DIAS_PARA_TRABADO } from "@/lib/etiquetas";
 import { cn } from "@/lib/utils";
 import { CambiarEspera } from "./cambiar-espera";
 import { ConfirmarServicio } from "./confirmar-servicio";
 
-// Qué falta para que el servicio deje de ser nuevo. Cada pieza sale de su marca tal como la manda
-// la API; con las tres en orden, no queda nada (null) y el servicio ya está tomado.
+// Qué falta para que el servicio deje de ser nuevo, dicho con las marcas que manda la API. Si la
+// API dice que es nuevo por otra razón que estas no cubren, se dice lo general.
 function queFalta(s: { porRevisar: boolean; porConfirmar: boolean; sinResponsable: boolean }): React.ReactNode {
   if (s.porRevisar) {
     return (
@@ -28,7 +28,7 @@ function queFalta(s: { porRevisar: boolean; porConfirmar: boolean; sinResponsabl
     );
   }
   const partes = [s.porConfirmar && "confirmarlo", s.sinResponsable && "elegir quién lo lleva"].filter(Boolean);
-  return partes.length === 0 ? null : `falta ${partes.join(" y ")}.`;
+  return partes.length === 0 ? "todavía nadie lo toma." : `falta ${partes.join(" y ")}.`;
 }
 
 export function BandaDeEspera({
@@ -37,6 +37,7 @@ export function BandaDeEspera({
   esperando,
   puedeCambiar,
   porConfirmar,
+  nuevo,
   porRevisar,
   sinResponsable,
 }: {
@@ -46,18 +47,14 @@ export function BandaDeEspera({
   esperando: Esperando | null;
   puedeCambiar: boolean;
   porConfirmar: boolean;
+  /** Si está en «Nuevo» (lo calcula la API); `porRevisar` y `sinResponsable` solo arman el texto. */
+  nuevo: boolean;
   porRevisar: boolean;
   sinResponsable: boolean;
 }) {
   const trabado = abierto && esperando !== null && esperando.dias > DIAS_PARA_TRABADO;
-  // Uno terminado o cancelado ya no está en el tablero: no es «nuevo» aunque le falte algo.
-  const falta = abierto ? queFalta({ porRevisar, porConfirmar, sinResponsable }) : null;
-  const nuevo = falta !== null;
-  const nombre = esperando
-    ? esperando.a === "OTRO" && esperando.detalle
-      ? esperando.detalle
-      : ETIQUETA_ESPERANDO_A[esperando.a].toLowerCase()
-    : "";
+  const falta = nuevo ? queFalta({ porRevisar, porConfirmar, sinResponsable }) : null;
+  const nombre = esperando ? aQuienSeEspera(esperando) : "";
   return (
     <div
       className={cn(

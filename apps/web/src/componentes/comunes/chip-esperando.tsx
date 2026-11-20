@@ -3,7 +3,7 @@
 // toca» (la pelota está de nuestro lado). Pasados 10 días se pone rojo (trabado); antes, ámbar.
 import type { Esperando } from "@proges/contrato";
 import { Insignia } from "@/componentes/ui/insignia";
-import { DIAS_PARA_TRABADO, ETIQUETA_ESPERANDO_A } from "@/lib/etiquetas";
+import { aQuienSeEspera, DIAS_PARA_TRABADO } from "@/lib/etiquetas";
 
 export function ChipEsperando({ esperando, className }: { esperando: Esperando | null; className?: string }) {
   if (!esperando) {
@@ -13,9 +13,7 @@ export function ChipEsperando({ esperando, className }: { esperando: Esperando |
       </Insignia>
     );
   }
-  // «Otro» no dice nada solo: se muestra el detalle que escribió el equipo, tal cual.
-  const a =
-    esperando.a === "OTRO" && esperando.detalle ? esperando.detalle : ETIQUETA_ESPERANDO_A[esperando.a].toLowerCase();
+  const a = aQuienSeEspera(esperando);
   return (
     <Insignia tono={esperando.dias > DIAS_PARA_TRABADO ? "bad" : "warn"} className={className}>
       Esperando a {a} · {esperando.dias} d

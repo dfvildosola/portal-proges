@@ -1,7 +1,7 @@
 // Los nombres con que se escriben en pantalla las listas de valores de la API (las que en el
 // contrato son MAYÚSCULAS: «NOTARIA», «DUENO»). Un solo lugar, para que todas las pantallas digan
 // lo mismo.
-import type { EsperandoA, ServicioEstado, ServicioTipo } from "@proges/contrato";
+import type { Esperando, EsperandoA, ServicioEstado, ServicioTipo } from "@proges/contrato";
 
 export const ETIQUETA_ESPERANDO_A: Record<EsperandoA, string> = {
   CONSERVADOR: "Conservador",
@@ -12,6 +12,12 @@ export const ETIQUETA_ESPERANDO_A: Record<EsperandoA, string> = {
   BANCO: "Banco",
   OTRO: "Otro",
 };
+
+// A quién se espera, en minúscula para ir dentro de una frase («Esperando a notaría»). «Otro» no
+// dice nada solo: se usa el detalle que escribió el equipo, tal cual.
+export function aQuienSeEspera(esperando: Esperando): string {
+  return esperando.a === "OTRO" && esperando.detalle ? esperando.detalle : ETIQUETA_ESPERANDO_A[esperando.a].toLowerCase();
+}
 
 export const ETIQUETA_TIPO_SERVICIO: Record<ServicioTipo, string> = {
   EVALUACION: "Evaluación",

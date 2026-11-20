@@ -25,9 +25,10 @@ export default async function Pagina({ searchParams }: { searchParams: Promise<{
 
   // Si se llegó desde la ficha de un servicio (/anotar?servicio=ID), la nota va ahí y no se vuelve
   // a preguntar dónde: queda en un solo paso. Si no, se elige en el paso 2, con el primero que la
-  // API propone ya marcado.
+  // API propone ya marcado. Si el servicio pedido no está en la lista (por ejemplo, ya se cerró),
+  // no se marca ninguno: marcar otro haría guardar la nota donde no era.
   const servicioFijo = opciones.find((o) => o.id === servicioPedido) ?? null;
-  const elegidoAlInicio = servicioFijo?.id ?? deSugeridos[0]?.id ?? null;
+  const elegidoAlInicio = servicioPedido ? (servicioFijo?.id ?? null) : (deSugeridos[0]?.id ?? null);
 
   // Anotar se piensa para el celular y una mano: en computador va en una columna angosta, no a lo ancho.
   return (

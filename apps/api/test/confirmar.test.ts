@@ -34,13 +34,21 @@ describe("confirmar un servicio de la carga inicial", () => {
       data: { organizationId: e.ids.clienteA, propertyId: propiedad, servicioId: catalogoId, tipo: "EVALUACION", porConfirmar: true },
     });
     assert.equal((await e.pedir("clienteA", "GET", `/v1/servicios/${s.id}`)).estado, 404);
+    assert.equal((await e.pedir("equipo", "GET", `/v1/servicios/${s.id}`)).cuerpo.nuevo, true);
     assert.equal((await e.pedir("clienteA", "POST", `/v1/servicios/${s.id}/confirmar`)).estado, 403);
     assert.equal((await e.pedir("llaveA", "POST", `/v1/servicios/${s.id}/confirmar`)).estado, 403);
 
     const ok = await e.pedir("equipo", "POST", `/v1/servicios/${s.id}/confirmar`);
     assert.equal(ok.estado, 200, JSON.stringify(ok.cuerpo));
     assert.equal(ok.cuerpo.porConfirmar, false);
-    assert.equal((await e.pedir("clienteA", "GET", `/v1/servicios/${s.id}`)).estado, 200);
+    // Confirmado pero sin responsable: sigue en «Nuevo». Con responsable, ya no.
+    assert.equal(ok.cuerpo.nuevo, true);
+    const conResponsable = await e.pedir("equipo", "PATCH", `/v1/servicios/${s.id}`, { responsableId: e.ids.equipo });
+    assert.equal(conResponsable.estado, 200, JSON.stringify(conResponsable.cuerpo));
+    assert.equal(conResponsable.cuerpo.nuevo, false);
+    const delDueno = await e.pedir("clienteA", "GET", `/v1/servicios/${s.id}`);
+    assert.equal(delDueno.estado, 200);
+    assert.equal("nuevo" in delDueno.cuerpo, false, "«nuevo» es solo del equipo");
     // Confirmar otra vez no cambia nada.
     assert.equal((await e.pedir("equipo", "POST", `/v1/servicios/${s.id}/confirmar`)).estado, 200);
     assert.equal((await e.pedir("equipo", "POST", "/v1/servicios/no-existe/confirmar")).estado, 404);

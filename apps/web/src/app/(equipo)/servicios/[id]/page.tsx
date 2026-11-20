@@ -83,6 +83,7 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
           esperando={ficha.esperando}
           puedeCambiar={editable}
           porConfirmar={porConfirmar}
+          nuevo={ficha.nuevo}
           porRevisar={ficha.porRevisar}
           sinResponsable={ficha.responsable === null}
         />

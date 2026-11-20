@@ -28,7 +28,7 @@ export function ConfirmarServicio({ servicioId, compacto = false }: { servicioId
         onClick={alConfirmar}
         disabled={pendiente}
         variante={compacto ? "contorno" : "principal"}
-        tamano={compacto ? "chico" : "normal"}
+        tamano={compacto ? "compacto" : "normal"}
         className="shrink-0"
       >
         {pendiente ? "Confirmando…" : "Confirmar"}

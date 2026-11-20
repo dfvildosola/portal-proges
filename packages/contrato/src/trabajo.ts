@@ -419,6 +419,10 @@ export const ServicioEquipo = ServicioDueno.extend({
   motivoCierre: z.string().nullable(),
   porRevisar: z.boolean(),
   porConfirmar: z.boolean(),
+  nuevo: z.boolean().meta({
+    description:
+      "Está en la columna «Nuevo» del tablero: abierto y por revisar, por confirmar o sin responsable. La regla vive en la API; la web solo lo muestra.",
+  }),
   historialEspera: z.array(CambioDeEspera).meta({ description: "De lo más nuevo a lo más antiguo." }),
   tareas: z.array(Tarea).meta({ description: "Las abiertas primero (por fecha) y después las hechas." }),
   notas: z.array(NotaEquipo).meta({ description: "La bitácora completa, de la más nueva a la más antigua." }),

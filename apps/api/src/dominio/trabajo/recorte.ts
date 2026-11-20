@@ -16,6 +16,7 @@ import type {
   TareaDeBase,
   TareaDelTableroDeBase,
 } from "./selecciones";
+import { esNuevo } from "./tablero";
 import { proximaTarea } from "./tareas";
 
 // Las listas del contrato tienen que calzar exacto con los enums de la base: si alguien agrega un
@@ -170,6 +171,10 @@ export function servicioParaEquipo(
     motivoCierre: s.motivoCierre,
     porRevisar: s.porRevisar,
     porConfirmar: s.porConfirmar,
+    // La misma regla que la columna «Nuevo» del tablero; uno cerrado ya no está en el tablero.
+    nuevo:
+      s.estado === "ABIERTO" &&
+      esNuevo({ porRevisar: s.porRevisar, porConfirmar: s.porConfirmar, sinResponsable: s.responsable === null }),
     historialEspera: s.eventos.map((e) => ({
       fecha: aFechaHoraISO(e.fecha),
       de: esperaDeEvento(e.anterior),

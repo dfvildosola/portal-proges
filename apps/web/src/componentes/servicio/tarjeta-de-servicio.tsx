@@ -31,7 +31,8 @@ function iniciales(nombre: string): string {
 }
 
 // El círculo con las iniciales. El nombre completo va en `title` (al pasar el mouse) y como
-// etiqueta para lectores de pantalla, porque dos letras solas no dicen nada.
+// etiqueta para lectores de pantalla, porque dos letras solas no dicen nada. Es `relative` para
+// quedar encima del enlace que cubre la tarjeta: si no, el mouse nunca le llega y no sale el nombre.
 function Responsable({ responsable }: { responsable: ServicioTableroItem["responsable"] }) {
   const nombre = responsable?.nombre ?? "Sin responsable";
   return (
@@ -40,7 +41,7 @@ function Responsable({ responsable }: { responsable: ServicioTableroItem["respon
       aria-label={nombre}
       title={nombre}
       className={cn(
-        "inline-flex size-[22px] shrink-0 items-center justify-center rounded-full text-[10px] font-extrabold",
+        "relative inline-flex size-[22px] shrink-0 items-center justify-center rounded-full text-[10px] font-extrabold",
         responsable ? "bg-ink-soft text-ink" : "bg-line text-soft",
       )}
     >
@@ -106,11 +107,14 @@ export function TarjetaDeServicio({
   columna: ColumnaDelTablero;
   personas: Persona[];
 }) {
+  // Cada servicio sale una sola vez en el tablero, así que su id basta para que este no se repita.
+  const tituloId = `tarjeta-${servicio.id}`;
   return (
     <Tarjeta tono="item" className="relative gap-1 bg-card hover:border-ink">
       <div className="flex items-start justify-between gap-2">
         {/* El foco se ve como un anillo alrededor de toda la tarjeta (el ::after que la cubre). */}
         <Link
+          id={tituloId}
           href={`/servicios/${servicio.id}`}
           className="rounded-[10px] text-[13px] font-bold break-words outline-none after:absolute after:inset-0 after:rounded-[10px] focus-visible:after:ring-2 focus-visible:after:ring-ink/40"
         >
@@ -122,7 +126,7 @@ export function TarjetaDeServicio({
         {servicio.nombre} · {servicio.cliente.nombre} · {servicio.propiedad.comuna}
       </span>
       <ProximoPaso servicio={servicio} columna={columna} />
-      <AccionesDeTarjeta servicio={servicio} columna={columna} personas={personas} />
+      <AccionesDeTarjeta servicio={servicio} columna={columna} personas={personas} tituloId={tituloId} />
     </Tarjeta>
   );
 }

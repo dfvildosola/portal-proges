@@ -41,7 +41,7 @@ export function CambiarEspera({
   const [abierto, setAbierto] = useState(false);
   return (
     <Dialogo open={abierto} onOpenChange={setAbierto}>
-      <DialogoDisparador render={<Boton variante={variante} tamano={compacto ? "chico" : "normal"} />}>{texto}</DialogoDisparador>
+      <DialogoDisparador render={<Boton variante={variante} tamano={compacto ? "compacto" : "normal"} />}>{texto}</DialogoDisparador>
       <DialogoContenido>
         <DialogoTitulo>¿A quién esperamos?</DialogoTitulo>
         <DialogoDescripcion>

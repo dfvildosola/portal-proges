@@ -20,6 +20,8 @@ export const estiloBoton = cva(
       tamano: {
         normal: "h-11 px-4 text-sm lg:h-9 lg:px-3.5 lg:text-[13px]",
         chico: "h-9 px-3 text-[13px] lg:h-8 lg:text-xs",
+        // Para botones dentro de una tarjeta: chico en el computador, pero de dedo en el celular.
+        compacto: "h-11 px-3 text-sm lg:h-8 lg:text-xs",
         icono: "size-11 lg:size-9",
       },
     },
