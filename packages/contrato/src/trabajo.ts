@@ -284,6 +284,18 @@ export const ServicioFilaEquipo = ServicioFila.extend({
 }).meta({ id: "ServicioFilaEquipo", description: "Un servicio en una lista, como lo ve el equipo." });
 export type ServicioFilaEquipo = z.infer<typeof ServicioFilaEquipo>;
 
+export const TareaProxima = z
+  .object({
+    que: z.string(),
+    vence: FechaISO.nullable(),
+    atrasada: z.boolean().meta({ description: "Vence antes de hoy (el día de Chile con el que respondió la API). Sin fecha nunca está atrasada." }),
+  })
+  .meta({
+    id: "TareaProxima",
+    description: "La próxima tarea pendiente de un servicio: la que vence primero (las que no tienen fecha, al final).",
+  });
+export type TareaProxima = z.infer<typeof TareaProxima>;
+
 export const ServicioTableroItem = z
   .object({
     id: Id,
@@ -293,10 +305,17 @@ export const ServicioTableroItem = z
     cliente: TrabajoCliente,
     responsable: TrabajoPersona.nullable(),
     esperando: Esperando.nullable(),
+    porRevisar: z.boolean().meta({ description: "Viene de un pedido del dueño que el equipo todavía no acepta ni rechaza." }),
+    porConfirmar: z.boolean().meta({ description: "Se dedujo de la carga inicial y el equipo todavía no lo confirma." }),
     tareasPendientes: z.number().int(),
+    proximaTarea: TareaProxima.nullable().meta({ description: "null si no tiene tareas pendientes." }),
     abiertoEl: FechaISO,
   })
-  .meta({ id: "ServicioTableroItem", description: "Un servicio abierto en el tablero." });
+  .meta({
+    id: "ServicioTableroItem",
+    description:
+      "Un servicio abierto en el tablero. Es nuevo (columna «nuevo») si está por revisar, por confirmar o no tiene responsable: `porRevisar`, `porConfirmar` y `responsable: null` dicen por qué.",
+  });
 export type ServicioTableroItem = z.infer<typeof ServicioTableroItem>;
 
 export const ServiciosConsulta = z.object({
@@ -318,12 +337,12 @@ export type ServiciosConsulta = z.infer<typeof ServiciosConsulta>;
 export const ServiciosTablero = z
   .object({
     vista: z.literal("tablero"),
-    nuevo: z.array(ServicioTableroItem).meta({ description: "Por revisar: vienen de un pedido y nadie los reparte." }),
-    nosToca: z.array(ServicioTableroItem).meta({ description: "Sin «esperando a» y con tareas pendientes, o sin ninguna tarea todavía: nos toca." }),
-    esperando: z.array(ServicioTableroItem).meta({ description: "Con «esperando a»; los que llevan más días, primero." }),
+    nuevo: z.array(ServicioTableroItem).meta({ description: "Nuevos: por revisar (pedido del dueño sin aceptar), por confirmar (de la carga inicial) o sin responsable. Falta confirmarlos o repartirlos." }),
+    nosToca: z.array(ServicioTableroItem).meta({ description: "Con responsable y ya confirmados, sin «esperando a» y con tareas pendientes, o sin ninguna tarea todavía: nos toca." }),
+    esperando: z.array(ServicioTableroItem).meta({ description: "Con responsable, ya confirmados y con «esperando a»; los que llevan más días, primero." }),
     porEntregar: z
       .array(ServicioTableroItem)
-      .meta({ description: "Abiertos, sin espera, con al menos una tarea y todas hechas: falta entregarlos o darlos por terminados." }),
+      .meta({ description: "Con responsable y ya confirmados, sin espera, con al menos una tarea y todas hechas: falta entregarlos o darlos por terminados." }),
   })
   .meta({ id: "ServiciosTablero", description: "Los servicios abiertos agrupados por quién tiene la pelota." });
 export type ServiciosTablero = z.infer<typeof ServiciosTablero>;
@@ -537,8 +556,8 @@ export type PedidoRechazar = z.infer<typeof PedidoRechazar>;
 
 export const InicioCifras = z
   .object({
-    serviciosEnCurso: z.number().int().meta({ description: "Abiertos y ya repartidos." }),
-    nuevosSinRepartir: z.number().int(),
+    serviciosEnCurso: z.number().int().meta({ description: "Todos los abiertos, menos los pedidos del dueño que todavía no se aceptan." }),
+    nuevosSinRepartir: z.number().int().meta({ description: "Los de la columna «nuevo» del tablero: por revisar, por confirmar o sin responsable." }),
     esperando: z.number().int(),
     esperandoMasDe10Dias: z.number().int(),
     tareasAtrasadas: z.number().int(),
@@ -562,7 +581,7 @@ export const InicioEquipo = z
   .object({
     fecha: FechaISO.meta({ description: "El «hoy» en Chile con el que se calculó." }),
     cifras: InicioCifras,
-    nuevo: z.array(ServicioTableroItem).meta({ description: "Lo que entró y nadie reparte (los más antiguos primero)." }),
+    nuevo: z.array(ServicioTableroItem).meta({ description: "Los nuevos: por revisar, por confirmar o sin responsable (los más antiguos primero, hasta 50; la cifra `nuevosSinRepartir` los cuenta todos)." }),
     trabado: z.object({
       esperandoMasDe10Dias: z.array(ServicioTableroItem).meta({ description: "Los que llevan más días esperando, primero." }),
       tareasAtrasadas: z.array(TareaConServicio).meta({ description: "Las más atrasadas primero (hasta 30)." }),

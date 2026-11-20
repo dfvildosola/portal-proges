@@ -6,6 +6,7 @@ import type { EquipoPersona, ServicioTableroItem } from "@proges/contrato";
 import { ChipEsperando } from "@/componentes/comunes/chip-esperando";
 import { ErrorDeFormulario } from "@/componentes/comunes/error-de-formulario";
 import { Boton } from "@/componentes/ui/boton";
+import { Insignia } from "@/componentes/ui/insignia";
 import { Select } from "@/componentes/ui/select";
 import { Tarjeta } from "@/componentes/ui/tarjeta";
 import { useFormulario } from "@/lib/usar-formulario";
@@ -28,7 +29,8 @@ export function FilaServicioSinResponsable({
           {servicio.propiedad.direccion} · {servicio.cliente.nombre}
         </span>
       </Link>
-      <ChipEsperando esperando={servicio.esperando} />
+      {servicio.porConfirmar ? <Insignia tono="warn">Por confirmar</Insignia> : null}
+      {servicio.esperando ? <ChipEsperando esperando={servicio.esperando} /> : null}
       <form {...formProps} className="flex items-center gap-2">
         <input type="hidden" name="servicioId" value={servicio.id} />
         <div className="min-w-0 flex-1">

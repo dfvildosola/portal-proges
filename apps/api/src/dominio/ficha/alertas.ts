@@ -43,6 +43,7 @@ export function alertasDeFicha(entrada: {
         tipo: "DOCUMENTO_FALTA",
         gravedad: "media",
         texto: `Falta el documento: ${nombre}.`,
+        documento: nombre,
         fecha: null,
         referenciaId: null,
       });
@@ -51,6 +52,7 @@ export function alertasDeFicha(entrada: {
         tipo: "DOCUMENTO_VENCIDO",
         gravedad: "alta",
         texto: `${nombre}: venció el ${formatDate(e.documento.fechaVencimiento)}.`,
+        documento: nombre,
         fecha: e.documento.fechaVencimiento ? aFechaISO(e.documento.fechaVencimiento) : null,
         referenciaId: e.documento.id,
       });
@@ -67,6 +69,7 @@ export function alertasDeFicha(entrada: {
           tipo: "DOCUMENTO_VENCE",
           gravedad: "media",
           texto: `${nombre}: vence el ${formatDate(ultimo.fechaVencimiento)}.`,
+          documento: nombre,
           fecha: aFechaISO(ultimo.fechaVencimiento),
           referenciaId: ultimo.id,
         });
@@ -81,6 +84,7 @@ export function alertasDeFicha(entrada: {
       tipo: dias < 0 ? "CONTRIBUCION_VENCIDA" : "CONTRIBUCION_VENCE",
       gravedad: dias < 0 ? "alta" : "media",
       texto: `Contribución ${c.anio}, cuota ${c.cuota}: ${dias < 0 ? "venció el" : "vence el"} ${formatDate(c.fechaVencimiento)}.`,
+      documento: null,
       fecha: aFechaISO(c.fechaVencimiento),
       referenciaId: c.id,
     });

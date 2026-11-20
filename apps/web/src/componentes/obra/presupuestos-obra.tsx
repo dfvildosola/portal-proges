@@ -4,7 +4,6 @@
 import type { ObraEquipo } from "@proges/contrato";
 import { Fecha } from "@/componentes/comunes/fecha";
 import { Monto } from "@/componentes/comunes/monto";
-import { Vacio } from "@/componentes/comunes/vacio";
 import { Insignia } from "@/componentes/ui/insignia";
 import { Tarjeta, TarjetaTitulo } from "@/componentes/ui/tarjeta";
 import { urlDeArchivo } from "@/lib/archivos";
@@ -14,6 +13,7 @@ import {
   TONO_PRESUPUESTO_ESTADO,
 } from "./etiquetas-obra";
 import { FormularioPresupuesto } from "./formulario-presupuesto";
+import { LineaVacia } from "./linea-vacia";
 import { ResolverPresupuesto } from "./resolver-presupuesto";
 
 type Presupuesto = ObraEquipo["presupuestos"][number];
@@ -35,35 +35,40 @@ export function PresupuestosObra({
   editable: boolean;
 }) {
   const vigentes = partidas.filter((p) => !p.quitadaEnOdoo);
+  const botonCargar = editable && (
+    <FormularioPresupuesto
+      servicioId={servicioId}
+      maestros={maestros}
+      partidas={vigentes.map(({ id, recinto, descripcion }) => ({ id, recinto, descripcion }))}
+    />
+  );
+  // Sin presupuestos, la sección es una sola línea con su botón; con ellos, la tarjeta con la lista.
+  if (presupuestos.length === 0) {
+    return (
+      <LineaVacia titulo="Presupuestos de maestros" texto="todavía no hay. Carga el que mande el maestro.">
+        {botonCargar}
+      </LineaVacia>
+    );
+  }
   return (
     <Tarjeta>
       <div className="flex items-center justify-between gap-2">
         <TarjetaTitulo>Presupuestos de maestros</TarjetaTitulo>
-        {editable && (
-          <FormularioPresupuesto
-            servicioId={servicioId}
-            maestros={maestros}
-            partidas={vigentes.map(({ id, recinto, descripcion }) => ({ id, recinto, descripcion }))}
-          />
-        )}
+        {botonCargar}
       </div>
-      {presupuestos.length === 0 ? (
-        <Vacio texto="Todavía no hay presupuestos. Carga el que mande el maestro." />
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {presupuestos.map((presupuesto) => (
-            <li key={presupuesto.id}>
-              <TarjetaDePresupuesto
-                servicioId={servicioId}
-                presupuesto={presupuesto}
-                cubre={presupuesto.partidaIds.map((id) => partidas.find((p) => p.id === id)?.descripcion).filter((d): d is string => !!d)}
-                esJefatura={esJefatura}
-                editable={editable}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="flex flex-col gap-2">
+        {presupuestos.map((presupuesto) => (
+          <li key={presupuesto.id}>
+            <TarjetaDePresupuesto
+              servicioId={servicioId}
+              presupuesto={presupuesto}
+              cubre={presupuesto.partidaIds.map((id) => partidas.find((p) => p.id === id)?.descripcion).filter((d): d is string => !!d)}
+              esJefatura={esJefatura}
+              editable={editable}
+            />
+          </li>
+        ))}
+      </ul>
     </Tarjeta>
   );
 }

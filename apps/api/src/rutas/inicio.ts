@@ -22,7 +22,7 @@ inicio.openapi(
     tags: ["Inicio"],
     summary: "El Inicio del equipo",
     description:
-      "Solo el equipo. Todo lo que necesita la pantalla de Inicio en una sola llamada: cifras (servicios en curso, nuevos sin repartir, esperando y cuántos hace más de 10 días, tareas atrasadas), lo nuevo, lo trabado (esperando más de 10 días, tareas atrasadas y cuántos presupuestos de maestros esperan aprobación: solo la cuenta), la carga de cada persona y las últimas 5 notas con foto.",
+      "Solo el equipo. Todo lo que necesita la pantalla de Inicio en una sola llamada: cifras (servicios en curso, nuevos —por revisar, por confirmar o sin responsable—, esperando y cuántos hace más de 10 días, tareas atrasadas), lo nuevo, lo trabado (esperando más de 10 días, tareas atrasadas y cuántos presupuestos de maestros esperan aprobación: solo la cuenta), la carga de cada persona y las últimas 5 notas con foto.",
     request: { query: InicioConsulta },
     responses: { 200: json(InicioEquipo, "El Inicio."), ...errores(400, 401, 403) },
   }),

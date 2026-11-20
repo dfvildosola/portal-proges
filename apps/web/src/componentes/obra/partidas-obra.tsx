@@ -1,10 +1,10 @@
 // Las partidas de la orden, agrupadas por recinto (baño, cocina…): cada una con su avance, su
 // maestro y su recepción. Los recintos salen en el orden en que llegan de Odoo.
 import type { ObraEquipo } from "@proges/contrato";
-import { Vacio } from "@/componentes/comunes/vacio";
 import { Tarjeta, TarjetaTitulo } from "@/componentes/ui/tarjeta";
 import { AvanceRecinto } from "./avance-recinto";
 import { FilaPartida, type PersonaParaElegir } from "./fila-partida";
+import { LineaVacia } from "./linea-vacia";
 
 type Partida = ObraEquipo["partidas"][number];
 
@@ -32,7 +32,7 @@ export function PartidasObra({
   editable: boolean;
 }) {
   if (partidas.length === 0) {
-    return <Vacio texto="Todavía no hay partidas: aparecen cuando se enlaza la orden de Odoo." />;
+    return <LineaVacia titulo="Partidas" texto="todavía no hay: aparecen cuando se enlaza la orden de Odoo." />;
   }
   return (
     <div className="flex flex-col gap-3">

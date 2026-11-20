@@ -17,6 +17,23 @@ export function porVencimiento(a: ConVencimiento, b: ConVencimiento): number {
   return 0;
 }
 
+// La próxima tarea pendiente de un servicio: la que vence primero, las sin fecha al final (y
+// entre iguales, la más antigua). «Atrasada» es vencer antes de hoy; una tarea sin fecha nunca lo
+// está. El cálculo vive aquí y no en la web, para que Inicio, tablero y tareas digan lo mismo.
+export type ProximaTarea = { que: string; vence: Date | null; atrasada: boolean };
+
+export function proximaTarea(
+  tareas: readonly { que: string; vence: Date | null; hechaEl: Date | null; createdAt: Date }[],
+  hoy: Date,
+): ProximaTarea | null {
+  const pendientes = tareas
+    .filter((t) => t.hechaEl === null)
+    .sort((a, b) => porVencimiento(a, b) || a.createdAt.getTime() - b.createdAt.getTime());
+  const primera = pendientes[0];
+  if (!primera) return null;
+  return { que: primera.que, vence: primera.vence, atrasada: primera.vence !== null && diasHasta(primera.vence, hoy) < 0 };
+}
+
 export type TareasPorDia<T> = {
   atrasadas: T[]; // vencieron antes de hoy
   hoy: T[];

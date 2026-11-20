@@ -14,7 +14,9 @@ import type {
   PedidoDeBase,
   TareaConServicioDeBase,
   TareaDeBase,
+  TareaDelTableroDeBase,
 } from "./selecciones";
+import { proximaTarea } from "./tareas";
 
 // Las listas del contrato tienen que calzar exacto con los enums de la base: si alguien agrega un
 // valor en un lado y no en el otro, `npm run tipos` falla aquí.
@@ -110,12 +112,17 @@ export function filaParaEquipo(s: FilaDeServicio, hoy: Date, cliente: NombreDeCl
   };
 }
 
+// Una fila del tablero. Solo sale hacia el equipo (la ruta del tablero y la del Inicio piden
+// `exigirEquipo` antes de llegar aquí): lleva al responsable, las tareas y las marcas de
+// «por revisar» y «por confirmar», que un dueño o una llave nunca deben ver. Por eso no hay una
+// versión «…Dueno» de esta función.
 export function itemDelTablero(
   s: FilaDeServicio,
   hoy: Date,
   cliente: NombreDeCliente,
-  tareasPendientes: number,
+  tareas: readonly TareaDelTableroDeBase[],
 ): contrato.ServicioTableroItem {
+  const proxima = proximaTarea(tareas, hoy);
   return {
     id: s.id,
     tipo: s.tipo,
@@ -124,7 +131,12 @@ export function itemDelTablero(
     cliente,
     responsable: persona(s.responsable),
     esperando: esperandoDe(s, hoy),
-    tareasPendientes,
+    porRevisar: s.porRevisar,
+    porConfirmar: s.porConfirmar,
+    tareasPendientes: tareas.filter((t) => t.hechaEl === null).length,
+    proximaTarea: proxima
+      ? { que: proxima.que, vence: proxima.vence ? aFechaISO(proxima.vence) : null, atrasada: proxima.atrasada }
+      : null,
     abiertoEl: aFechaISO(s.abiertoEl),
   };
 }

@@ -6,17 +6,18 @@ import type { InicioEquipo } from "@proges/contrato";
 import { aFechaHoraISO, aFechaISO } from "../../util/al-contrato";
 import { equipoActivo, clientesPorId, filasDelTablero, tareasAbiertas } from "./consultas";
 import { seleccionNota } from "./selecciones";
-import { agruparTablero, esperandoMasDeLoNormal, type TableroAgrupado } from "./tablero";
+import { agruparTablero, enCurso, esperandoMasDeLoNormal, type TableroAgrupado } from "./tablero";
 import { cargaDelEquipo, clasificarPorSemana } from "./tareas";
 
 const MAX_NUEVOS = 50;
 const MAX_TAREAS_ATRASADAS = 30;
 const NOTAS_CON_FOTO = 5;
 
-// Las cinco cifras de arriba del Inicio. Pura: parte de los grupos del tablero.
+// Las cifras de arriba del Inicio. Pura: parte de los grupos del tablero, así que «nuevos» es
+// exactamente la columna «Nuevo» y «en curso» incluye a los nuevos que no son pedidos sin aceptar.
 export function cifrasDelInicio(g: TableroAgrupado, tareasAtrasadas: number): InicioEquipo["cifras"] {
   return {
-    serviciosEnCurso: g.nosToca.length + g.esperando.length + g.porEntregar.length,
+    serviciosEnCurso: enCurso(g),
     nuevosSinRepartir: g.nuevo.length,
     esperando: g.esperando.length,
     esperandoMasDe10Dias: esperandoMasDeLoNormal(g.esperando).length,

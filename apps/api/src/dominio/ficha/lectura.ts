@@ -23,6 +23,7 @@ import { aFechaISO, aMonto } from "../../util/al-contrato";
 import { hoyChile } from "../../util/fechas";
 import { esperandoDe, datosDePropiedad } from "./recorte";
 import { alertasDeFicha } from "./alertas";
+import { esNuevo } from "../trabajo/tablero";
 import { construirHistorial, type DatosDeHistorial } from "./historial";
 import { cifrasDeObras, costoAprobado, margenDeObra, totalPorRecinto } from "./reparaciones";
 import { avancePonderado, hayCostoAprobado, planContraReal, type PartidaCuenta, type PresupuestoCuenta } from "../obra/obra";
@@ -87,6 +88,9 @@ export async function listarPropiedades(
             esperandoA: true,
             esperandoDesde: true,
             esperandoDetalle: true,
+            porRevisar: true,
+            porConfirmar: true,
+            responsableId: true,
             servicio: { select: { nombre: true } },
           },
         },
@@ -143,6 +147,13 @@ export async function listarPropiedades(
       tipo: p.tipo,
       estado: p.estado,
       serviciosEnCurso: abiertos.length,
+      // Cuántos están en la columna «Nuevo» del tablero. Es un dato interno del equipo: el dueño no
+      // ve los por revisar ni los por confirmar, y quién lleva cada servicio no es asunto suyo.
+      serviciosNuevos: dueno
+        ? 0
+        : abiertos.filter((s) =>
+            esNuevo({ porRevisar: s.porRevisar, porConfirmar: s.porConfirmar, sinResponsable: s.responsableId === null }),
+          ).length,
       esperandoMasAntiguo: esperando
         ? { ...(esperandoDe(esperando, hoy, dueno) as NonNullable<ReturnType<typeof esperandoDe>>), servicioId: esperando.id }
         : null,
@@ -243,6 +254,8 @@ export async function fichaResumen(propiedad: Property, dueno: boolean, hoy: Dat
         esperandoA: true,
         esperandoDesde: true,
         esperandoDetalle: true,
+        porRevisar: true,
+        porConfirmar: true,
         servicio: { select: { nombre: true } },
         responsable: { select: { nombre: true } },
         orden: { select: { total: true, moneda: true } },
@@ -287,7 +300,12 @@ export async function fichaResumen(propiedad: Property, dueno: boolean, hoy: Dat
       estado: s.estado,
       abiertoEl: aFechaISO(dia(s.abiertoEl)),
       esperando: esperandoDe(s, hoy, dueno),
-      ...(dueno ? {} : { responsable: s.responsable?.nombre ?? null }),
+      ...(dueno
+        ? {}
+        : {
+            responsable: s.responsable?.nombre ?? null,
+            nuevo: esNuevo({ porRevisar: s.porRevisar, porConfirmar: s.porConfirmar, sinResponsable: s.responsable === null }),
+          }),
     }));
 
   return {

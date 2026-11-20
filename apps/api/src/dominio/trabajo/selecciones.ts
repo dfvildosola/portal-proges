@@ -27,6 +27,17 @@ export const seleccionFila = {
 } satisfies Prisma.ServicioEnCursoSelect;
 export type FilaDeServicio = Prisma.ServicioEnCursoGetPayload<{ select: typeof seleccionFila }>;
 
+// De cada tarea de un servicio, lo justo para contarlas y elegir la próxima en el tablero. Es más
+// chica que `seleccionTarea` (sin responsable ni quién la hizo): el tablero trae todas las tareas
+// de todos los servicios abiertos, y no necesita esos datos.
+export const seleccionTareaDelTablero = {
+  que: true,
+  vence: true,
+  hechaEl: true,
+  createdAt: true,
+} satisfies Prisma.TareaSelect;
+export type TareaDelTableroDeBase = Prisma.TareaGetPayload<{ select: typeof seleccionTareaDelTablero }>;
+
 export const seleccionNota = {
   id: true,
   organizationId: true,

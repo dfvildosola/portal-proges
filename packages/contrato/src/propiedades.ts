@@ -201,6 +201,10 @@ export const PropiedadResumen = z
     tipo: PropiedadTipo,
     estado: PropiedadEstado,
     serviciosEnCurso: z.number().int().meta({ description: "Cuántos servicios abiertos tiene." }),
+    serviciosNuevos: z.number().int().meta({
+      description:
+        "Cuántos de sus servicios abiertos son nuevos (por revisar, por confirmar o sin responsable): la columna «Nuevo» del tablero. Para un dueño, siempre 0.",
+    }),
     esperandoMasAntiguo: FichaEsperando.extend({ servicioId: Id })
       .nullable()
       .meta({ description: "El «esperando a» que lleva más tiempo entre sus servicios abiertos, o null si no se espera a nadie." }),
@@ -248,6 +252,10 @@ export const FichaAlerta = z
     tipo: z.enum(["DOCUMENTO_FALTA", "DOCUMENTO_VENCIDO", "DOCUMENTO_VENCE", "CONTRIBUCION_VENCIDA", "CONTRIBUCION_VENCE"]),
     gravedad: VencimientoGravedad,
     texto: z.string().meta({ description: "Qué pasa, escrito para una persona." }),
+    documento: z
+      .string()
+      .nullable()
+      .meta({ description: "El nombre del documento (Escritura, Plano…) si la alerta es de un documento; null en las de contribuciones." }),
     fecha: FechaISO.nullable().meta({ description: "El día del vencimiento, si lo hay." }),
     referenciaId: Id.nullable().meta({ description: "El id del documento o de la cuota de contribución, si lo hay." }),
   })
@@ -263,6 +271,10 @@ export const FichaServicio = z
     abiertoEl: FechaISO,
     esperando: FichaEsperando.nullable(),
     responsable: z.string().nullable().optional().meta({ description: "SOLO EQUIPO. Quién lo lleva." }),
+    nuevo: z
+      .boolean()
+      .optional()
+      .meta({ description: "SOLO EQUIPO. Si está en la columna «Nuevo» del tablero: por revisar, por confirmar o sin responsable." }),
   })
   .meta({ id: "FichaServicio", description: "Un servicio de la propiedad, con a quién se espera." });
 export type FichaServicio = z.infer<typeof FichaServicio>;

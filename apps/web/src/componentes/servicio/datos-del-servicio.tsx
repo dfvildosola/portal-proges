@@ -29,7 +29,8 @@ export function DatosDelServicio({ servicio, personas }: { servicio: ServicioEqu
             {ETIQUETA_TIPO_SERVICIO[servicio.tipo]} · {servicio.nombre}
           </Dato>
           <Dato etiqueta="Estado">
-            <ChipEstado estado={servicio.estado} porRevisar={servicio.porRevisar} porConfirmar={servicio.porConfirmar} />
+            {/* «Por confirmar» y «Nuevo · sin repartir» ya salen junto al título: aquí solo el estado a secas. */}
+            <ChipEstado estado={servicio.estado} />
           </Dato>
           <Dato etiqueta="Propiedad">
             <Link href={`/propiedades/${servicio.propiedad.id}`} className="text-ink underline-offset-2 hover:underline">

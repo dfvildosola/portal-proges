@@ -22,11 +22,21 @@ import { ETIQUETA_ESPERANDO_A } from "@/lib/etiquetas";
 import { useFormulario } from "@/lib/usar-formulario";
 import { cambiarEspera } from "@/app/(equipo)/servicios/[id]/acciones";
 
-export function CambiarEspera({ servicioId, esperando }: { servicioId: string; esperando: Esperando | null }) {
+// `variante`: es el botón principal del aviso de arriba, salvo cuando ahí hay otro más importante
+// (confirmar el servicio): entonces este pasa a ser el secundario.
+export function CambiarEspera({
+  servicioId,
+  esperando,
+  variante = "principal",
+}: {
+  servicioId: string;
+  esperando: Esperando | null;
+  variante?: "principal" | "contorno";
+}) {
   const [abierto, setAbierto] = useState(false);
   return (
     <Dialogo open={abierto} onOpenChange={setAbierto}>
-      <DialogoDisparador render={<Boton variante="principal" />}>Ahora esperamos a…</DialogoDisparador>
+      <DialogoDisparador render={<Boton variante={variante} />}>Ahora esperamos a…</DialogoDisparador>
       <DialogoContenido>
         <DialogoTitulo>¿A quién esperamos?</DialogoTitulo>
         <DialogoDescripcion>

@@ -38,8 +38,12 @@ export default async function Pagina() {
   const personas = equipo.items;
   // La bandeja del equipo trae pedidos con cliente; se descartan por tipo los que no lo traen.
   const pedidosDelEquipo = pedidos.items.filter((p): p is PedidoEquipo => "cliente" in p);
-  // Los «nuevos» del tablero son los de los pedidos: se reparten al aceptar el pedido, no aquí.
-  const abiertos = [...tablero.nosToca, ...tablero.esperando, ...tablero.porEntregar];
+  // «Nuevo» mezcla tres cosas (pedidos sin aceptar, por confirmar y sin responsable). Los pedidos
+  // sin aceptar se reparten al aceptar el pedido, arriba; todo lo demás ya es un servicio y se
+  // ve aquí o en las tareas. Los sin responsable están en cualquier columna, sobre todo en «Nuevo».
+  const abiertos = [...tablero.nuevo, ...tablero.nosToca, ...tablero.esperando, ...tablero.porEntregar].filter(
+    (s) => !s.porRevisar,
+  );
   const sinResponsable = abiertos.filter((s) => s.responsable === null);
   const hoy = hoyChile();
 

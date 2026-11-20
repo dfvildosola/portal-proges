@@ -231,6 +231,9 @@ describe("lista de propiedades", () => {
     assert.equal(p.esperandoMasAntiguo.a, "CONSERVADOR");
     assert.equal(p.esperandoMasAntiguo.dias, 5);
     assert.equal(p.esperandoMasAntiguo.servicioId, servicioObra);
+    // La venta no tiene responsable y la inspección es un pedido por revisar: esas dos son «nuevas»,
+    // con la misma regla de la columna «Nuevo» del tablero. La obra ya tiene quién la lleve.
+    assert.equal(p.serviciosNuevos, 2);
     assert.ok(p.ultimoHecho.texto.length > 0);
   });
 
@@ -247,6 +250,7 @@ describe("lista de propiedades", () => {
     const r = await e.pedir("clienteA", "GET", "/v1/propiedades");
     const p = r.cuerpo.items.find((x: { id: string }) => x.id === propA);
     assert.equal(p.serviciosEnCurso, 2);
+    assert.equal(p.serviciosNuevos, 0, "quién lleva cada servicio es interno del equipo");
     assert.ok(!JSON.stringify(r.cuerpo).includes("DETALLE_INTERNO_DE_ESPERA"));
   });
 });
@@ -386,6 +390,10 @@ describe("la ficha", () => {
     assert.deepEqual(cifras.costoMaestros, { valor: "600000", moneda: "CLP" });
     assert.deepEqual(cifras.margen, { valor: "400000", moneda: "CLP" });
     assert.equal(r.cuerpo.serviciosEnCurso.length, 3);
+    // La obra tiene responsable; la venta (sin responsable) y el pedido por revisar son «nuevos».
+    const nuevo = (id: string) => r.cuerpo.serviciosEnCurso.find((s: { id: string }) => s.id === id)?.nuevo;
+    assert.equal(nuevo(servicioObra), false);
+    assert.equal(r.cuerpo.serviciosEnCurso.filter((s: { nuevo?: boolean }) => s.nuevo === true).length, 2);
     assert.equal(r.cuerpo.ultimosHechos.length, 4);
   });
 

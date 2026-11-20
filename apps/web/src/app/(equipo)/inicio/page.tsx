@@ -32,7 +32,7 @@ export default async function Pagina() {
       <Cifras cifras={inicio.cifras} />
 
       <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-3">
-        <PanelNuevo servicios={inicio.nuevo} />
+        <PanelNuevo servicios={inicio.nuevo} total={inicio.cifras.nuevosSinRepartir} />
         <PanelTrabado trabado={inicio.trabado} hoy={inicio.fecha} />
         <div className="flex flex-col gap-3">
           <PanelEquipo carga={inicio.carga} />

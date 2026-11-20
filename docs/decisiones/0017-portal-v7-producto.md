@@ -23,10 +23,12 @@ El equipo, mientras tanto, trabaja casi todo en terreno: abre el celular, ve su 
 
 **«Esperando a…» reemplaza a las etapas.** Las etapas de la v4 decían en qué paso iba cada servicio, y el equipo no las mantenía al día. Lo que de verdad importa es **quién tiene la pelota**: nosotros, o alguien de afuera (conservador, notaría, municipalidad, maestro, dueño, banco u otro). Cada servicio abierto cae en una de cuatro columnas:
 
-- nuevo, por revisar;
+- nuevo, por confirmar o repartir;
 - nos toca;
 - esperando a otro;
 - por entregar.
+
+**«Nuevo» incluye tres casos, y es lo mismo en todas las pantallas.** Un servicio es nuevo si es un pedido del dueño que todavía no se acepta (por revisar), si salió de la carga inicial y nadie lo ha confirmado (por confirmar), o si no tiene responsable. Esto se decidió el 2026-11-20, al revisar el portal con los 32 servicios reales de NPL: todos venían por confirmar y sin responsable, y las tres pantallas se contradecían. Inicio decía «0 entraron» y su panel «Entró nuevo» estaba vacío, Repartir mostraba 32 servicios sin responsable, y el tablero los ponía todos en «Nos toca» y dejaba vacías las otras tres columnas. Ahora «nuevo» manda sobre el resto: un servicio que nadie lleva no puede estar en «Nos toca», porque no hay a quién le toque. La cifra «nuevos» del Inicio, su panel y la columna «Nuevo» cuentan lo mismo. «Servicios en curso» cuenta todos los abiertos menos los pedidos aún no aceptados, así que ya no marca cero cuando todo es nuevo. Cada tarjeta del tablero dice por qué es nueva, y en las otras columnas muestra la próxima tarea con su fecha (en rojo si ya se pasó).
 
 Cada cambio de espera deja un evento `ESPERA`, que guarda a quién se esperaba antes y a quién ahora; cuando ya no se espera a nadie, guarda `NOS_TOCA`. Con esos eventos, Resultados calcula cuántos días se trabajó y cuántos se esperó a otros. Pasados 10 días de espera, el servicio aparece en «Trabado» del Inicio.
 

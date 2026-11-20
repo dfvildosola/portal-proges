@@ -29,7 +29,7 @@ export function Cifras({ cifras }: { cifras: InicioEquipo["cifras"] }) {
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <Cifra numero={cifras.serviciosEnCurso} texto="servicios en curso" />
-      <Cifra numero={cifras.nuevosSinRepartir} texto="entraron, sin repartir" />
+      <Cifra numero={cifras.nuevosSinRepartir} texto="nuevos: por confirmar o repartir" />
       <Cifra
         numero={cifras.esperando}
         tono="warn"

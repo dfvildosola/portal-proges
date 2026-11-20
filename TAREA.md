@@ -2,7 +2,15 @@
 
 **Estado (2026-11-19): plan v7 APROBADO con workflow.** Etapa 1 ✅ (3afe066). Etapa 2 ✅ (b46a26c, ae54fc4). Etapa 3 ✅ (758dd2f, 60b79b3, 0d81781). Revisión de código ✅ (9ffa3db, 8410ea5, e01f4ce). Cierre publicado; espera la revisión de Diego. Página del plan: https://claude.ai/artifact/Q5hLn7T56rPapBoimRFsEt. Maqueta aprobada: https://claude.ai/artifact/6oufJsWJ57469Ttg2X2RS8. Tamaño: grande, en tres etapas (un workflow por etapa). Branch: `plan/etapa-1-dos-caras`.
 
-**Paso siguiente exacto:** Diego revisa el cierre en la página del plan (ya publicada en estado de cierre, con los hallazgos de la revisión), marca su lista y pega el resumen. Con su ok: «Mezcla» = actualizar la fila de portal-proges en `~/Code/CLAUDE.md` (repo code-raiz, en su branch), borrar este `TAREA.md` en el último commit de la branch y mezclar a `main` local. Subir y publicar son los pasos de la sección 0 de `PENDIENTES.md`, solo cuando Diego lo pida. La revisión de código ya se hizo y sus arreglos están commiteados (9ffa3db, 8410ea5, e01f4ce): 304 pruebas pasan.
+**Revisión de Diego en local (2026-11-20).** Pidió borrar los datos de `proges_dev` y cargar los reales: hecho (la base anterior quedó como `proges_dev_respaldo_20261120`; ahora hay NPL con 42 propiedades y 32 servicios «por confirmar», y su usuario admin). Encontró confuso el portal a 1440 px; se recorrió contra la maqueta y aprobó cinco arreglos («dale, haz los cinco»), como tarea mediana con subagentes, en esta misma branch:
+1. ⏳ «Nuevo» = por revisar, por confirmar o sin responsable, igual en Inicio, Servicios y Repartir; la tarjeta dice «Por confirmar».
+2. ⏳ Tarjeta del tablero como la maqueta: próximo paso con fecha, iniciales del responsable, días esperando.
+3. ⏳ Propiedades: fuera la columna «Estado» (Disponible); en su lugar, el estado del servicio, como la maqueta.
+4. ⏳ Ficha de la propiedad: los documentos que faltan en una sola alerta; las cifras del Resumen en una fila.
+5. ⏳ Ficha del servicio: un solo aviso arriba; las partes vacías de la obra como una línea cada una.
+Después: `npm run verificar`, recorrido a 1440 y 390 px, `revisor`, y mostrarle las pantallas a Diego.
+
+**Paso siguiente exacto (antes de los cinco arreglos):** Diego revisa el cierre en la página del plan (ya publicada en estado de cierre, con los hallazgos de la revisión), marca su lista y pega el resumen. Con su ok: «Mezcla» = actualizar la fila de portal-proges en `~/Code/CLAUDE.md` (repo code-raiz, en su branch), borrar este `TAREA.md` en el último commit de la branch y mezclar a `main` local. Subir y publicar son los pasos de la sección 0 de `PENDIENTES.md`, solo cuando Diego lo pida. La revisión de código ya se hizo y sus arreglos están commiteados (9ffa3db, 8410ea5, e01f4ce): 304 pruebas pasan.
 
 **Respuesta de Diego a la revisión (2026-11-19):** «dale, avísame cuando termine». Se toma como sí a las tres propuestas: Maestros abierto a todo el equipo; un servicio sin tareas va a «Nos toca» y «Por entregar» es solo con tareas y todas hechas; el margen solo se muestra con costo de maestro aprobado. Los cuatro detalles de la etapa 1 quedan como están construidos (margen = orden al dueño menos lo facturado; el comentario de la visita lo ve el dueño; el dueño no ve las fotos de recepción; el IVA del presupuesto sigue abierto) y se le vuelven a mostrar en el cierre.
 

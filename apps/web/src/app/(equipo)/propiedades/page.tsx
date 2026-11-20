@@ -1,5 +1,5 @@
 // /propiedades: la lista de propiedades de todos los clientes. Sirve para ver dónde hay trabajo:
-// cuántos servicios tiene cada una en curso, a quién se espera y lo último que pasó. Los filtros y
+// qué tiene cada una en curso y a quién se espera y lo último que pasó. Los filtros y
 // la página viajan en la dirección, así que la lista se puede compartir o recargar tal cual.
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -76,9 +76,7 @@ export default async function Pagina({ searchParams }: { searchParams: Promise<C
                   <TablaTitulo>Propiedad</TablaTitulo>
                   <TablaTitulo>Cliente</TablaTitulo>
                   <TablaTitulo>Tipo</TablaTitulo>
-                  <TablaTitulo>Estado</TablaTitulo>
-                  <TablaTitulo className="text-center">En curso</TablaTitulo>
-                  <TablaTitulo>Esperando a</TablaTitulo>
+                  <TablaTitulo>En curso</TablaTitulo>
                   <TablaTitulo>Lo último</TablaTitulo>
                 </tr>
               </thead>

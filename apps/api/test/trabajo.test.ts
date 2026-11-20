@@ -6,7 +6,6 @@ import { after, before, describe, test } from "node:test";
 import { db, ORG_PROGES } from "@proges/db";
 import { crearEscenario, clavesInternas, type Escenario } from "./ayuda";
 import { NOS_TOCA, planearEspera } from "../src/dominio/trabajo/espera";
-import { agruparTablero, grupoDelTablero } from "../src/dominio/trabajo/tablero";
 import { cargaDelEquipo, clasificarPorDia, clasificarPorSemana } from "../src/dominio/trabajo/tareas";
 import { textoTareaDeRevision } from "../src/dominio/trabajo/pedidos";
 import { tipoUnicoDeFamilia, tiposDeFamilia } from "../src/dominio/trabajo/catalogo";
@@ -22,42 +21,6 @@ const dia = (n: number) => sumarDias(hoyChile(), n).toISOString().slice(0, 10);
 describe("reglas puras", () => {
   const HOY = new Date(Date.UTC(2026, 10, 19)); // 2026-11-19
   const d = (n: number) => new Date(Date.UTC(2026, 10, 19 + n));
-
-  test("tablero: cada servicio cae en un solo grupo", () => {
-    assert.equal(grupoDelTablero({ porRevisar: true, esperando: false, tareasPendientes: 3, tareasTotal: 3 }), "nuevo");
-    assert.equal(grupoDelTablero({ porRevisar: false, esperando: true, tareasPendientes: 3, tareasTotal: 3 }), "esperando");
-    assert.equal(grupoDelTablero({ porRevisar: false, esperando: false, tareasPendientes: 1, tareasTotal: 4 }), "nosToca");
-    // Con tareas y todas hechas: falta entregarlo.
-    assert.equal(grupoDelTablero({ porRevisar: false, esperando: false, tareasPendientes: 0, tareasTotal: 4 }), "porEntregar");
-    // Sin ninguna tarea nunca se trabajó: nos toca (no está «por entregar»).
-    assert.equal(grupoDelTablero({ porRevisar: false, esperando: false, tareasPendientes: 0, tareasTotal: 0 }), "nosToca");
-    // Esperando a alguien gana aunque no tenga tareas.
-    assert.equal(grupoDelTablero({ porRevisar: false, esperando: true, tareasPendientes: 0, tareasTotal: 0 }), "esperando");
-  });
-
-  test("tablero: en «esperando» los que llevan más días van primero", () => {
-    const item = (id: string, dias: number) =>
-      ({
-        porRevisar: false,
-        tareasTotal: 0,
-        item: {
-          id,
-          tipo: "VENTA",
-          nombre: "x",
-          propiedad: { id: "p", direccion: "d", comuna: "c" },
-          cliente: { id: "c", nombre: "n" },
-          responsable: null,
-          esperando: { a: "NOTARIA", detalle: null, desde: "2026-11-01", dias },
-          tareasPendientes: 0,
-          abiertoEl: "2026-11-01",
-        },
-      }) as const;
-    const g = agruparTablero([item("a", 2), item("b", 12), item("c", 5)]);
-    assert.deepEqual(
-      g.esperando.map((i) => i.id),
-      ["b", "c", "a"],
-    );
-  });
 
   test("espera: cambiar a quién se espera fija el día y deja el evento", () => {
     const sin = { esperandoA: null, esperandoDetalle: null, esperandoDesde: null };
@@ -303,6 +266,57 @@ describe("catálogo y servicios", () => {
     assert.ok(todos.some((i: { id: string }) => i.id === servicioA));
     const sin = await e.pedir("equipo", "GET", `/v1/servicios?vista=tablero&cliente=${e.ids.clienteA}&responsable=sin`);
     assert.ok(![...sin.cuerpo.nosToca, ...sin.cuerpo.porEntregar].some((i: { id: string }) => i.id === servicioA));
+  });
+
+  test("el tablero manda a «Nuevo» lo por confirmar y lo sin responsable, con el motivo a la vista", async () => {
+    const tablero = async () =>
+      (await e.pedir("equipo", "GET", `/v1/servicios?vista=tablero&cliente=${e.ids.clienteA}`)).cuerpo;
+    const ids = (lista: { id: string }[]) => lista.map((i) => i.id);
+    const base = { organizationId: e.ids.clienteA, propertyId: propiedadA, servicioId: catalogoId, tipo: "EVALUACION" as const };
+    const porConfirmar = await db.servicioEnCurso.create({ data: { ...base, responsableId: e.ids.equipo, porConfirmar: true } });
+    const sinResponsable = await db.servicioEnCurso.create({ data: base });
+
+    const t = await tablero();
+    for (const id of [porConfirmar.id, sinResponsable.id]) assert.ok(ids(t.nuevo).includes(id), id);
+    assert.ok(!ids(t.nosToca).includes(sinResponsable.id));
+    const a = t.nuevo.find((i: { id: string }) => i.id === porConfirmar.id);
+    assert.deepEqual([a.porConfirmar, a.porRevisar, a.responsable.id], [true, false, e.ids.equipo]);
+    const b = t.nuevo.find((i: { id: string }) => i.id === sinResponsable.id);
+    assert.deepEqual([b.responsable, b.proximaTarea], [null, null]);
+    // El servicio de siempre (con responsable y confirmado) sigue fuera de «Nuevo».
+    assert.ok(!ids(t.nuevo).includes(servicioA));
+
+    // El Inicio cuenta lo mismo que la columna, y los nuevos también están «en curso».
+    const inicio = (await e.pedir("equipo", "GET", `/v1/inicio?cliente=${e.ids.clienteA}`)).cuerpo;
+    assert.equal(inicio.cifras.nuevosSinRepartir, t.nuevo.length);
+    assert.ok(inicio.cifras.serviciosEnCurso >= t.nuevo.length - t.nuevo.filter((i: { porRevisar: boolean }) => i.porRevisar).length);
+    // Confirmarlo o repartirlo lo saca de «Nuevo».
+    await e.pedir("equipo", "POST", `/v1/servicios/${porConfirmar.id}/confirmar`);
+    assert.ok(!ids((await tablero()).nuevo).includes(porConfirmar.id));
+  });
+
+  test("el tablero trae la próxima tarea de cada servicio, y si está atrasada", async () => {
+    const buscar = async () => {
+      const t = (await e.pedir("equipo", "GET", `/v1/servicios?vista=tablero&cliente=${e.ids.clienteA}`)).cuerpo;
+      return [...t.nuevo, ...t.nosToca, ...t.esperando, ...t.porEntregar].find((i: { id: string }) => i.id === servicioA);
+    };
+    const nueva = async (que: string, vence: string | null) => {
+      const r = await e.pedir("equipo", "POST", `/v1/servicios/${servicioA}/tareas`, vence ? { que, vence } : { que });
+      assert.equal(r.estado, 201, JSON.stringify(r.cuerpo));
+      return r.cuerpo.id as string;
+    };
+    const idsCreadas = [await nueva("Sin fecha", null), await nueva("Más adelante", dia(9)), await nueva("Visitar y fotografiar", dia(2))];
+    let item = await buscar();
+    assert.deepEqual(item.proximaTarea, { que: "Visitar y fotografiar", vence: dia(2), atrasada: false });
+    assert.equal(item.tareasPendientes, 3);
+
+    idsCreadas.push(await nueva("Se pasó", dia(-1)));
+    item = await buscar();
+    assert.deepEqual(item.proximaTarea, { que: "Se pasó", vence: dia(-1), atrasada: true });
+    assert.equal(item.tareasPendientes, 4);
+
+    for (const id of idsCreadas) await e.pedir("equipo", "DELETE", `/v1/tareas/${id}`);
+    assert.equal((await buscar()).proximaTarea, null);
   });
 
   test("cerrar: terminado con motivo; una obra no se cierra aquí (409)", async () => {

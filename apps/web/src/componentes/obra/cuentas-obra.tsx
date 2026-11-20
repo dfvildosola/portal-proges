@@ -6,6 +6,7 @@ import { Monto } from "@/componentes/comunes/monto";
 import { Tarjeta, TarjetaTitulo } from "@/componentes/ui/tarjeta";
 import { cn } from "@/lib/utils";
 import { signoDeMonto } from "./etiquetas-obra";
+import { LineaVacia } from "./linea-vacia";
 
 function Fila({ etiqueta, children, fuerte = false }: { etiqueta: string; children: React.ReactNode; fuerte?: boolean }) {
   return (
@@ -28,9 +29,36 @@ function DiferenciaDeDias({ dias }: { dias: number | null }) {
   return <span className={dias > 0 ? "text-bad" : dias < 0 ? "text-ok" : undefined}>{texto}</span>;
 }
 
+// ¿Todos los montos que trae la obra son cero o no existen? Solo mira lo que la API ya calculó
+// (`signoDeMonto` lee el texto, sin sumar nada). El plazo planificado también cuenta como dato:
+// viene de un presupuesto aprobado, y esconderlo sería esconder algo que ya se cargó.
+function sinMontos({ cuentas, planContraReal: plan, margen, orden }: ObraEquipo): boolean {
+  const montos = [
+    orden?.total,
+    ...Object.values(cuentas),
+    plan.costo.planificado,
+    plan.costo.real,
+    plan.costo.diferencia,
+    margen?.precioDueno,
+    margen?.planificado,
+    margen?.real,
+  ];
+  const todosEnCero = montos.every((m) => !m || signoDeMonto(m.valor) === 0);
+  return todosEnCero && plan.plazo.planificado === null;
+}
+
 export function CuentasObra({ obra }: { obra: ObraEquipo }) {
   const { cuentas, planContraReal: plan, margen, orden } = obra;
   const abierta = obra.estado === "ABIERTO";
+  // Con todo en cero, una lista de «$ 0» y «—» no dice nada: mejor una sola línea que explique por qué.
+  if (sinMontos(obra)) {
+    return (
+      <LineaVacia
+        titulo="Plata"
+        texto="todavía no hay montos: aparecen cuando se enlaza la orden de Odoo y se cargan presupuestos o facturas."
+      />
+    );
+  }
   return (
     <Tarjeta>
       <TarjetaTitulo>Plata</TarjetaTitulo>

@@ -6,7 +6,7 @@
 import { db, ORG_PROGES, type Prisma, type ServicioTipo } from "@proges/db";
 import type { ServicioTableroItem } from "@proges/contrato";
 import { itemDelTablero, tareaConServicio, type NombreDeCliente } from "./recorte";
-import { seleccionFila, seleccionTareaConServicio } from "./selecciones";
+import { seleccionFila, seleccionTareaConServicio, seleccionTareaDelTablero } from "./selecciones";
 import type { FilaDeTablero } from "./tablero";
 
 // El nombre de cada cliente por su id. Un id desconocido (cliente borrado) no rompe la respuesta.
@@ -31,7 +31,8 @@ export async function equipoActivo(): Promise<{ id: string; nombre: string }[]> 
 export type FiltroTablero = { tipo?: ServicioTipo; responsable?: string };
 
 // Los servicios abiertos de esos espacios, listos para agrupar en el tablero (con sus tareas
-// pendientes y totales contadas). Entran también los «por revisar»: son el grupo NUEVO.
+// pendientes y totales contadas y su próxima tarea). Entran también los «por revisar» y los «por
+// confirmar»: son parte del grupo NUEVO.
 export async function filasDelTablero(orgIds: string[], filtro: FiltroTablero, hoy: Date): Promise<FilaDeTablero[]> {
   const servicios = await db.servicioEnCurso.findMany({
     where: {
@@ -42,13 +43,12 @@ export async function filasDelTablero(orgIds: string[], filtro: FiltroTablero, h
         ? { responsableId: filtro.responsable === "sin" ? null : filtro.responsable }
         : {}),
     },
-    select: { ...seleccionFila, tareas: { select: { hechaEl: true } } },
+    select: { ...seleccionFila, tareas: { select: seleccionTareaDelTablero } },
   });
   const clienteDe = await clientesPorId(servicios.map((s) => s.organizationId));
   return servicios.map((s) => ({
-    porRevisar: s.porRevisar,
     tareasTotal: s.tareas.length,
-    item: itemDelTablero(s, hoy, clienteDe(s.organizationId), s.tareas.filter((t) => t.hechaEl === null).length),
+    item: itemDelTablero(s, hoy, clienteDe(s.organizationId), s.tareas),
   }));
 }
 

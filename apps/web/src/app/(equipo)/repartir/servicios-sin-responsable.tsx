@@ -1,5 +1,6 @@
-// «Servicios sin responsable»: servicios abiertos que ya se aceptaron pero nadie lleva. (Los que
-// recién entraron de un pedido se reparten arriba, al aceptar el pedido.) Si no hay ninguno, la
+// «Servicios sin responsable»: servicios abiertos que nadie lleva, estén o no confirmados (los
+// «por confirmar» lo dicen en su tarjeta). Los pedidos sin aceptar no entran: se reparten arriba,
+// al aceptar el pedido. Si no hay ninguno, la
 // sección no se dibuja: no hay nada que repartir.
 import type { EquipoPersona, ServicioTableroItem } from "@proges/contrato";
 import { Seccion } from "@/componentes/comunes/seccion";
