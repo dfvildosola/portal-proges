@@ -121,6 +121,18 @@ export async function pagarCobro(_anterior: Anterior, datos: FormData): Resultad
   );
 }
 
+/** Para un pago mal anotado: borra los pagos del cobro y lo deja pendiente. */
+export async function deshacerPagoDeCobro(_anterior: Anterior, datos: FormData): Resultado {
+  const id = textoDe(datos, "id");
+  return ejecutar(() => llamar("POST", `/v1/cobros/${id}/anular-pago`), REVALIDAR);
+}
+
+/** Para un cobro mal generado. La API no lo borra si tiene pagos. */
+export async function borrarCobro(_anterior: Anterior, datos: FormData): Resultado {
+  const id = textoDe(datos, "id");
+  return ejecutar(() => llamar("DELETE", `/v1/cobros/${id}`), REVALIDAR);
+}
+
 // ---------------------------------------------------------------------------
 // Gastos (cuentas) y contribuciones
 // ---------------------------------------------------------------------------

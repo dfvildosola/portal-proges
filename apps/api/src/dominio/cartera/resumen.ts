@@ -63,7 +63,7 @@ export function resumenDelMes(datos: {
       saldo: sumarPorMoneda(
         atrasados.map((c) => ({
           moneda: c.moneda,
-          monto: saldoCobro({ montoEsperado: aNumero(c.montoEsperado), montoPagado: c.montoPagado ? aNumero(c.montoPagado) : null, moneda: c.moneda }),
+          monto: saldoCobro(c),
         })),
       ),
     },

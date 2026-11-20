@@ -17,7 +17,7 @@ import { aFechaISO, aMonto } from "../util/al-contrato";
 import { hoyChile, sumarDias } from "../util/fechas";
 import type { FacturaCuenta, PresupuestoCuenta } from "../dominio/obra/obra";
 import { margenDeObras, resultadoDeObra, type ObraParaResultados } from "../dominio/resultados/obras";
-import { cifrasDeServicios, diasPorTipo, serviciosPorSemana, type ServicioCerrado } from "../dominio/resultados/servicios";
+import { cifrasDeServicios, diasPorTipo, entraAlConteo, serviciosPorSemana, type ServicioCerrado } from "../dominio/resultados/servicios";
 import { diaChile, estaEnElRango } from "../dominio/resultados/semanas";
 import { tareasATiempoPorPersona } from "../dominio/resultados/tareas";
 import { errores, json } from "./ayuda";
@@ -40,7 +40,7 @@ resultados.openapi(
     tags: ["Resultados"],
     summary: "Resultados del período",
     description:
-      "En una sola llamada: servicios que entran y que se terminan por semana; días promedio por tipo de servicio separando el tiempo trabajando del tiempo esperando a otros; obras (lo aprobado al maestro contra lo facturado y el margen); porcentaje de tareas hechas a tiempo por persona; y las cifras de arriba. Sin `desde` ni `hasta` son las últimas 12 semanas. Solo la jefatura y el administrador.",
+      "En una sola llamada: servicios que entran (sin contar los cancelados ni los pedidos rechazados) y que se terminan por semana; días promedio por tipo de servicio separando el tiempo trabajando del tiempo esperando a otros; obras (lo aprobado al maestro contra lo facturado y el margen); porcentaje de tareas hechas a tiempo por persona; y las cifras de arriba. Sin `desde` ni `hasta` son las últimas 12 semanas. Solo la jefatura y el administrador.",
     request: { query: ResultadosConsulta },
     responses: { 200: json(Resultados, "Los resultados."), ...errores(400, 401, 403) },
   }),
@@ -78,7 +78,7 @@ resultados.openapi(
           eventos: { where: { tipo: "ESPERA" }, orderBy: { fecha: "asc" }, select: { fecha: true, nuevo: true } },
         },
       }),
-      db.servicioEnCurso.findMany({ where: { ...dondeCliente, abiertoEl: lejos }, select: { abiertoEl: true } }),
+      db.servicioEnCurso.findMany({ where: { ...dondeCliente, abiertoEl: lejos }, select: { abiertoEl: true, estado: true } }),
       // Las obras vivas en algún momento del período: abiertas antes de su fin y sin cerrar, o
       // cerradas después de su comienzo.
       db.servicioEnCurso.findMany({
@@ -166,7 +166,7 @@ resultados.openapi(
           margenObrasPorcentaje: margen.porcentaje,
         },
         serviciosPorSemana: serviciosPorSemana(
-          abiertosDb.map((s) => s.abiertoEl),
+          abiertosDb.filter(entraAlConteo).map((s) => s.abiertoEl),
           cerrados.map((s) => s.cerradoEl),
           desde,
           hasta,

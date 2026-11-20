@@ -8,7 +8,8 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       // Las fotos y los PDF suben por una server action (la web se los pasa a la API). El tope por
-      // defecto es 1 MB; la API acepta hasta 25 MB por archivo.
+      // defecto es 1 MB. Lo más grande que acepta la API son los PDF de documentos (hasta 25 MB);
+      // las fotos y los PDF de presupuestos de maestros se topan en 4 MB.
       bodySizeLimit: "25mb",
     },
     // Antes de llegar a la acción, el proxy (proxy.ts) guarda en memoria una copia del cuerpo de

@@ -248,6 +248,10 @@ config.openapi(
         admin: datos.admin,
         jefatura: datos.jefatura,
         activo: datos.activo,
+        // Cambiar el correo es entregar el puesto a otra persona: se suelta el enlace con la cuenta
+        // de Clerk anterior, para que la cuenta vieja no siga entrando y el próximo ingreso se
+        // enlace por el correo nuevo (acceso/sesion.ts busca primero por clerkUserId).
+        ...(datos.correo !== actual.email ? { clerkUserId: null } : {}),
       },
     });
     return c.json(usuarioParaConfig(guardado, await nombresDeClientes()), 200);

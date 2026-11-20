@@ -419,7 +419,7 @@ cartera.openapi(
         fechaEfectiva: `Se puede aplicar desde el ${formatDate(desde)}: antes, los cobros que aún no se generan saldrían con el monto nuevo.`,
       });
     }
-    const nuevo = new Prisma.Decimal(montoReajustado(Number(actual.monto), porcentaje, actual.moneda));
+    const nuevo = montoReajustado(actual.monto, porcentaje, actual.moneda);
     await db.$transaction([
       db.leaseContract.update({
         where: { id },

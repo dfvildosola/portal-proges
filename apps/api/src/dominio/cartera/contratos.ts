@@ -1,4 +1,5 @@
-import type { LeaseContract, Prisma } from "@proges/db";
+import { Prisma, type LeaseContract } from "@proges/db";
+import { redondearMoneda } from "./cobros";
 import { rangoDelMes, sumarDias, sumarMeses } from "../../util/fechas";
 
 // Lo mínimo que necesitan estas funciones: se pueden llamar con un `select` parcial.
@@ -115,14 +116,9 @@ export function terminoRenovado(c: ContratoFechas, hoy: Date): Date {
   }
 }
 
-// Monto tras un reajuste: entero en CLP, 2 decimales en UF.
-export function montoReajustado(
-  monto: number,
-  porcentaje: number,
-  moneda: "CLP" | "UF",
-): number {
-  const nuevo = monto * (1 + porcentaje / 100);
-  return moneda === "UF"
-    ? Math.round((nuevo + Number.EPSILON) * 100) / 100
-    : Math.round(nuevo);
+// Monto tras un reajuste, calculado con Decimal y redondeado a los decimales de su moneda:
+// entero en CLP, 2 decimales en UF.
+export function montoReajustado(monto: Prisma.Decimal, porcentaje: number, moneda: "CLP" | "UF"): Prisma.Decimal {
+  const nuevo = monto.times(new Prisma.Decimal(porcentaje).div(100).plus(1));
+  return redondearMoneda(nuevo, moneda);
 }

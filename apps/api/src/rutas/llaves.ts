@@ -10,7 +10,7 @@ import { Id, LlaveConfig, LlaveCreada, LlaveNueva, LlavesConsulta, LlavesLista }
 import { generarLlave } from "../acceso/llaves";
 import { nuevoRouter } from "../entorno";
 import { ErrorApi } from "../errores";
-import { espacioParaCrear, espacioParaEscribirEn, espaciosQueLee, exigirAdmin, exigirEscritura } from "../permisos";
+import { espacioParaCrear, exigirAdmin, exigirEscritura } from "../permisos";
 import { llaveParaConfig } from "../dominio/config/recorte";
 import { errores, json } from "./ayuda";
 
@@ -28,7 +28,7 @@ llaves.openapi(
     tags: ["Llaves de la API"],
     summary: "Lista de llaves",
     description:
-      "Las llaves de la API de los clientes activos, las más nuevas primero, con su prefijo, su último uso y si fueron revocadas. Nunca incluye la llave completa. Con `cliente` se ven solo las de ese cliente. Solo el administrador.",
+      "Las llaves de la API de todos los clientes, también de los desactivados (para poder revocarlas), las más nuevas primero, con su prefijo, su último uso y si fueron revocadas. Nunca incluye la llave completa. Con `cliente` se ven solo las de ese cliente. Solo el administrador.",
     request: { query: LlavesConsulta },
     responses: { 200: json(LlavesLista, "Las llaves."), ...errores(400, 401, 403) },
   }),
@@ -36,8 +36,10 @@ llaves.openapi(
     const quien = c.get("quien");
     exigirAdmin(quien);
     const { cliente } = c.req.valid("query");
+    // Sin filtrar por clientes activos: las llaves de un cliente desactivado se tienen que poder
+    // ver y revocar (si el cliente se reactiva, una llave filtrada volvería a servir).
     const filas = await db.llaveApi.findMany({
-      where: { organizationId: { in: await espaciosQueLee(quien, cliente) } },
+      where: cliente ? { organizationId: cliente } : {},
       orderBy: { createdAt: "desc" },
     });
     const clientes = await db.organizacion.findMany({
@@ -91,11 +93,12 @@ llaves.openapi(
     const quien = c.get("quien");
     exigirAdmin(exigirEscritura(quien));
     const { id } = c.req.valid("param");
+    // Solo el administrador llega aquí, y puede revocar también las llaves de un cliente
+    // desactivado (espacioParaEscribirEn respondería 404 para ellos).
     const llave = await db.llaveApi.findUnique({ where: { id } });
-    const espacio = await espacioParaEscribirEn(quien, llave?.organizationId);
     if (!llave) throw new ErrorApi(404, "No se encontró lo que buscas.");
     if (llave.revocadaEl) throw new ErrorApi(409, "Esa llave ya estaba revocada.");
     const revocada = await db.llaveApi.update({ where: { id }, data: { revocadaEl: new Date() } });
-    return c.json(llaveParaConfig(revocada, await nombreDelCliente(espacio)), 200);
+    return c.json(llaveParaConfig(revocada, await nombreDelCliente(llave.organizationId)), 200);
   },
 );

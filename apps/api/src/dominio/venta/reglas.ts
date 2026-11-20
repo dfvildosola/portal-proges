@@ -63,3 +63,31 @@ export function textoTareaRespuesta(datos: {
         : `contraofertó ${formatMoney(datos.contraoferta?.valor, datos.contraoferta?.moneda)} a`;
   return `Comunicar la respuesta del dueño al oferente: ${decision} la oferta de ${oferta} de ${datos.oferente}.`;
 }
+
+// Lo que el dueño ya vio no se reescribe: desde que se le mostró la oferta, el monto, la moneda y
+// la fecha quedan fijos, y desde que la respondió, también el estado (lo que él contestó se
+// contestó sobre esa oferta). Solo frena un cambio real: mandar el mismo valor no molesta.
+// `cambio` trae lo que la ruta quiere escribir (undefined = no se toca).
+export function exigirCambioPermitido(
+  oferta: {
+    fecha: Date;
+    monto: { equals(otro: Monto["valor"]): boolean };
+    moneda: string;
+    estado: string;
+    mostradaAlDuenoEl: Date | null;
+    respuestaDueno: string | null;
+  },
+  cambio: { fecha?: Date; monto?: Monto; estado?: string },
+): void {
+  if (oferta.mostradaAlDuenoEl !== null) {
+    const cambiaFecha = cambio.fecha !== undefined && cambio.fecha.getTime() !== oferta.fecha.getTime();
+    const cambiaMonto =
+      cambio.monto !== undefined && (cambio.monto.moneda !== oferta.moneda || !oferta.monto.equals(cambio.monto.valor));
+    if (cambiaFecha || cambiaMonto) {
+      throw new ErrorApi(409, "Esta oferta ya se le mostró al dueño: el monto, la moneda y la fecha ya no se pueden cambiar.");
+    }
+  }
+  if (oferta.respuestaDueno !== null && cambio.estado !== undefined && cambio.estado !== oferta.estado) {
+    throw new ErrorApi(409, "El dueño ya respondió esta oferta: su estado ya no se puede cambiar.");
+  }
+}

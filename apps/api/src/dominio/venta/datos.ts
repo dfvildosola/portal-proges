@@ -1,15 +1,22 @@
 // Lo que el reporte de venta lee de la base, en una sola mirada. Va filtrado por los espacios
 // que quien pregunta puede leer: un servicio de otro cliente responde null (la ruta lo vuelve 404).
+// Para un dueño o una llave (`paraDueno`) también responde null si el servicio no es visible para
+// ellos (cancelado, por confirmar o por revisar), igual que el resto de la API.
 import { db } from "@proges/db";
 import { ErrorApi } from "../../errores";
 import { hoyChile } from "../../util/fechas";
+import { VISIBLE_PARA_DUENO } from "../trabajo/ficha";
 import type { DatosDelReporte } from "./recorte";
 
 const PERSONA = { select: { id: true, nombre: true } } as const;
 
-export async function leerDatosDelReporte(servicioId: string, espacios: string[]): Promise<DatosDelReporte | null> {
+export async function leerDatosDelReporte(
+  servicioId: string,
+  espacios: string[],
+  paraDueno: boolean,
+): Promise<DatosDelReporte | null> {
   const s = await db.servicioEnCurso.findFirst({
-    where: { id: servicioId, organizationId: { in: espacios } },
+    where: { id: servicioId, organizationId: { in: espacios }, ...(paraDueno ? VISIBLE_PARA_DUENO : {}) },
     select: {
       id: true,
       tipo: true,

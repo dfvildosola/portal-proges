@@ -107,7 +107,9 @@ export function planDeOrden(orden: OrdenOdoo, existentes: PartidaExistente[]): P
       descripcion: l.descripcion,
       cantidad: l.cantidad,
       unidad: l.unidad,
-      precioDueno: l.precioUnitario,
+      // El total de la línea (cantidad × precio, con descuento), no el precio de una unidad: todo lo
+      // que lee `precioDueno` (cobrado, avance ponderado, total por recinto) lo trata como total.
+      precioDueno: l.subtotal,
       posicion: l.posicion,
     };
     const existente = porLinea.get(l.id);

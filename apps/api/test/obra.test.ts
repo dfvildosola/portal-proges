@@ -194,7 +194,7 @@ describe("avance, recepción, plan contra real y margen (puros)", () => {
 // ---------------------------------------------------------------------------
 
 function linea(id: number, posicion: number, recinto: string, codigo: string, descripcion: string, cantidad: number, unidad: string, precioUnitario: number) {
-  return { id, posicion, recinto, codigo, descripcion, detalle: null, cantidad, unidad, precioUnitario };
+  return { id, posicion, recinto, codigo, descripcion, detalle: null, cantidad, unidad, precioUnitario, subtotal: cantidad * precioUnitario };
 }
 const L101 = linea(101, 0, "Cocina", "RR-001", "Cambio de piso", 12.5, "m2", 40_000);
 const L102 = linea(102, 1, "Cocina", "RR-002", "Pintura de muros", 30, "m2", 8_000);
@@ -225,7 +225,7 @@ function ordenBase(id: number, numero: string): OrdenOdoo {
 // agrega un espejo (105); la grifería (104) sube un lugar.
 const tras = (o: OrdenOdoo): OrdenOdoo => ({
   ...o,
-  lineas: [{ ...L101, precioUnitario: 42_000 }, L102, { ...L104, posicion: 2 }, L105],
+  lineas: [{ ...L101, precioUnitario: 42_000, subtotal: 12.5 * 42_000 }, L102, { ...L104, posicion: 2 }, L105],
 });
 
 // ---------------------------------------------------------------------------
@@ -429,7 +429,7 @@ describe("la obra de punta a punta", () => {
     assert.equal(r.estado, 200, JSON.stringify(r.cuerpo));
     assert.deepEqual([r.cuerpo.nuevas, r.cuerpo.cambiadas, r.cuerpo.quitadasEnOdoo], [1, 2, 1]);
     const p101 = await db.partida.findUniqueOrThrow({ where: { id: idsDePartidas[101] } });
-    assert.equal(Number(p101.precioDueno), 42_000);
+    assert.equal(Number(p101.precioDueno), 525_000); // 12,5 m² × 42.000: el total de la línea
     assert.equal(p101.avance, 75); // lo del equipo quedó
     assert.equal(p101.maestroId, maestroId);
     const p103 = await db.partida.findUniqueOrThrow({ where: { id: idsDePartidas[103] } });

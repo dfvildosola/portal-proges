@@ -13,7 +13,7 @@ import {
 import { aFechaCivil, archivosDe, esPdf, textoDeTareaCorreccion, validarFotos } from "../src/dominio/obra/formulario";
 
 function linea(id: number, posicion: number, recinto: string, codigo: string, descripcion: string, cantidad: number, unidad: string, precioUnitario: number) {
-  return { id, posicion, recinto, codigo, descripcion, detalle: null, cantidad, unidad, precioUnitario };
+  return { id, posicion, recinto, codigo, descripcion, detalle: null, cantidad, unidad, precioUnitario, subtotal: cantidad * precioUnitario };
 }
 const L101 = linea(101, 0, "Cocina", "RR-001", "Cambio de piso", 12.5, "m2", 40_000);
 const L102 = linea(102, 1, "Cocina", "RR-002", "Pintura de muros", 30, "m2", 8_000);
@@ -40,7 +40,7 @@ const ORDEN_1: OrdenOdoo = {
 // agrega un espejo (105); la grifería (104) sube un lugar.
 const DESPUES: OrdenOdoo = {
   ...ORDEN_1,
-  lineas: [{ ...L101, precioUnitario: 42_000 }, L102, { ...L104, posicion: 2 }, L105],
+  lineas: [{ ...L101, precioUnitario: 42_000, subtotal: 12.5 * 42_000 }, L102, { ...L104, posicion: 2 }, L105],
 };
 
 function comoExistente(odooLineId: number, l = [L101, L102, L103, L104].find((x) => x.id === odooLineId)!): PartidaExistente {
@@ -53,7 +53,7 @@ function comoExistente(odooLineId: number, l = [L101, L102, L103, L104].find((x)
     descripcion: l.descripcion,
     cantidad: l.cantidad,
     unidad: l.unidad,
-    precioDueno: l.precioUnitario,
+    precioDueno: l.subtotal,
     posicion: l.posicion,
   };
 }
@@ -68,6 +68,14 @@ describe("la orden de Odoo (pura)", () => {
     assert.equal(plan.anticipos, 2);
     assert.equal(plan.facturado, 500_000);
     assert.equal(plan.moneda, "CLP");
+  });
+
+  test("precioDueno es el total de la línea (cantidad × precio), no el precio de una unidad", () => {
+    const plan = planDeOrden(ORDEN_1, []);
+    assert.deepEqual(plan.nuevas.map((p) => p.precioDueno), [500_000, 240_000, 250_000, 90_000]);
+    // Y si Odoo aplicó un descuento, lo que se guarda es lo que Odoo cobra de verdad.
+    const conDescuento: OrdenOdoo = { ...ORDEN_1, lineas: [{ ...L101, subtotal: 450_000 }] }; // 10 % menos
+    assert.equal(planDeOrden(conDescuento, []).nuevas[0].precioDueno, 450_000);
   });
 
   test("lo que viene de Odoo nunca incluye avance, recepción, observación ni maestro", () => {

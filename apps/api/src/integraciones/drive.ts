@@ -254,8 +254,10 @@ export function esIdDeArchivo(texto: string): boolean {
   return ID_DRIVE.test(texto);
 }
 
-// La miniatura que Drive genera de una foto o un PDF, o null si todavía no la tiene. Sirve para
-// las listas: el original solo se baja al abrirlo (R16 del plan).
+// La miniatura que Drive genera de una foto o un PDF, o null si no hay una buena. Sirve para las
+// listas: el original solo se baja al abrirlo (R16 del plan). Quien llama (GET /v1/fotos/{id})
+// cae al archivo completo cuando esto devuelve null, así que ante cualquier duda se devuelve
+// null: nunca se entrega como «foto» una página de error o de inicio de sesión.
 export async function miniatura(driveFileId: string, ancho = 400): Promise<{ datos: Buffer; mime: string } | null> {
   if (!ID_DRIVE.test(driveFileId)) throw new Error("El id del archivo de Drive no es válido.");
   const ficha = (await (
@@ -263,7 +265,13 @@ export async function miniatura(driveFileId: string, ancho = 400): Promise<{ dat
   ).json()) as { thumbnailLink?: string };
   if (!ficha.thumbnailLink) return null;
   // El enlace trae un tamaño al final («=s220»): se cambia por el que se pidió.
-  const res = await fetch(ficha.thumbnailLink.replace(/=s\d+$/, `=s${ancho}`));
+  const enlace = new URL(ficha.thumbnailLink.replace(/=s\d+$/, `=s${ancho}`));
+  // La miniatura de un archivo privado pide el token de la cuenta de servicio, y ese token solo
+  // se manda a un servidor de Google por https.
+  if (enlace.protocol !== "https:" || !/(^|\.)(googleusercontent|google)\.com$/.test(enlace.hostname)) return null;
+  const res = await fetch(enlace, { headers: { Authorization: `Bearer ${await tokenDeAcceso()}` } });
   if (!res.ok) return null;
-  return { datos: Buffer.from(await res.arrayBuffer()), mime: res.headers.get("content-type") ?? "image/jpeg" };
+  const mime = res.headers.get("content-type")?.split(";")[0].trim().toLowerCase() ?? "";
+  if (!mime.startsWith("image/")) return null;
+  return { datos: Buffer.from(await res.arrayBuffer()), mime };
 }

@@ -101,6 +101,9 @@ export type LineaOrden = {
   cantidad: number;
   unidad: string | null;
   precioUnitario: number;
+  // Lo que cuesta la línea entera sin impuesto (`price_subtotal` de Odoo: cantidad × precio unitario
+  // menos el descuento). La suma de los subtotales es el total de la orden.
+  subtotal: number;
 };
 
 export type AnticipoOrden = {
@@ -156,7 +159,7 @@ export async function leerOrden(numero: string): Promise<OrdenOdoo> {
   const filas = await buscar(
     "sale.order.line",
     [["order_id", "=", o.id]],
-    ["display_type", "name", "product_id", "product_uom_qty", "product_uom_id", "price_unit", "is_downpayment"],
+    ["display_type", "name", "product_id", "product_uom_qty", "product_uom_id", "price_unit", "price_subtotal", "is_downpayment"],
     { order: "sequence asc, id asc" },
   );
 
@@ -207,6 +210,7 @@ export async function leerOrden(numero: string): Promise<OrdenOdoo> {
         cantidad: Number(f.product_uom_qty),
         unidad: nombreDe(f.product_uom_id),
         precioUnitario: Number(f.price_unit),
+        subtotal: Number(f.price_subtotal),
       };
       lineas.push(ultima);
     }

@@ -11,6 +11,7 @@ import type { Quien } from "../../acceso/quien";
 import { ErrorApi } from "../../errores";
 import type { Drive } from "../../integraciones/tipos";
 import { espacioParaEscribirEn, exigirEquipo } from "../../permisos";
+import { exigirResponsableValido } from "../trabajo/pedidos";
 import { TIPOS_DE_FOTO, archivosDe, textoDeTareaCorreccion, textoONull, validarFotos } from "./formulario";
 import { exigirAbierto } from "./permisos-obra";
 
@@ -49,13 +50,7 @@ export async function recibirPartida(
 
   // El responsable, si viene, tiene que ser alguien activo del equipo (el id viene de la web).
   const responsableId = pedido.responsableId ?? null;
-  if (responsableId) {
-    const responsable = await db.usuario.findFirst({
-      where: { id: responsableId, rol: "EQUIPO", activo: true },
-      select: { id: true },
-    });
-    if (!responsable) throw new ErrorApi(400, "Esa persona no está disponible.", { responsableId: "Esa persona no está disponible." });
-  }
+  await exigirResponsableValido(responsableId);
 
   // Las fotos, a la carpeta «Portal» de la propiedad, antes de guardar nada.
   const subidas: { driveFileId: string; nombre: string; mime: string }[] = [];

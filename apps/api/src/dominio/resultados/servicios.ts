@@ -107,6 +107,12 @@ export function cifrasDeServicios(cerrados: ServicioCerrado[]): CifrasDeServicio
   };
 }
 
+// ¿Este servicio cuenta como uno que «entró»? Un servicio cancelado no: ahí caen los pedidos que
+// el equipo rechazó (rechazarRevision los deja CANCELADO) y los que se cancelaron a mano.
+export function entraAlConteo(servicio: { estado: string }): boolean {
+  return servicio.estado !== "CANCELADO";
+}
+
 export type Semana = { semana: Date; entran: number; cierran: number };
 
 // Por cada semana del período (de lunes a domingo): cuántos servicios se abrieron y cuántos se

@@ -33,6 +33,7 @@ import { ErrorApi } from "../errores";
 import { esDueno, espaciosQueLee, exigirCliente, legible } from "../permisos";
 import { aMonto } from "../util/al-contrato";
 import { hoyChile } from "../util/fechas";
+import { visibleParaDueno } from "../dominio/trabajo/ficha";
 import { leerDatosDelReporte } from "../dominio/venta/datos";
 import {
   anuncioParaEscribir,
@@ -55,6 +56,7 @@ import {
 import {
   estadoTrasRespuesta,
   exigirFechaNoFutura,
+  exigirCambioPermitido,
   exigirMontoPositivo,
   exigirServicioAbierto,
   textoTareaRespuesta,
@@ -91,7 +93,7 @@ venta.openapi(
   async (c) => {
     const quien = c.get("quien");
     const { id } = c.req.valid("param");
-    const datos = await leerDatosDelReporte(id, await espaciosQueLee(quien));
+    const datos = await leerDatosDelReporte(id, await espaciosQueLee(quien), esDueno(quien));
     if (!datos) throw new ErrorApi(404, "No se encontró lo que buscas.");
     return c.json(esDueno(quien) ? reporteParaDueno(datos) : reporteParaEquipo(datos), 200);
   },
@@ -237,17 +239,19 @@ venta.openapi(
     tags: [TAG],
     summary: "Corregir una oferta o cambiar su estado",
     description:
-      "Solo el equipo. Se manda solo lo que cambia. Cambiar el estado no mueve nada más del servicio: eso lo decide una persona.",
+      "Solo el equipo. Se manda solo lo que cambia. Cambiar el estado no mueve nada más del servicio: eso lo decide una persona. " +
+      "Una vez que la oferta se le mostró al dueño, el monto, la moneda y la fecha ya no se cambian (409): lo que el dueño vio es lo que respondió. Una vez que el dueño la respondió, tampoco el estado.",
     request: { params: conId, body: cuerpo(VentaOfertaCambiar) },
     responses: { 200: json(VentaOfertaEquipo, "La oferta corregida."), ...errores(400, 401, 403, 404, 409) },
   }),
   async (c) => {
     const { id } = c.req.valid("param");
     const datos = c.req.valid("json");
-    await ofertaParaEscribir(c.get("quien"), id);
+    const { oferta: actual } = await ofertaParaEscribir(c.get("quien"), id);
     const fecha = datos.fecha ? deFechaISO(datos.fecha) : undefined;
     if (fecha) exigirFechaNoFutura(fecha, hoyChile(), "fecha");
     if (datos.monto) exigirMontoPositivo(datos.monto, "monto");
+    exigirCambioPermitido(actual, { fecha, monto: datos.monto, estado: datos.estado });
     const oferta = await db.oferta.update({
       where: { id },
       data: {
@@ -316,9 +320,11 @@ venta.openapi(
       quien,
       await db.oferta.findUnique({
         where: { id },
-        include: { servicioEnCurso: { select: { tipo: true, estado: true, responsableId: true } } },
+        include: { servicioEnCurso: { select: { tipo: true, estado: true, porConfirmar: true, porRevisar: true, responsableId: true } } },
       }),
     );
+    // Un servicio que el dueño no puede ver (cancelado, por confirmar, por revisar) tampoco deja responder.
+    if (!visibleParaDueno(oferta.servicioEnCurso)) throw new ErrorApi(404, "No se encontró lo que buscas.");
     exigirServicioAbierto(oferta.servicioEnCurso);
     if (oferta.mostradaAlDuenoEl === null) {
       throw new ErrorApi(409, "Esta oferta todavía no se le muestra al dueño.");

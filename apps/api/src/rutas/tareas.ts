@@ -142,7 +142,7 @@ tareas.openapi(
     tags: ["Tareas"],
     summary: "Cambiar una tarea o marcarla hecha",
     description:
-      "Solo el equipo. Cambia qué, quién o para cuándo (solo si no está hecha), y/o la marca hecha: true la marca, false la deshace. Si otra persona la cambió justo antes, responde 409.",
+      "Solo el equipo. Cambia qué, quién o para cuándo (solo si no está hecha), y/o la marca hecha: true la marca, false la deshace. Responde 409 si otra persona la cambió justo antes, si es la tarea «Revisar y repartir» de un pedido (se cierra aceptando o rechazando el pedido) o si su servicio ya está cerrado.",
     request: { params: ParamId, body: { content: { "application/json": { schema: TareaCambiar } }, required: true } },
     responses: { 200: json(Tarea, "La tarea ya cambiada."), ...errores(400, 401, 403, 404, 409) },
   }),
@@ -152,8 +152,18 @@ tareas.openapi(
     const { id } = c.req.valid("param");
     const cambio = c.req.valid("json");
 
-    const previa = await db.tarea.findUnique({ where: { id }, select: { organizationId: true } });
+    const previa = await db.tarea.findUnique({
+      where: { id },
+      select: { organizationId: true, esRevision: true, servicioEnCurso: { select: { estado: true } } },
+    });
     const orgId = await espacioParaEscribirEn(quien, previa?.organizationId);
+    // La tarea de revisión de un pedido la cierra el pedido, no una persona a mano.
+    if (previa?.esRevision) {
+      throw new ErrorApi(409, "Esta tarea se cierra al aceptar o rechazar el pedido en Repartir.");
+    }
+    if (previa?.servicioEnCurso.estado !== "ABIERTO") {
+      throw new ErrorApi(409, "Este servicio ya está cerrado: sus tareas no se cambian.");
+    }
     await exigirResponsableValido(cambio.responsableId);
 
     // El filtro por estado evita pisar el cambio de otra persona: marcar solo sirve si sigue

@@ -1,5 +1,6 @@
 // Rutas de los cobros de arriendo (RentCharge): la lista por mes y estado, los atrasados, un
-// cobro, anotar un pago y generar los cobros de un mes. Pieza G; se monta desde cartera.ts.
+// cobro, anotar o deshacer un pago, borrar un cobro y generar los cobros de un mes. Pieza G; se
+// monta desde cartera.ts.
 //
 // Un cobro es lo que un contrato debe cobrar en un mes. Anotar que se pagó lo puede hacer el
 // equipo o el dueño (decisión d25); una llave solo lee.
@@ -20,7 +21,7 @@ import { ErrorApi } from "../errores";
 import { espacioParaCrear, espacioParaEscribirEn, espaciosQueLee, exigirEscritura, legible } from "../permisos";
 import { hoyChile, vencimientoDelMes } from "../util/fechas";
 import { COBRO_INCLUYE, paginar, respuestaPagina, whereEstadoCobro } from "../dominio/cartera/consultas";
-import { saldoCobro } from "../dominio/cartera/cobros";
+import { saldoCobroDecimal } from "../dominio/cartera/cobros";
 import { whereCubreMes } from "../dominio/cartera/contratos";
 import { aDecimal, deFechaISO, exigirMontoPositivo, exigirMontoValido } from "../dominio/cartera/entrada";
 import { cobroParaDueno } from "../dominio/cartera/recorte";
@@ -157,7 +158,7 @@ cobros.openapi(
 
       // Cada pago se suma a lo ya pagado. Decimal, no Number: la UF tiene decimales.
       const totalPagado = (cobro.montoPagado ?? new Prisma.Decimal(0)).plus(aDecimal(pago.montoPagado));
-      const cubierto = saldoCobro({ ...cobro, montoPagado: totalPagado }) === 0;
+      const cubierto = saldoCobroDecimal({ ...cobro, montoPagado: totalPagado }).isZero();
       const notas = pago.notas || null;
       return tx.rentCharge.update({
         where: { id },
@@ -173,6 +174,76 @@ cobros.openapi(
       });
     });
     return c.json(cobroParaDueno(fila, hoy), 200);
+  },
+);
+
+// ¿El cobro ya tiene plata anotada? Un pago entero (PAGADO) o un abono parcial.
+const tienePagos = (c: { estado: string; fechaPago: Date | null; montoPagado: Prisma.Decimal | null }) =>
+  c.estado === "PAGADO" || c.fechaPago !== null || (c.montoPagado !== null && c.montoPagado.gt(0));
+
+cobros.openapi(
+  createRoute({
+    method: "post",
+    path: "/cobros/{id}/anular-pago",
+    tags: ["Cobros"],
+    summary: "Deshacer el pago de un cobro",
+    description:
+      "Para un pago mal anotado: borra todos los pagos del cobro (la fecha, lo abonado y el interés por mora) y lo devuelve a pendiente. Si ya venció, sale ATRASADO solo, como cualquier cobro sin pagar. Las notas se conservan. Responde 409 si el cobro no tiene pagos. Lo puede hacer el equipo o el dueño; una llave no.",
+    request: { params: ParamId },
+    responses: { 200: json(Cobro, "El cobro sin pagos."), ...errores(401, 403, 404, 409) },
+  }),
+  async (c) => {
+    const quien = c.get("quien");
+    const persona = exigirEscritura(quien);
+    const { id } = c.req.valid("param");
+    const hoy = hoyChile();
+
+    const actual = await db.rentCharge.findUnique({ where: { id }, select: { organizationId: true } });
+    const orgId = await espacioParaEscribirEn(quien, actual?.organizationId);
+
+    // Con el mismo bloqueo que anotar un pago: un pago que llega justo ahora no se pierde a medias.
+    const fila = await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "RentCharge" WHERE id = ${id} AND "organizationId" = ${orgId} FOR UPDATE`;
+      const cobro = await tx.rentCharge.findFirst({ where: { id, organizationId: orgId } });
+      if (!cobro) throw new ErrorApi(404, "No se encontró lo que buscas.");
+      if (!tienePagos(cobro)) throw new ErrorApi(409, "Este cobro no tiene pagos que deshacer.");
+      return tx.rentCharge.update({
+        where: { id },
+        data: { estado: "PENDIENTE", fechaPago: null, montoPagado: null, interesMora: null, modificadoPorId: persona.usuario.id },
+        include: COBRO_INCLUYE,
+      });
+    });
+    return c.json(cobroParaDueno(fila, hoy), 200);
+  },
+);
+
+cobros.openapi(
+  createRoute({
+    method: "delete",
+    path: "/cobros/{id}",
+    tags: ["Cobros"],
+    summary: "Borrar un cobro",
+    description:
+      "Para un cobro mal generado. No se borra un cobro con pagos: primero se deshace el pago (409). Lo puede hacer el equipo o el dueño; una llave no. El mes se puede volver a generar con «Generar los cobros de un mes».",
+    request: { params: ParamId },
+    responses: { 204: { description: "Borrado." }, ...errores(401, 403, 404, 409) },
+  }),
+  async (c) => {
+    const quien = c.get("quien");
+    exigirEscritura(quien);
+    const { id } = c.req.valid("param");
+
+    const actual = await db.rentCharge.findUnique({ where: { id }, select: { organizationId: true } });
+    const orgId = await espacioParaEscribirEn(quien, actual?.organizationId);
+
+    await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "RentCharge" WHERE id = ${id} AND "organizationId" = ${orgId} FOR UPDATE`;
+      const cobro = await tx.rentCharge.findFirst({ where: { id, organizationId: orgId } });
+      if (!cobro) throw new ErrorApi(404, "No se encontró lo que buscas.");
+      if (tienePagos(cobro)) throw new ErrorApi(409, "Este cobro tiene pagos anotados: primero deshaz el pago.");
+      await tx.rentCharge.delete({ where: { id } });
+    });
+    return c.body(null, 204);
   },
 );
 

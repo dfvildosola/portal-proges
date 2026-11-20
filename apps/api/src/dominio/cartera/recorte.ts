@@ -22,7 +22,7 @@ import type {
 import type * as contrato from "@proges/contrato";
 import { aFechaHoraISO, aFechaISO, aMonto } from "../../util/al-contrato";
 import { estadoDelCobro, administracionVigente, type MontoEnMoneda } from "./administracion";
-import { esParcial, saldoCobro } from "./cobros";
+import { esParcial, saldoCobroDecimal } from "./cobros";
 import type { CobroLeido, ContratoLeido } from "./consultas";
 import { estadoContrato, fechaLimiteAviso, proximoReajuste, terminoVigente } from "./contratos";
 
@@ -95,7 +95,7 @@ export function cobroParaDueno(c: CobroLeido, hoy: Date): contrato.Cobro {
     estado: real === "POR_COBRAR" ? "PENDIENTE" : real,
     fechaPago: aFechaONull(c.fechaPago),
     montoPagado: c.montoPagado ? aMonto(c.montoPagado, c.moneda) : null,
-    saldo: aMonto(saldoCobro(c), c.moneda),
+    saldo: aMonto(saldoCobroDecimal(c), c.moneda),
     parcial: esParcial(c),
     interesMora: c.interesMora ? aMonto(c.interesMora, c.moneda) : null,
     notas: c.notas,

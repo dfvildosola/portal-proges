@@ -1,6 +1,7 @@
 // Las tareas del equipo: cómo se agrupan por urgencia. Funciones puras que reciben «hoy».
 //
-// «Esta semana» son los próximos 7 días contando hoy (la misma ventana de siempre). Una tarea
+// «Esta semana» es hoy y los 7 días siguientes (8 días, la misma ventana de «Esta semana» de la
+// agenda de vencimientos, `dias <= 7` en dominio/ficha/agenda.ts). Una tarea
 // sin fecha no puede estar atrasada: va a «más adelante».
 import { diasHasta } from "../../util/fechas";
 
@@ -39,7 +40,7 @@ export function clasificarPorDia<T extends ConVencimiento>(tareas: readonly T[],
 
 export type TareasPorSemana<T> = { atrasadas: T[]; estaSemana: T[]; despues: T[] };
 
-// Para Repartir y la carga: atrasadas, de esta semana (hoy a 7 días) y para después.
+// Para Repartir y la carga: atrasadas, de esta semana (hoy y los 7 días siguientes) y para después.
 export function clasificarPorSemana<T extends ConVencimiento>(tareas: readonly T[], hoy: Date): TareasPorSemana<T> {
   const grupos: TareasPorSemana<T> = { atrasadas: [], estaSemana: [], despues: [] };
   for (const t of [...tareas].sort(porVencimiento)) {

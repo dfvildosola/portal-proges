@@ -30,7 +30,8 @@ import { nuevoRouter } from "../entorno";
 import type { Drive } from "../integraciones/tipos";
 import { ErrorApi } from "../errores";
 import { esDueno, espacioParaCrear, espacioParaEscribirEn, espaciosQueLee, exigirEquipo, exigirEscritura, legible } from "../permisos";
-import { idDeCarpeta } from "../integraciones/drive";
+import { esIdDeArchivo, idDeCarpeta } from "../integraciones/drive";
+import { borrarPdf } from "../dominio/comun/pdf-drive";
 import { hoyChile } from "../util/fechas";
 import { camposDeLaEntrada, problemaDeMonto, validarPropiedad } from "../dominio/ficha/entrada";
 import { fichaResumen, historialDe, listarPropiedades, reparacionesDe } from "../dominio/ficha/lectura";
@@ -174,7 +175,7 @@ propiedades.openapi(
     tags: ["Propiedades"],
     summary: "Borrar una propiedad",
     description:
-      "Borra una propiedad y lo suyo (documentos, contratos, cuentas). Si tiene servicios no se puede: borrarla se llevaría su historial. En ese caso hay que cancelar sus servicios en vez de borrarla.",
+      "Borra una propiedad y lo suyo (documentos, contratos, cuentas) y manda los PDF de sus documentos a la papelera de Drive. Si tiene servicios no se puede: borrarla se llevaría su historial. En ese caso hay que cancelar sus servicios en vez de borrarla.",
     request: { params: ParamId },
     responses: { 204: sinContenido, ...errores(401, 403, 404, 409) },
   }),
@@ -187,7 +188,20 @@ propiedades.openapi(
     if (servicios > 0) {
       throw new ErrorApi(409, "Esta propiedad tiene servicios con historial y no se puede borrar. Cancela sus servicios en vez de borrarla.");
     }
+    // Las fotos no hay que mirarlas: cuelgan de notas y partidas, que cuelgan de servicios, y con
+    // servicios no se llega hasta aquí. Quedan los PDF de los documentos, que se borran en cascada.
+    const documentos = await db.document.findMany({ where: { propertyId: propiedad.id }, select: { id: true, blobKey: true } });
+    // Primero la base y después la papelera, igual que en DELETE /documentos/{id}: si Drive falla,
+    // lo peor es un archivo suelto en la papelera de Drive (borrarPdf lo anota con su id para
+    // limpiarlo a mano), y no una propiedad a medio borrar con documentos que apuntan a un
+    // archivo que ya no está.
     await db.property.delete({ where: { id: propiedad.id } });
+    const { drive } = c.get("dep");
+    await Promise.all(
+      documentos
+        .filter((d) => esIdDeArchivo(d.blobKey))
+        .map((d) => borrarPdf(drive, d.blobKey, { documentoId: d.id, propiedadId: propiedad.id })),
+    );
     return c.body(null, 204);
   },
 );
