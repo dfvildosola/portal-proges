@@ -85,21 +85,24 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
         <TareasDelServicio servicioId={ficha.id} tareas={ficha.tareas} personas={personas} puedeAgregar={abierto} />
         <BitacoraDelServicio servicioId={ficha.id} notas={ficha.notas} puedeAnotar />
         <div className="flex min-w-0 flex-col gap-5">
-          {esObra && (
-            <Suspense fallback={<CargandoPanel />}>
-              <PanelObra servicioId={ficha.id} modo="equipo" />
-            </Suspense>
-          )}
-          {tienePanelDeVenta && (
-            <Suspense fallback={<CargandoPanel />}>
-              <PanelVenta servicioId={ficha.id} modo="equipo" />
-            </Suspense>
-          )}
           <DatosDelServicio servicio={ficha} personas={personas} />
           <HistorialDeEspera cambios={ficha.historialEspera} />
           {abierto && !ficha.porRevisar && <CerrarServicio servicioId={ficha.id} esObra={esObra} />}
         </div>
       </div>
+
+      {/* La obra y la venta tienen mucho adentro (decenas de partidas, anuncios, visitas): van a
+          todo el ancho, debajo, y no apretadas en una columna. */}
+      {esObra && (
+        <Suspense fallback={<CargandoPanel />}>
+          <PanelObra servicioId={ficha.id} modo="equipo" />
+        </Suspense>
+      )}
+      {tienePanelDeVenta && (
+        <Suspense fallback={<CargandoPanel />}>
+          <PanelVenta servicioId={ficha.id} modo="equipo" />
+        </Suspense>
+      )}
     </div>
   );
 }
