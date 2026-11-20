@@ -4,6 +4,7 @@
 import type { ServicioTableroItem, ServiciosTablero } from "@proges/contrato";
 import { Vacio } from "@/componentes/comunes/vacio";
 import { TarjetaDeServicio, type ColumnaDelTablero } from "./tarjeta-de-servicio";
+import type { Persona } from "./tipos";
 
 type Columna = {
   clave: ColumnaDelTablero;
@@ -39,7 +40,8 @@ const COLUMNAS: Columna[] = [
   },
 ];
 
-export function TableroDeServicios({ tablero }: { tablero: ServiciosTablero }) {
+// `personas` es el equipo: las tarjetas de «Nuevo» lo usan para elegir quién lleva el servicio.
+export function TableroDeServicios({ tablero, personas }: { tablero: ServiciosTablero; personas: Persona[] }) {
   return (
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-4 lg:items-start lg:gap-3">
       {COLUMNAS.map((columna) => {
@@ -59,7 +61,7 @@ export function TableroDeServicios({ tablero }: { tablero: ServiciosTablero }) {
               <ul className="flex flex-col gap-2">
                 {servicios.map((s) => (
                   <li key={s.id}>
-                    <TarjetaDeServicio servicio={s} columna={columna.clave} />
+                    <TarjetaDeServicio servicio={s} columna={columna.clave} personas={personas} />
                   </li>
                 ))}
               </ul>

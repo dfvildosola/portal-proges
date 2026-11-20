@@ -23,20 +23,25 @@ import { useFormulario } from "@/lib/usar-formulario";
 import { cambiarEspera } from "@/app/(equipo)/servicios/[id]/acciones";
 
 // `variante`: es el botón principal del aviso de arriba, salvo cuando ahí hay otro más importante
-// (confirmar el servicio): entonces este pasa a ser el secundario.
+// (confirmar el servicio): entonces este pasa a ser el secundario. `compacto` y `texto` son para la
+// tarjeta del tablero (botón más chico y con otro texto); la ventana es la misma.
 export function CambiarEspera({
   servicioId,
   esperando,
   variante = "principal",
+  compacto = false,
+  texto = "Ahora esperamos a…",
 }: {
   servicioId: string;
   esperando: Esperando | null;
   variante?: "principal" | "contorno";
+  compacto?: boolean;
+  texto?: string;
 }) {
   const [abierto, setAbierto] = useState(false);
   return (
     <Dialogo open={abierto} onOpenChange={setAbierto}>
-      <DialogoDisparador render={<Boton variante={variante} />}>Ahora esperamos a…</DialogoDisparador>
+      <DialogoDisparador render={<Boton variante={variante} tamano={compacto ? "chico" : "normal"} />}>{texto}</DialogoDisparador>
       <DialogoContenido>
         <DialogoTitulo>¿A quién esperamos?</DialogoTitulo>
         <DialogoDescripcion>

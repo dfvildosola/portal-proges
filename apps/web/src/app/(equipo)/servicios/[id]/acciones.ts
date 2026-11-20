@@ -39,6 +39,13 @@ export async function cambiarEspera(_anterior: ResultadoAccion | null, datos: Fo
   );
 }
 
+/** Deja de esperar a otro: la pelota vuelve a nuestro lado («Nos toca»). Es lo mismo que elegir «Nos toca» en la ventana de espera, pero con un toque. */
+export async function yaNoEsperamos(servicioId: string): Promise<ResultadoAccion> {
+  return ejecutar(() => llamar("PATCH", rutaDe(servicioId), { cuerpo: { esperandoA: null, esperandoDetalle: null } }), {
+    revalidar: pantallas(servicioId),
+  });
+}
+
 /** Confirma un servicio de la carga inicial: desde ahí el dueño lo ve en su portal. */
 export async function confirmarServicio(servicioId: string): Promise<ResultadoAccion> {
   return ejecutar(() => llamar("POST", `${rutaDe(servicioId)}/confirmar`), { revalidar: pantallas(servicioId) });

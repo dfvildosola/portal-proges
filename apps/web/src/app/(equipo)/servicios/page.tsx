@@ -50,6 +50,7 @@ export default async function Pagina({ searchParams }: { searchParams: Promise<C
   for (const s of todos(completo)) clientes.set(s.cliente.id, s.cliente.nombre);
   const opcionesDeCliente = [...clientes].map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 
+  const personas = equipo.items.map((p) => ({ id: p.id, nombre: p.nombre }));
   const total = todos(tablero).length;
   return (
     <div className="flex flex-col gap-5">
@@ -57,8 +58,8 @@ export default async function Pagina({ searchParams }: { searchParams: Promise<C
         titulo="Servicios"
         subtitulo={`${total} ${total === 1 ? "servicio abierto" : "servicios abiertos"}, ordenados por quién tiene la pelota`}
       />
-      <FiltrosDelTablero clientes={opcionesDeCliente} personas={equipo.items.map((p) => ({ id: p.id, nombre: p.nombre }))} />
-      <TableroDeServicios tablero={tablero} />
+      <FiltrosDelTablero clientes={opcionesDeCliente} personas={personas} />
+      <TableroDeServicios tablero={tablero} personas={personas} />
     </div>
   );
 }

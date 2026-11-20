@@ -1,11 +1,14 @@
 // Un servicio dentro del tablero, como en la maqueta: qué es, dónde, quién lo lleva y cuál es el
-// próximo paso. Toda la tarjeta es un enlace a la ficha.
+// próximo paso. Hacer clic en cualquier parte de la tarjeta abre la ficha: el enlace es el título,
+// estirado sobre toda la tarjeta (`after:absolute after:inset-0`). Un botón no puede ir dentro de un
+// enlace, por eso la fila de acciones de abajo va aparte, encima del enlace (acciones-de-tarjeta.tsx).
 //   Línea 1  «Tipo · Dirección» en negrita y, a la derecha, las iniciales del responsable («—» si
 //            nadie lo lleva).
 //   Línea 2  nombre del servicio · cliente · comuna.
 //   Línea 3  depende de la columna: en «Nuevo», por qué es nuevo; en «Esperando a otro», a quién
 //            y hace cuántos días; en las demás, la próxima tarea con su fecha (en rojo si ya se
 //            pasó) y cuántas más quedan.
+//   Línea 4  las acciones según la columna (mover el servicio sin abrir la ficha), si hay.
 import Link from "next/link";
 import type { ServicioTableroItem, ServiciosTablero } from "@proges/contrato";
 import { ChipEsperando } from "@/componentes/comunes/chip-esperando";
@@ -13,6 +16,8 @@ import { Fecha } from "@/componentes/comunes/fecha";
 import { Tarjeta } from "@/componentes/ui/tarjeta";
 import { ETIQUETA_TIPO_SERVICIO } from "@/lib/etiquetas";
 import { cn } from "@/lib/utils";
+import { AccionesDeTarjeta } from "./acciones-de-tarjeta";
+import type { Persona } from "./tipos";
 
 export type ColumnaDelTablero = keyof Omit<ServiciosTablero, "vista">;
 
@@ -92,24 +97,32 @@ function ProximoPaso({ servicio, columna }: { servicio: ServicioTableroItem; col
   );
 }
 
-export function TarjetaDeServicio({ servicio, columna }: { servicio: ServicioTableroItem; columna: ColumnaDelTablero }) {
+export function TarjetaDeServicio({
+  servicio,
+  columna,
+  personas,
+}: {
+  servicio: ServicioTableroItem;
+  columna: ColumnaDelTablero;
+  personas: Persona[];
+}) {
   return (
-    <Link
-      href={`/servicios/${servicio.id}`}
-      className="block min-w-0 rounded-[10px] focus-visible:ring-2 focus-visible:ring-ink/40 focus-visible:outline-none"
-    >
-      <Tarjeta tono="item" className="gap-1 bg-card hover:border-ink">
-        <span className="flex items-start justify-between gap-2">
-          <span className="text-[13px] font-bold break-words">
-            {ETIQUETA_TIPO_SERVICIO[servicio.tipo]} · {servicio.propiedad.direccion}
-          </span>
-          <Responsable responsable={servicio.responsable} />
-        </span>
-        <span className="text-xs break-words text-soft">
-          {servicio.nombre} · {servicio.cliente.nombre} · {servicio.propiedad.comuna}
-        </span>
-        <ProximoPaso servicio={servicio} columna={columna} />
-      </Tarjeta>
-    </Link>
+    <Tarjeta tono="item" className="relative gap-1 bg-card hover:border-ink">
+      <div className="flex items-start justify-between gap-2">
+        {/* El foco se ve como un anillo alrededor de toda la tarjeta (el ::after que la cubre). */}
+        <Link
+          href={`/servicios/${servicio.id}`}
+          className="rounded-[10px] text-[13px] font-bold break-words outline-none after:absolute after:inset-0 after:rounded-[10px] focus-visible:after:ring-2 focus-visible:after:ring-ink/40"
+        >
+          {ETIQUETA_TIPO_SERVICIO[servicio.tipo]} · {servicio.propiedad.direccion}
+        </Link>
+        <Responsable responsable={servicio.responsable} />
+      </div>
+      <span className="text-xs break-words text-soft">
+        {servicio.nombre} · {servicio.cliente.nombre} · {servicio.propiedad.comuna}
+      </span>
+      <ProximoPaso servicio={servicio} columna={columna} />
+      <AccionesDeTarjeta servicio={servicio} columna={columna} personas={personas} />
+    </Tarjeta>
   );
 }
