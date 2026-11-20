@@ -12,6 +12,7 @@ import { PanelObra } from "@/componentes/obra/panel-obra";
 import { BandaDeEspera } from "@/componentes/servicio/banda-de-espera";
 import { BitacoraDelServicio } from "@/componentes/servicio/bitacora-del-servicio";
 import { CerrarServicio } from "@/componentes/servicio/cerrar-servicio";
+import { ConfirmarServicio } from "@/componentes/servicio/confirmar-servicio";
 import { DatosDelServicio } from "@/componentes/servicio/datos-del-servicio";
 import { HistorialDeEspera } from "@/componentes/servicio/historial-de-espera";
 import { TareasDelServicio } from "@/componentes/servicio/tareas-del-servicio";
@@ -80,6 +81,8 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
           Este servicio viene de un pedido y todavía nadie lo reparte: primero hay que aceptarlo y repartirlo.
         </p>
       )}
+
+      {ficha.porConfirmar && ficha.estado !== "CANCELADO" && <ConfirmarServicio servicioId={ficha.id} />}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1.25fr_1.1fr] lg:items-start lg:gap-4">
         <TareasDelServicio servicioId={ficha.id} tareas={ficha.tareas} personas={personas} puedeAgregar={abierto} />

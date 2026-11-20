@@ -5,10 +5,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { type EntradaDelDueno, estaActiva } from "./entradas-del-menu";
+import { entradasDelDueno, estaActiva } from "./entradas-del-menu";
 
-export function MenuLateralDueno({ cliente, entradas }: { cliente: string; entradas: EntradaDelDueno[] }) {
+export function MenuLateralDueno({ cliente, autonomo }: { cliente: string; autonomo: boolean }) {
   const ruta = usePathname();
+  const entradas = entradasDelDueno(autonomo);
   return (
     <nav aria-label="Menú principal" className="sticky top-0 hidden h-dvh flex-col gap-0.5 bg-side px-2.5 py-4 lg:flex">
       <Link href="/mi" className="px-2 pb-3.5 leading-tight">

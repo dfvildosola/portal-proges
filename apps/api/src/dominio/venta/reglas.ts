@@ -4,6 +4,7 @@
 // Vienen de legado/src/app/(app)/propiedades/comercial-actions.ts.
 import type { Monto, VentaOfertaEstado, VentaRespuestaOferta } from "@proges/contrato";
 import { ErrorApi } from "../../errores";
+import { formatMoney } from "../../util/format";
 
 // Solo la venta y el arriendo llevan precio, visitas y ofertas.
 export function esComercial(tipo: string): boolean {
@@ -53,12 +54,12 @@ export function textoTareaRespuesta(datos: {
   monto: Monto;
   contraoferta: Monto | null;
 }): string {
-  const oferta = `${datos.monto.valor} ${datos.monto.moneda}`;
+  const oferta = formatMoney(datos.monto.valor, datos.monto.moneda);
   const decision =
     datos.respuesta === "ACEPTA"
       ? "aceptó"
       : datos.respuesta === "RECHAZA"
         ? "rechazó"
-        : `contraofertó ${datos.contraoferta?.valor} ${datos.contraoferta?.moneda} a`;
+        : `contraofertó ${formatMoney(datos.contraoferta?.valor, datos.contraoferta?.moneda)} a`;
   return `Comunicar la respuesta del dueño al oferente: ${decision} la oferta de ${oferta} de ${datos.oferente}.`;
 }

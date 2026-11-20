@@ -101,7 +101,7 @@ describe("cálculos del corretaje (puros)", () => {
       contraoferta: { valor: "3300", moneda: "UF" },
     });
     assert.match(texto, /^Comunicar la respuesta del dueño al oferente/);
-    assert.match(texto, /3300 UF/);
+    assert.match(texto, /contraofertó 3\.300 UF a la oferta de 3\.000 UF de Ana/);
   });
 });
 

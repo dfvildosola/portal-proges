@@ -39,6 +39,11 @@ export async function cambiarEspera(_anterior: ResultadoAccion | null, datos: Fo
   );
 }
 
+/** Confirma un servicio de la carga inicial: desde ahí el dueño lo ve en su portal. */
+export async function confirmarServicio(servicioId: string): Promise<ResultadoAccion> {
+  return ejecutar(() => llamar("POST", `${rutaDe(servicioId)}/confirmar`), { revalidar: pantallas(servicioId) });
+}
+
 /** Da el servicio por terminado o lo cancela, con su motivo. */
 export async function cerrarServicio(_anterior: ResultadoAccion | null, datos: FormData): Promise<ResultadoAccion> {
   const servicioId = textoDe(datos, "servicioId");

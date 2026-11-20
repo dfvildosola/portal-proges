@@ -357,3 +357,32 @@ servicios.openapi(
     return c.json(await fichaParaEquipo(id, hoyChile()), 200);
   },
 );
+
+// ---------------------------------------------------------------------------
+// Confirmar un servicio de la carga inicial
+// ---------------------------------------------------------------------------
+
+// Los servicios que se dedujeron de la carga inicial (las planillas de antes del portal) quedan «por
+// confirmar»: el dueño no los ve hasta que alguien del equipo revisa que de verdad están en curso.
+servicios.openapi(
+  createRoute({
+    method: "post",
+    path: "/servicios/{id}/confirmar",
+    tags: ["Servicios"],
+    summary: "Confirmar un servicio de la carga inicial",
+    description:
+      "Solo el equipo. Un servicio deducido de la carga inicial queda «por confirmar» y el dueño no lo ve; al confirmarlo, el dueño lo ve en su portal. Si ya estaba confirmado, no cambia nada.",
+    request: { params: ParamId },
+    responses: { 200: json(ServicioEquipo, "La ficha ya confirmada."), ...errores(401, 403, 404) },
+  }),
+  async (c) => {
+    const quien = c.get("quien");
+    exigirEquipo(quien);
+    const { id } = c.req.valid("param");
+    const s = await db.servicioEnCurso.findUnique({ where: { id }, select: { organizationId: true } });
+    const orgId = await espacioParaEscribirEn(quien, s?.organizationId);
+    if (!s) throw new ErrorApi(404, SERVICIO_NO_ENCONTRADO);
+    await db.servicioEnCurso.updateMany({ where: { id, organizationId: orgId }, data: { porConfirmar: false } });
+    return c.json(await fichaParaEquipo(id, hoyChile()), 200);
+  },
+);

@@ -4,10 +4,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { type EntradaDelDueno, estaActiva } from "./entradas-del-menu";
+import { entradasDelDueno, estaActiva } from "./entradas-del-menu";
 
-export function BarraInferiorDueno({ entradas }: { entradas: EntradaDelDueno[] }) {
+export function BarraInferiorDueno({ autonomo }: { autonomo: boolean }) {
   const ruta = usePathname();
+  const entradas = entradasDelDueno(autonomo);
   return (
     <nav
       aria-label="Menú principal"

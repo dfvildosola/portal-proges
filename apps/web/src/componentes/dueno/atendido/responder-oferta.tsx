@@ -56,7 +56,7 @@ function Contenido({ respuesta, datos, alAvisar }: { respuesta: Respuesta; datos
       <>
         <DialogoTitulo>Listo, avisamos a tu corredor</DialogoTitulo>
         <DialogoDescripcion>
-          Él le comunica tu respuesta a quien hizo la {datos.palabra}. Si hay novedades, las verás aquí.
+          Le comunicará tu respuesta a quien hizo la {datos.palabra}. Si hay novedades, las verás aquí.
         </DialogoDescripcion>
         <DialogoPie>
           <DialogoCerrar render={<Boton />}>Cerrar</DialogoCerrar>

@@ -1,6 +1,7 @@
 // Las pantallas del portal del dueño. El menú lateral (computador) y la barra de abajo (celular)
 // leen esta misma lista, para que nunca muestren cosas distintas. Vencimientos y Cartera son solo
-// del dueño autónomo, el que lleva su propia cartera.
+// del dueño autónomo, el que lleva su propia cartera. La lista la arma cada menú en el navegador:
+// los íconos son componentes, y un componente no puede viajar del servidor al navegador.
 import { Building2, CalendarClock, House, PlusCircle, Wallet, type LucideIcon } from "lucide-react";
 
 export type EntradaDelDueno = { href: string; texto: string; icono: LucideIcon };
