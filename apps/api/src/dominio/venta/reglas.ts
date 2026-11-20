@@ -87,7 +87,10 @@ export function exigirCambioPermitido(
       throw new ErrorApi(409, "Esta oferta ya se le mostró al dueño: el monto, la moneda y la fecha ya no se pueden cambiar.");
     }
   }
-  if (oferta.respuestaDueno !== null && cambio.estado !== undefined && cambio.estado !== oferta.estado) {
-    throw new ErrorApi(409, "El dueño ya respondió esta oferta: su estado ya no se puede cambiar.");
+  // Lo que el dueño respondió no se reescribe. La única salida es CAIDA: el oferente se echó atrás
+  // después de la respuesta (por ejemplo, el dueño aceptó y el comprador no firmó la promesa).
+  const cambiaEstado = cambio.estado !== undefined && cambio.estado !== oferta.estado;
+  if (oferta.respuestaDueno !== null && cambiaEstado && cambio.estado !== "CAIDA") {
+    throw new ErrorApi(409, "El dueño ya respondió esta oferta: su estado ya no se puede cambiar, salvo marcarla caída.");
   }
 }

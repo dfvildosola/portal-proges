@@ -147,3 +147,21 @@ test("reajuste: Decimal, redondeado a los decimales de su moneda", () => {
   assert.equal(m("10.05", 5, "UF"), "10.55"); // 10,5525 → 2 decimales
   assert.equal(m("1.005", 100, "UF"), "2.01"); // 2,01 exacto (con float, 1.005 * 2 y round daban 2)
 });
+
+test("los pagados se listan del pago más reciente al más antiguo, no por mes", async () => {
+  const viejo = await cobroDe(contratoA, e.ids.clienteA, "2026-07", {
+    estado: "PAGADO",
+    fechaPago: new Date("2026-11-19T00:00:00Z"),
+    montoPagado: "500000",
+  });
+  const nuevo = await cobroDe(contratoA, e.ids.clienteA, "2026-10", {
+    estado: "PAGADO",
+    fechaPago: new Date("2026-10-05T00:00:00Z"),
+    montoPagado: "500000",
+  });
+  const r = await e.pedir("clienteA", "GET", "/v1/cobros?estado=PAGADO");
+  assert.equal(r.estado, 200, JSON.stringify(r.cuerpo));
+  const ids = r.cuerpo.items.map((c: { id: string }) => c.id);
+  assert.ok(ids.indexOf(viejo.id) < ids.indexOf(nuevo.id), "el de julio pagado ayer va antes que el de octubre");
+  await db.rentCharge.deleteMany({ where: { id: { in: [viejo.id, nuevo.id] } } });
+});

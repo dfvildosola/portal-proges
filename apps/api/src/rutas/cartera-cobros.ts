@@ -31,6 +31,9 @@ export const cobros = nuevoRouter();
 
 const ParamId = z.object({ id: Id });
 const ORDEN = [{ periodo: "desc" }, { fechaVencimiento: "asc" }, { id: "asc" }] as const;
+// Al pedir solo los pagados, lo más reciente es lo último que se pagó: así un atrasado de hace meses
+// que se acaba de pagar queda arriba (la cartera del dueño muestra los últimos pagos para deshacer uno).
+const ORDEN_PAGADOS = [{ fechaPago: "desc" }, { periodo: "desc" }, { id: "asc" }] as const;
 
 cobros.openapi(
   createRoute({
@@ -39,7 +42,7 @@ cobros.openapi(
     tags: ["Cobros"],
     summary: "Lista de cobros de arriendo",
     description:
-      "Los cobros, del mes más reciente al más antiguo. Se puede filtrar por mes (`mes=2026-11`), por estado (el real de hoy: un cobro sin pagar que ya venció sale ATRASADO), propiedad o contrato. El equipo ve todos los clientes; un dueño o una llave, solo lo suyo.",
+      "Los cobros, del mes más reciente al más antiguo (con `estado=PAGADO`, del pago más reciente al más antiguo). Se puede filtrar por mes (`mes=2026-11`), por estado (el real de hoy: un cobro sin pagar que ya venció sale ATRASADO), propiedad o contrato. El equipo ve todos los clientes; un dueño o una llave, solo lo suyo.",
     request: { query: CobrosConsulta },
     responses: { 200: json(Pagina(Cobro), "Una página de cobros."), ...errores(400, 401) },
   }),
@@ -56,7 +59,12 @@ cobros.openapi(
     };
     const [total, filas] = await Promise.all([
       db.rentCharge.count({ where }),
-      db.rentCharge.findMany({ where, include: COBRO_INCLUYE, orderBy: [...ORDEN], ...paginar(q) }),
+      db.rentCharge.findMany({
+        where,
+        include: COBRO_INCLUYE,
+        orderBy: q.estado === "PAGADO" ? [...ORDEN_PAGADOS] : [...ORDEN],
+        ...paginar(q),
+      }),
     ]);
     return c.json(respuestaPagina(filas.map((f) => cobroParaDueno(f, hoy)), total, q), 200);
   },

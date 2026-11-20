@@ -106,6 +106,9 @@ describe("el corretaje y los servicios ocultos al dueño", () => {
     assert.match(r.cuerpo.error.mensaje, /ya respondió/);
     assert.equal((await db.oferta.findUniqueOrThrow({ where: { id: ofertaId } })).estado, "ACEPTADA");
     assert.equal((await e.pedir("equipo", "PATCH", ruta, { estado: "ACEPTADA" })).estado, 200);
+    // Si el comprador se echa atrás después de la respuesta, el equipo sí la marca caída.
+    assert.equal((await e.pedir("equipo", "PATCH", ruta, { estado: "CAIDA" })).estado, 200);
+    assert.equal((await db.oferta.findUniqueOrThrow({ where: { id: ofertaId } })).estado, "CAIDA");
   });
 
   test("una oferta que todavía no se muestra se corrige entera", async () => {

@@ -1,4 +1,5 @@
-// La pestaña «Arriendos» de la cartera: los contratos, los arrendatarios y los cobros del mes.
+// La pestaña «Arriendos» de la cartera: los cobros del mes (y los atrasados), los últimos pagos,
+// los contratos y los arrendatarios.
 // Pide todo a la API en paralelo; si algo falla, muestra el mensaje de la API en lugar de la lista.
 import Link from "next/link";
 import type { Arrendatario, Cobro, Contrato } from "@proges/contrato";
@@ -16,6 +17,7 @@ import { FormularioContrato } from "./formulario-contrato";
 import { TarjetaContrato } from "./tarjeta-contrato";
 
 const GRANDE = { porPagina: 100 };
+const ULTIMOS_PAGOS = 10;
 
 export async function Arriendos({ hoy }: { hoy: string }) {
   const mes = hoy.slice(0, 7);
@@ -26,18 +28,23 @@ export async function Arriendos({ hoy }: { hoy: string }) {
       pedir<ListaDeApi<Arrendatario>>("/v1/arrendatarios", { consulta: GRANDE }),
       pedir<ListaDeApi<Cobro>>("/v1/cobros", { consulta: { ...GRANDE, mes } }),
       pedir<ListaDeApi<Cobro>>("/v1/cobros/atrasados", { consulta: GRANDE }),
+      pedir<ListaDeApi<Cobro>>("/v1/cobros", { consulta: { estado: "PAGADO", porPagina: ULTIMOS_PAGOS } }),
       propiedadesDelDueno(),
     ]);
   } catch (error) {
     if (error instanceof ErrorDeApi) return <ErrorDeCarga mensaje={error.mensaje} />;
     throw error;
   }
-  const [contratos, arrendatarios, delMes, atrasados, propiedades] = datos;
+  const [contratos, arrendatarios, delMes, atrasados, pagados, propiedades] = datos;
 
   // Los atrasados de cualquier mes primero (los más viejos arriba) y después lo del mes; sin repetir
   // el cobro que está en las dos listas.
   const idsAtrasados = new Set(atrasados.items.map((c) => c.id));
   const cobros = [...atrasados.items, ...delMes.items.filter((c) => !idsAtrasados.has(c.id))];
+  // Los últimos pagados de otros meses: un atrasado que se marca pagado sale de la lista de arriba,
+  // y si fue un error tiene que quedar a la vista para deshacerlo.
+  const idsArriba = new Set(cobros.map((c) => c.id));
+  const ultimosPagos = pagados.items.filter((c) => !idsArriba.has(c.id));
 
   const activos = contratos.items.filter((c) => c.estado !== "TERMINADO");
   const terminados = contratos.items.filter((c) => c.estado === "TERMINADO");
@@ -56,6 +63,16 @@ export async function Arriendos({ hoy }: { hoy: string }) {
           </div>
         )}
       </Seccion>
+
+      {ultimosPagos.length > 0 && (
+        <Seccion titulo="Últimos pagos">
+          <div className="flex flex-col gap-2">
+            {ultimosPagos.map((cobro) => (
+              <FilaCobro key={cobro.id} cobro={cobro} hoy={hoy} />
+            ))}
+          </div>
+        </Seccion>
+      )}
 
       <Seccion
         titulo="Contratos"

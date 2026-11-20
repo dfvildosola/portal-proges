@@ -240,7 +240,7 @@ venta.openapi(
     summary: "Corregir una oferta o cambiar su estado",
     description:
       "Solo el equipo. Se manda solo lo que cambia. Cambiar el estado no mueve nada más del servicio: eso lo decide una persona. " +
-      "Una vez que la oferta se le mostró al dueño, el monto, la moneda y la fecha ya no se cambian (409): lo que el dueño vio es lo que respondió. Una vez que el dueño la respondió, tampoco el estado.",
+      "Una vez que la oferta se le mostró al dueño, el monto, la moneda y la fecha ya no se cambian (409): lo que el dueño vio es lo que respondió. Una vez que el dueño la respondió, el estado solo puede pasar a CAIDA (el oferente se echó atrás).",
     request: { params: conId, body: cuerpo(VentaOfertaCambiar) },
     responses: { 200: json(VentaOfertaEquipo, "La oferta corregida."), ...errores(400, 401, 403, 404, 409) },
   }),
