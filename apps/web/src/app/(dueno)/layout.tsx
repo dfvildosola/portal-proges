@@ -21,7 +21,11 @@ export default async function LayoutDelDueno({ children }: { children: React.Rea
       <MenuLateralDueno cliente={quien.cliente.nombre} autonomo={autonomo} />
       <div className="flex min-w-0 flex-col">
         <CabeceraDueno cliente={quien.cliente.nombre} persona={persona} />
-        <main className="flex-1 px-4 pt-4 pb-28 lg:px-6 lg:pt-5 lg:pb-10">{children}</main>
+        {/* En pantallas grandes el contenido no pasa de 1280 px y queda centrado: más ancho, las
+            filas se estiran y cuesta seguirlas con la vista. */}
+        <main className="flex-1 px-4 pt-4 pb-28 lg:px-6 lg:pt-5 lg:pb-10">
+          <div className="mx-auto w-full max-w-[1280px]">{children}</div>
+        </main>
       </div>
       <BarraInferiorDueno autonomo={autonomo} />
     </div>

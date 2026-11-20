@@ -19,7 +19,11 @@ export default async function LayoutDelEquipo({ children }: { children: React.Re
       <MenuLateral verResultados={jefatura || admin} />
       <div className="flex min-w-0 flex-col">
         <Cabecera nombre={quien.usuario.nombre} rol={rol} />
-        <main className="flex-1 px-4 pt-4 pb-28 lg:px-6 lg:pt-5 lg:pb-10">{children}</main>
+        {/* En pantallas grandes el contenido no pasa de 1280 px y queda centrado: más ancho, las
+            filas se estiran y cuesta seguirlas con la vista. */}
+        <main className="flex-1 px-4 pt-4 pb-28 lg:px-6 lg:pt-5 lg:pb-10">
+          <div className="mx-auto w-full max-w-[1280px]">{children}</div>
+        </main>
       </div>
       <BarraInferior />
     </div>

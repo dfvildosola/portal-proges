@@ -27,8 +27,9 @@ export default async function Pagina({ searchParams }: { searchParams: Promise<{
   // primero que la API propone.
   const elegidoAlInicio = opciones.find((o) => o.id === servicioPedido)?.id ?? deSugeridos[0]?.id ?? null;
 
+  // Anotar se piensa para el celular y una mano: en computador va en una columna angosta, no a lo ancho.
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex max-w-xl flex-col gap-5">
       <EncabezadoDePagina titulo="Anotar" subtitulo="Una nota con fotos, para que quede en la bitácora del servicio." />
       <FormularioDeNota opciones={opciones} elegidoAlInicio={elegidoAlInicio} errorDeBusqueda={abiertos.error} />
     </div>
