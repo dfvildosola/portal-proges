@@ -1,0 +1,630 @@
+<title>Proges: tres caminos</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: arriba el mapa de las tres miradas; luego una ventana de computador navegable; luego el celular; al final la respuesta. */
+:root{
+  --bg:#f3f5f6; --fg:#14202b; --soft:#56636e; --line:#dbe1e5; --card:#ffffff; --side:#14202b; --sidefg:#c9d4dc;
+  --ink:#1f4e6e; --ink-soft:#e7eef4; --ok:#2f7d5b; --ok-soft:#e3f1ea; --warn:#a8691a; --warn-soft:#fbefdc;
+  --bad:#b4412f; --bad-soft:#f8e5e1; --phone:#0f1820; --scr:#f7f9fa;
+  --sans:"Plus Jakarta Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111a22; --fg:#eef2f4; --soft:#9aa6af; --line:#2a3741; --card:#18242e; --side:#0b1218; --sidefg:#9fb0bd;
+  --ink:#8eb6d3; --ink-soft:#1d3344; --ok:#6fbf98; --ok-soft:#173329; --warn:#e0a85a; --warn-soft:#3a2c17;
+  --bad:#e88a77; --bad-soft:#3d211c; --phone:#000; --scr:#141f28; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111a22; --fg:#eef2f4; --soft:#9aa6af; --line:#2a3741; --card:#18242e; --side:#0b1218; --sidefg:#9fb0bd;
+  --ink:#8eb6d3; --ink-soft:#1d3344; --ok:#6fbf98; --ok-soft:#173329; --warn:#e0a85a; --warn-soft:#3a2c17;
+  --bad:#e88a77; --bad-soft:#3d211c; --phone:#000; --scr:#141f28; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:46px}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:0;font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:21px;margin:0 0 4px;font-weight:800;letter-spacing:-.01em;text-wrap:balance}
+.lede{color:var(--soft);max-width:70ch;margin:8px 0 0}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+.hint{font-size:12.5px;color:var(--soft)}
+/* mapa de miradas */
+.lenses{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:16px}
+@media (max-width:860px){.lenses{grid-template-columns:1fr 1fr}}
+@media (max-width:480px){.lenses{grid-template-columns:1fr}}
+.lens{all:unset;cursor:pointer;background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.lens:hover,.lens:focus-visible{border-color:var(--ink)}
+.lens .t{font-weight:800;font-size:16px}
+.lens .q{font-size:13px;color:var(--soft)}
+.lens .dev{display:flex;gap:5px;flex-wrap:wrap;margin-top:auto}
+.core{margin-top:10px;background:var(--ink);color:var(--card);border-radius:14px;padding:12px 16px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-weight:700;font-size:14px}
+.core span.ar{opacity:.6}
+.core .lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;width:100%}
+/* tags */
+.tag{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap;display:inline-block}
+.tag.bad{background:var(--bad-soft);color:var(--bad)} .tag.warn{background:var(--warn-soft);color:var(--warn)}
+.tag.ok{background:var(--ok-soft);color:var(--ok)} .tag.ink{background:var(--ink-soft);color:var(--ink)} .tag.mut{background:var(--line);color:var(--soft)}
+/* ventana de computador */
+.winbox{overflow-x:auto;margin-top:14px;border-radius:14px}
+.win{width:1120px;height:700px;border-radius:14px;border:1px solid var(--line);background:var(--scr);display:grid;grid-template-rows:34px 1fr;overflow:hidden;box-shadow:0 22px 50px -26px rgba(0,0,0,.4)}
+.chrome{display:flex;align-items:center;gap:8px;padding:0 12px;background:var(--card);border-bottom:1px solid var(--line)}
+.chrome i{width:10px;height:10px;border-radius:50%;background:var(--line);display:block}
+.chrome .url{margin-left:14px;font-family:var(--mono);font-size:11.5px;color:var(--soft);background:var(--bg);padding:3px 12px;border-radius:7px}
+.app{display:grid;grid-template-columns:196px 1fr;min-height:0}
+.sb{background:var(--side);color:var(--sidefg);padding:16px 10px;display:flex;flex-direction:column;gap:3px}
+.sb .logo{color:#fff;font-weight:800;font-size:17px;padding:0 8px 14px;letter-spacing:-.02em}
+.sb button{all:unset;cursor:pointer;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:8px;display:flex;justify-content:space-between;align-items:center}
+.sb button:hover{background:rgba(255,255,255,.06)}
+.sb button[aria-current="true"]{background:rgba(255,255,255,.12);color:#fff}
+.sb button:focus-visible{outline:2px solid var(--ink)}
+.sb .n{font-size:11px;font-family:var(--mono);background:rgba(255,255,255,.12);padding:0 6px;border-radius:6px}
+.sb .grp{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;opacity:.55;padding:12px 10px 4px}
+.sb .me{margin-top:auto;font-size:12px;padding:8px 10px;opacity:.8}
+.main{overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.top .h{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.top .s{font-size:12.5px;color:var(--soft)}
+.flt{display:flex;gap:6px}
+.flt span{font-size:12px;font-weight:600;padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card)}
+.kp{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.k{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.k .n{font-size:26px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.k .l{font-size:12px;color:var(--soft)}
+.cols{display:grid;gap:14px;min-height:0}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.panel h4{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);display:flex;justify-content:space-between}
+.it{border:1px solid var(--line);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:2px;background:var(--scr)}
+.it.tap{cursor:pointer} .it.tap:hover{border-color:var(--ink)}
+.it .tt{font-weight:700;font-size:13.5px;line-height:1.3}
+.it .mt{font-size:12px;color:var(--soft)}
+.rw{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.av{width:22px;height:22px;border-radius:50%;background:var(--ink-soft);color:var(--ink);font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.btn{all:unset;cursor:pointer;text-align:center;background:var(--ink);color:var(--card);font-weight:700;font-size:12.5px;padding:7px 12px;border-radius:9px}
+.btn.gh{background:transparent;color:var(--ink);border:1.5px solid var(--ink)}
+.bars{display:flex;flex-direction:column;gap:7px}
+.br{display:grid;grid-template-columns:110px 1fr 40px;gap:8px;align-items:center;font-size:12.5px}
+.br .b{height:12px;border-radius:6px;background:var(--line);overflow:hidden;display:flex}
+.br .b i{display:block;height:100%}
+.br .v{text-align:right;font-family:var(--mono);font-size:12px}
+.lane{background:var(--bg);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.lane h5{margin:0;font-size:12.5px;display:flex;justify-content:space-between}
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+table.t th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+table.t td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.t tr.tap{cursor:pointer} table.t tr.tap:hover td{background:var(--ink-soft)}
+table.t tr.sel td{background:var(--ink-soft)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.track{display:flex;flex-direction:column}
+.st{display:grid;grid-template-columns:18px 1fr;gap:9px;position:relative;padding-bottom:12px}
+.st:before{content:"";position:absolute;left:8px;top:16px;bottom:0;width:2px;background:var(--line)}
+.st:last-child:before{display:none}
+.dot{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);background:var(--card);margin-top:2px}
+.dot.ok{background:var(--ok);border-color:var(--ok)} .dot.warn{background:var(--warn);border-color:var(--warn)} .dot.ink{background:var(--ink);border-color:var(--ink)}
+.st .tt{font-size:13px;font-weight:700} .st .mt{font-size:12px;color:var(--soft)}
+.photo{border-radius:9px;background:linear-gradient(135deg,var(--ink-soft),var(--line));display:flex;align-items:flex-end;padding:6px 8px;font-size:11px;font-weight:700;color:var(--ink)}
+.prog{display:flex;height:7px;border-radius:4px;background:var(--line);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--ok)}
+.wait{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:9px 12px;font-weight:700;font-size:13px}
+.chk{width:16px;height:16px;border-radius:50%;border:2px solid var(--soft);flex:none;display:inline-block}
+.chk.done{background:var(--ok);border-color:var(--ok)}
+svg text{fill:var(--soft);font-family:var(--mono);font-size:10.5px}
+.demo{font-size:11.5px;color:var(--warn);font-weight:700}
+.who{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.who button{all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--card)}
+.who button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.who button:focus-visible{outline:3px solid var(--ink)}
+/* celular */
+.mob{display:grid;grid-template-columns:330px minmax(0,1fr);gap:28px;align-items:start;margin-top:14px}
+@media (max-width:820px){.mob{grid-template-columns:1fr;justify-items:center}.mob>.box{justify-self:stretch}}
+.phone{width:310px;max-width:100%;height:620px;border-radius:40px;background:var(--phone);padding:11px;box-shadow:0 18px 40px -18px rgba(0,0,0,.45)}
+.scr{height:100%;border-radius:30px;background:var(--scr);overflow:hidden;display:flex;flex-direction:column;position:relative}
+.pbar{display:flex;justify-content:space-between;padding:10px 20px 4px;font-size:11px;font-weight:700;font-family:var(--mono)}
+.pbody{flex:1;overflow-y:auto;padding:4px 14px 14px;display:flex;flex-direction:column;gap:9px}
+.pnav{display:flex;justify-content:space-around;border-top:1px solid var(--line);padding:8px 4px 14px;background:var(--card)}
+.pnav button{all:unset;cursor:pointer;font-size:10px;font-weight:600;color:var(--soft);display:flex;flex-direction:column;align-items:center;gap:2px}
+.pnav button i{width:20px;height:20px;border-radius:6px;background:var(--line);display:block}
+.pnav button[aria-current="true"]{color:var(--ink)} .pnav button[aria-current="true"] i{background:var(--ink)}
+.c{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.c.tap{cursor:pointer}
+.c .tt{font-weight:700;font-size:13.5px;line-height:1.3} .c .mt{font-size:11.5px;color:var(--soft)}
+.sec{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--soft);margin-top:4px;display:flex;justify-content:space-between}
+.fab{position:absolute;right:16px;bottom:74px;background:var(--ink);color:var(--card);font-weight:700;font-size:13px;padding:11px 16px;border-radius:999px;cursor:pointer}
+.ph-h{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.input{border:1.5px dashed var(--line);border-radius:12px;padding:10px;font-size:12.5px;color:var(--soft);background:var(--card)}
+.ppl{display:flex;gap:5px;flex-wrap:wrap}
+.ppl span{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:var(--scr)}
+.ppl span.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.box h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--soft)}
+.box ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+/* respuesta */
+.olds{display:flex;flex-direction:column;gap:8px}
+.old{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.old .n{font-weight:700} .old .w{font-size:12.5px;color:var(--soft)}
+.opt{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.opt button{all:unset;cursor:pointer;font-size:12px;font-weight:700;padding:5px 9px;border-radius:7px;color:var(--soft)}
+.opt button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.opt button:focus-visible{outline:2px solid var(--ink)}
+@media (max-width:560px){.old{grid-template-columns:1fr}}
+textarea{width:100%;min-height:80px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);font:inherit;padding:10px 12px}
+pre.out{white-space:pre-wrap;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-family:var(--mono);font-size:12.5px;margin:0;max-height:320px;overflow:auto}
+.copy{all:unset;cursor:pointer;align-self:flex-start;background:var(--ink);color:var(--card);font-weight:700;padding:11px 18px;border-radius:12px}
+.copy:focus-visible{outline:3px solid var(--fg)}
+.ans{display:flex;flex-direction:column;gap:12px}
+.ok-msg{font-size:13px;color:var(--ok);font-weight:700}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Proges · rediseño desde cero · maqueta v2</div>
+  <h1>Un portal, tres miradas</h1>
+  <p class="lede">Las tres ideas de la v1 conviven: son tres formas de mirar lo mismo, como en una empresa de despachos, donde el repartidor mira su ruta del día, el jefe el tablero de todos los envíos y el cliente el seguimiento de su paquete. Los envíos son los mismos. Aquí se decide qué mirada abre cada persona en cada aparato. Toca una mirada para verla.</p>
+  <div class="lenses" id="lenses"></div>
+  <div class="core"><span class="lbl">Por dentro es una sola cosa</span>Propiedad <span class="ar">→</span> sus servicios <span class="ar">→</span> tareas, notas con fotos y «esperando a…» <span class="ar">·</span> la obra con su maestro, presupuesto y facturas de Odoo</div>
+</header>
+
+<section>
+  <h2>Dos tipos de dueño, la misma ficha</h2>
+  <p class="lede">Lo que Proges hace es difícil de salir a vender; lo que se vende es el portal. El dueño lleva gratis el control de sus propiedades, y cuando algo le falta, se lo pide a Proges desde ahí. Toca un tipo de dueño para verlo en el computador.</p>
+  <div class="cols" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:14px">
+   <button class="lens" data-dwho="due" data-jump="1"><span class="eyebrow">Cliente grande · NPL y 2 o 3 más</span><span class="t">Proges hace todo, el dueño mira</span><span class="q">El equipo anota cada servicio, documento y reparación. El dueño ve su cartera, el avance y los reportes, y pide servicios nuevos.</span></button>
+   <button class="lens" data-dwho="aut" data-jump="1"><span class="eyebrow">Dueño que se registra solo · plan gratuito</span><span class="t">El dueño lleva su control y pide ayuda</span><span class="q">Registra sus propiedades y anota arriendos, gastos, contribuciones y documentos. Cada aviso trae su botón «que Proges lo haga».</span></button>
+   <div class="panel" style="justify-content:center"><div class="eyebrow">Los dos terminan en el mismo lugar</div><div style="font-size:14px;font-weight:700;line-height:1.5">Ficha de la propiedad <span style="color:var(--soft)">→</span> «Pedir a Proges» <span style="color:var(--soft)">→</span> «Entró nuevo» en el inicio de Cecilia</div><div class="mt" style="font-size:12.5px;color:var(--soft)">Cada dato de la ficha dice quién lo anotó: el dueño o Proges. Hasta dónde llega el plan gratuito se decide después.</div></div>
+  </div>
+</section>
+
+<section>
+  <h2>En el computador</h2>
+  <p class="lede">Para la gestión de oficina, repartir y mirar resultados. Navega con el menú de la izquierda; las tarjetas y filas se pueden tocar. Cambia de persona para ver qué ve cada uno.</p>
+  <div class="who" id="dwho"></div>
+  <div class="winbox"><div class="win"><div class="chrome"><i></i><i></i><i></i><span class="url" id="url">portal.proges.cl/inicio</span></div><div class="app"><nav class="sb" id="sb"></nav><div class="main" id="dmain"></div></div></div></div>
+  <p class="hint" style="margin-top:8px">Nombres del equipo, montos y números de Resultados son de ejemplo: hoy esos datos no existen y se llenan cuando el equipo use el portal.</p>
+</section>
+
+<section>
+  <h2>En el celular</h2>
+  <p class="lede">Para terreno: qué me toca hoy, anotar con foto en diez segundos y contestar «¿a quién esperamos?». Lo mismo que el computador, con menos cosas.</p>
+  <div class="mob">
+    <div><div class="phone"><div class="scr" id="ph"></div></div></div>
+    <div class="box"><h3>Cómo conviven los dos</h3><ul>
+      <li><b>Celular abre en «Hoy»</b>: la ruta del día de cada uno. Marcar hecha es un toque; anotar con foto, dos.</li>
+      <li><b>Computador abre en «Inicio»</b>: lo nuevo, lo trabado y cómo va el equipo. De ahí al tablero de servicios o a una propiedad.</li>
+      <li><b>La ficha de la propiedad y la del servicio son las mismas</b> en los dos aparatos; el computador las muestra con más columnas.</li>
+      <li><b>«Esperando a…»</b> es un dato del servicio (conservador, notaría, maestro, dueño), no una lista de pasos: no obliga a definir hoy cómo es cada trámite. Los pasos fijos pueden venir después, cuando se repitan.</li>
+      <li><b>Resultados</b> es solo de computador: lo miran Álvaro y Diego.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section>
+  <h2>Lo de antes: qué queda</h2>
+  <p class="lede">Las pantallas que ya existen, con mi recomendación marcada. «Se esconde» quiere decir que sale del menú y vive dentro de la ficha o en Resultados; «se borra», que sale de la pantalla, pero sus datos quedan.</p>
+  <div class="olds" id="olds" style="margin-top:12px"></div>
+</section>
+
+<section>
+  <h2>Un solo nombre</h2>
+  <p class="lede">Hoy la pantalla dice «servicio» y «proyecto» para lo mismo. La maqueta usa «servicio».</p>
+  <div class="olds" id="nombre" style="margin-top:12px"></div>
+</section>
+
+<section class="ans">
+  <h2>Tu respuesta</h2>
+  <p class="lede" style="margin-top:0">Marca cada pantalla, escribe lo que cambiarías y copia. Con esto armo la v3 o, si ya te gusta, el plan para construirla.</p>
+  <div class="olds" id="screens"></div>
+  <label for="coment" class="eyebrow">Comentarios</label>
+  <textarea id="coment" placeholder="Qué cambiarías, qué falta, qué no se entiende…"></textarea>
+  <pre class="out" id="out"></pre>
+  <button class="copy" id="copy">Copiar respuesta</button>
+  <span class="ok-msg" id="okmsg" hidden>Copiado. Pégalo en el chat.</span>
+</section>
+
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const S={dwho:"ger", dv:"inicio", prop:0, ptab:"res", hf:"todo", rep:"r1", srv:"rep", ph:"hoy", olds:{}, nombre:"servicio", scr:{}};
+
+const LENSES=[
+ ["hoy","Hoy","¿Qué me toca a mí hoy?",["Celular: puerta de entrada"],"ph"],
+ ["servicios","Tablero de servicios","¿Quién tiene la pelota en cada servicio? ¿Qué está trabado?",["Computador: el día a día de Cecilia"],"d"],
+ ["ficha","Ficha de la propiedad","Su historia clínica: datos, ubicación, documentos, cada reparación con su costo y todo lo que se le hizo.",["Los dos aparatos","El dueño ve la misma"],"d"],
+ ["venta","Corretaje","¿Cómo va la venta? Anuncios, visitas, ofertas y precio, para el equipo y como reporte al dueño.",["Computador","El dueño lo sigue"],"d"],
+ ["resultados","Resultados","¿Cómo vamos? ¿Dónde se va el tiempo y la plata?",["Computador: Álvaro y Diego"],"d"],
+];
+
+/* ---------- datos de ejemplo ---------- */
+const PROPS=[
+ {dir:"Agustinas 715, of. 706",cli:"NPL",srv:"Reparación",est:["warn","Esperando a: maestro"],ult:"Hoy · se recibió el baño"},
+ {dir:"Los Leones 1240, depto 52",cli:"NPL",srv:"Toma de posesión",est:["warn","Esperando a: conservador · 13 d"],ult:"Ayer · reparo del conservador"},
+ {dir:"José de Moraleda 4510",cli:"Piloto",srv:"Venta",est:["ink","Nos toca"],ult:"Lun · 2 visitas"},
+ {dir:"Av. Portales Oriente 1820",cli:"Piloto",srv:"Regularización",est:["bad","Esperando a: municipalidad · 18 d"],ult:"1 nov · ingreso DOM"},
+ {dir:"Huérfanos 1160, depto 1203",cli:"NPL",srv:"Toma de posesión",est:["mut","Nuevo · sin repartir"],ult:"Ayer · pidió el cliente"},
+];
+const LANES=[
+ ["Nuevo",[["Toma de posesión","Huérfanos 1160, depto 1203","NPL","—","pidió el cliente ayer",""],["Filtración en baño","Agustinas 715, of. 706","NPL","—","llamó el arrendatario",""]]],
+ ["Nos toca",[["Venta","José de Moraleda 4510","Piloto","PÍ","mostrar hoy 17:30",""],["Toma de posesión","Bilbao 2210","NPL","MA","visitar y fotografiar",""],["Arriendo","Providencia 1650, depto 81","NPL","RO","publicar aviso",""]]],
+ ["Esperando a otro",[["Reparación","Agustinas 715, of. 706","NPL","PÍ","maestro · 3 d","warn"],["Toma de posesión","Los Leones 1240, depto 52","NPL","PÍ","conservador · 13 d","warn"],["Regularización","Av. Portales Oriente 1820","Piloto","CE","municipalidad · 18 d","bad"],["Venta","Vitacura 3300","Piloto","RO","dueño responde oferta · 2 d","warn"]]],
+ ["Por entregar",[["Reparación","Manuel Montt 940","NPL","MA","informe final al dueño",""]]],
+];
+
+/* ---------- pantallas de computador ---------- */
+const nav=()=>{
+ const items = S.dwho==="aut" ? [["inicio","Mis propiedades"],["venc","Vencimientos",4],["ficha","Ficha de una propiedad"],["pedir","Pedir a Proges"]]
+  : S.dwho==="due" ? [["inicio","Mis propiedades"],["servicios","Mis servicios"],["pedir","Pedir un servicio"]]
+  : [["inicio","Inicio"],["servicios","Servicios",14],["propiedades","Propiedades",47],["equipo","Equipo"],["G","Mirar"],["resultados","Resultados"],["G","Configuración"],["config","Maestros, clientes, equipo"]];
+ return `<div class="logo">Proges</div>`+items.map(([k,l,n])=>k==="G"?`<div class="grp">${l}</div>`:`<button data-dv="${k}" aria-current="${S.dv===k}">${l}${n?`<span class="n">${n}</span>`:""}</button>`).join("")+
+  `<div class="me">${S.dwho==="ger"?"Diego · gerencia":S.dwho==="ce"?"Cecilia":S.dwho==="aut"?"Carolina · plan gratuito":"NPL · dueño"}</div>`;
+};
+const card=(t,m,extra,go)=>`<div class="it ${go?'tap':''}" ${go?`data-dv="${go}"`:""}><div class="rw"><span class="tt">${t}</span>${extra||""}</div><span class="mt">${m}</span></div>`;
+
+const D={
+ inicio:()=>{
+  if(S.dwho==="due") return D.dueno();
+  if(S.dwho==="aut") return D.autonomo();
+  const ger=S.dwho==="ger";
+  return `<div class="top"><div><div class="h">${ger?"Buenos días, Diego":"Buenos días, Cecilia"}</div><div class="s">jueves 19 de noviembre</div></div><div class="flt"><span>Todos los clientes ▾</span></div></div>
+  <div class="kp">
+   <div class="k"><div class="n">14</div><div class="l">servicios en curso</div></div>
+   <div class="k"><div class="n">2</div><div class="l">entraron, sin repartir</div></div>
+   <div class="k"><div class="n" style="color:var(--warn)">6</div><div class="l">esperando a otro · 2 hace más de 10 días</div></div>
+   <div class="k"><div class="n" style="color:var(--bad)">3</div><div class="l">tareas atrasadas</div></div>
+  </div>
+  <div class="cols" style="grid-template-columns:1fr 1fr 1fr">
+   <div class="panel"><h4><span>Entró nuevo</span><span>2</span></h4>
+    ${card("Toma de posesión","Huérfanos 1160, depto 1203 · NPL · pidió el cliente ayer",'<button class="btn" data-dv="equipo">Repartir</button>')}
+    ${card("Filtración en baño","Agustinas 715, of. 706 · NPL · llamó el arrendatario",'<button class="btn" data-dv="equipo">Repartir</button>')}
+   </div>
+   <div class="panel"><h4><span>Trabado</span><span>4</span></h4>
+    ${card("Regularización · Portales Oriente 1820","esperando a municipalidad",'<span class="tag bad">18 d</span>',"servicios")}
+    ${card("Toma de posesión · Los Leones 1240","esperando a conservador",'<span class="tag warn">13 d</span>',"servicio")}
+    ${card("Pedir copia de inscripción","Pía · Los Leones 1240",'<span class="tag bad">2 d atrasada</span>')}
+    ${ger?card("Presupuesto maestro por aprobar","Agustinas 715 · Diseño y Espacios · $1.840.000",'<span class="tag ink">plata</span>',"servicio"):""}
+   </div>
+   <div class="panel"><h4><span>El equipo esta semana</span><span>abiertas · atrasadas</span></h4>
+    <div class="bars">${[["Pía",7,1],["Matías",4,0],["Cecilia",5,0],["Rocío",9,2]].map(([n,a,b])=>`<div class="br"><span>${n}</span><span class="b"><i style="width:${a*8}%;background:var(--ink)"></i><i style="width:${b*8}%;background:var(--bad)"></i></span><span class="v">${a+b}</span></div>`).join("")}</div>
+    <h4 style="margin-top:8px"><span>Lo último que se anotó</span></h4>
+    <div class="rw" style="gap:10px"><div class="photo" style="width:56px;height:44px;flex:none"></div><div><div style="font-size:13px;font-weight:700">Se recibió el baño: conforme</div><div class="mt" style="font-size:12px;color:var(--soft)">Pía · Agustinas 715 · 12:20 · lo ve el dueño</div></div></div>
+    <div class="rw" style="gap:10px"><div class="photo" style="width:56px;height:44px;flex:none"></div><div><div style="font-size:13px;font-weight:700">Conservador pide certificado de número</div><div class="mt" style="font-size:12px;color:var(--soft)">Matías · Los Leones 1240 · ayer</div></div></div>
+   </div>
+  </div>`},
+ servicios:()=>{
+  if(S.dwho==="due") return D.duenoServ();
+  return `<div class="top"><div><div class="h">Servicios</div><div class="s">Ordenados por quién tiene la pelota</div></div><div class="flt"><span>Cliente: todos ▾</span><span>Tipo: todos ▾</span><span>Persona: todas ▾</span></div></div>
+  <div class="cols" style="grid-template-columns:repeat(4,1fr);align-items:start">
+   ${LANES.map(([n,its])=>`<div class="lane"><h5><span>${n}</span><span class="tag mut">${its.length}</span></h5>${its.map(([t,d,c,p,m,w])=>`<div class="it tap" data-dv="${d.startsWith('José')?'venta':'servicio'}" style="background:var(--card)"><div class="rw"><span class="tt">${t}</span><span class="av">${p}</span></div><span class="mt">${d} · ${c}</span>${w?`<span class="tag ${w}" style="align-self:flex-start">esperando a ${m}</span>`:`<span class="mt"><b style="color:var(--fg)">${m}</b></span>`}</div>`).join("")}</div>`).join("")}
+  </div>`},
+ servicio:()=>`<div class="top"><div><div class="s"><a href="#" data-dv="servicios" style="color:var(--ink)">Servicios</a> / Reparación</div><div class="h">Reparación · Agustinas 715, of. 706</div><div class="s">NPL · responsable Pía · orden de Odoo S00047 · empezó el 16 nov</div></div><div class="flt"><button class="btn gh">Anotar</button><button class="btn">Ahora esperamos a…</button></div></div>
+  <div class="wait">Esperando a: maestro (Diseño y Espacios) para terminar cocina · desde el lun 16 · 3 días</div>
+  <div class="cols" style="grid-template-columns:1fr 1.25fr 1.1fr;align-items:start">
+   <div class="panel"><h4><span>Tareas</span><span>2 de 5</span></h4>
+    ${[["Aprobar presupuesto del maestro","Cecilia · 16 nov",1],["Comprar grifería","Pía · 18 nov",1],["Recibir baño con el maestro","Pía · hoy",0],["Recibir cocina","Pía · vie 21",0],["Informe final al dueño","Pía · lun 24",0]].map(([t,m,d])=>`<div class="rw" style="justify-content:flex-start;gap:9px"><span class="chk ${d?'done':''}"></span><div><div style="font-size:13px;font-weight:600">${t}</div><div style="font-size:11.5px;color:var(--soft)">${m}</div></div></div>`).join("")}
+    <div class="it" style="border-style:dashed;color:var(--soft);font-size:12.5px">+ tarea: qué, quién, para cuándo</div>
+   </div>
+   <div class="panel"><h4><span>Bitácora</span><span>lo marcado ✓ lo ve el dueño</span></h4>
+    <div class="track">
+     <div class="st"><span class="dot ok"></span><div><div class="tt">Se recibió el baño: grifería y sello conformes ✓</div><div class="mt">Pía · hoy 12:20</div><div class="rw" style="justify-content:flex-start;gap:6px;margin-top:4px"><div class="photo" style="width:70px;height:50px"></div><div class="photo" style="width:70px;height:50px"></div></div></div></div>
+     <div class="st"><span class="dot"></span><div><div class="tt">Faltaba la llave del medidor; vuelvo el lunes</div><div class="mt">Matías · vie 13 · interno</div></div></div>
+     <div class="st"><span class="dot ink"></span><div><div class="tt">Cecilia aprobó el presupuesto del maestro</div><div class="mt">lun 16 · automático</div></div></div>
+     <div class="st"><span class="dot"></span><div><div class="tt">Se enlazó la orden S00047 de Odoo</div><div class="mt">mié 11 · automático</div></div></div>
+    </div>
+   </div>
+   <div class="panel"><h4><span>Obra</span><span>solo equipo</span></h4>
+    <div class="rw"><span style="font-size:12.5px">Avance ponderado</span><b>70 %</b></div><div class="prog"><i style="width:70%"></i></div>
+    <table class="t"><tr><th>Partida</th><th class="num">Avance</th><th>Recepción</th></tr>
+     <tr><td>Baño: grifería y sello</td><td class="num">100 %</td><td><span class="tag ok">conforme</span></td></tr>
+     <tr><td>Cocina: muebles</td><td class="num">60 %</td><td><span class="tag mut">pendiente</span></td></tr>
+     <tr><td>Pintura general</td><td class="num">50 %</td><td><span class="tag mut">pendiente</span></td></tr></table>
+    <table class="t"><tr><th>Plata</th><th class="num">$</th></tr>
+     <tr><td>Al dueño (orden Odoo)</td><td class="num">2.650.000</td></tr>
+     <tr><td>Maestro aprobado</td><td class="num">1.840.000</td></tr>
+     <tr><td>Maestro facturado / pagado</td><td class="num">920.000 / 920.000</td></tr>
+     <tr><td><b>Margen esperado</b></td><td class="num"><b>810.000</b></td></tr></table>
+   </div>
+  </div>`,
+ propiedades:()=>`<div class="top"><div><div class="h">Propiedades</div><div class="s">47 en total · 9 con algo en curso</div></div><div class="flt"><span>Buscar dirección o rol…</span><span>Con algo en curso ▾</span><span>Cliente ▾</span><span>Comuna ▾</span></div></div>
+  <div class="panel" style="padding:6px 6px"><table class="t"><tr><th>Propiedad</th><th>Cliente</th><th>Tipo</th><th>Estado</th><th class="num">Servicios</th><th>Lo último</th></tr>
+    ${PROPS.map((x,i)=>`<tr class="${i===0?'tap':''}" ${i===0?'data-prop="0"':''}><td><b>${x.dir}</b>${i===0?' <span class="tag ink">abrir ficha</span>':''}</td><td>${x.cli}</td><td>${["Oficina","Depto","Casa","Local","Depto"][i]}</td><td><span class="tag ${x.est[0]}">${x.est[1]}</span></td><td class="num">${[4,2,3,1,1][i]}</td><td style="font-size:12px;color:var(--soft)">${x.ult}</td></tr>`).join("")}</table></div>
+  <p class="hint">En la maqueta, la ficha completa está armada solo para Agustinas 715.</p>`,
+ ficha:()=>{
+  const due=S.dwho==="due"||S.dwho==="aut";
+  const tabs=[["res","Resumen"],["hist","Historial"],["rep","Reparaciones"],["doc","Documentos"],["dat","Datos y ubicación"],["arr","Arriendo y venta"]];
+  const head=`<div class="top" style="align-items:flex-start"><div><div class="s"><a href="#" data-dv="${due?'inicio':'propiedades'}" style="color:var(--ink)">${due?'Mis propiedades':'Propiedades'}</a> / Agustinas 715, of. 706</div>
+    <div class="h">Agustinas 715, oficina 706</div><div class="s">Santiago Centro · oficina 48 m² · piso 7 · rol 123-45 · dueño NPL · en Proges desde jun 2026</div>
+    <div class="rw" style="justify-content:flex-start;gap:6px;margin-top:6px"><span class="tag warn">En reparación</span><span class="tag mut">Desocupada</span><span class="tag mut">No administrada</span>${due?'<span class="tag ink">Vista del dueño</span>':''}</div></div>
+    <div class="photo" style="width:150px;height:92px;flex:none">Foto de fachada</div></div>
+   <div class="flt" style="border-bottom:1px solid var(--line);padding-bottom:8px">${tabs.map(([k,l])=>`<button class="btn ${S.ptab===k?'':'gh'}" style="padding:6px 11px" data-ptab="${k}">${l}</button>`).join("")}</div>`;
+  return head+FT[S.ptab](due);
+ },
+ equipo:()=>`<div class="top"><div><div class="h">Repartir</div><div class="s">Semana del 17 al 21 de noviembre · arrastra una tarea a una persona</div></div></div>
+  <div class="cols" style="grid-template-columns:1fr repeat(4,1fr);align-items:start">
+   <div class="lane" style="background:var(--warn-soft)"><h5><span>Sin repartir</span><span class="tag warn">3</span></h5>
+    ${card("Pedir copias al conservador","Huérfanos 1160 · toma de posesión")}${card("Visitar y fotografiar","Huérfanos 1160")}${card("Ver filtración","Agustinas 715 · urgente",'<span class="tag bad">!</span>')}</div>
+   ${[["Pía",[["Recibir baño","Agustinas 715 · hoy"],["Copia inscripción","Los Leones · atrasada"],["Mostrar depto","Moraleda · hoy"]]],["Matías",[["Visitar Bilbao 2210","mañana"],["Notaría","Portales · vie"]]],["Cecilia",[["Aprobar presupuesto","Agustinas"],["Llamar DOM","Portales"]]],["Rocío",[["Publicar aviso","Providencia"],["Seguir oferta","Vitacura"],["Cobro arriendo","—"]]]].map(([n,ts])=>`<div class="lane"><h5><span>${n}</span><span class="tag mut">${ts.length}</span></h5>${ts.map(([t,m])=>`<div class="it" style="background:var(--card)"><span class="tt">${t}</span><span class="mt">${m}</span></div>`).join("")}</div>`).join("")}
+  </div>`,
+ resultados:()=>{
+  if(S.dwho!=="ger") return `<div class="top"><div class="h">Resultados</div></div><div class="panel"><div class="mt">Solo gerencia: Álvaro y Diego. <a href="#" data-dwho="ger" style="color:var(--ink)">Ver como gerencia</a></div></div>`;
+  const wk=[[3,2],[4,3],[2,4],[5,3],[3,3],[4,5],[6,4],[3,2]];
+  const W=470,H=170,bw=22,gap=(W-40)/8;
+  const bars=wk.map(([a,c],i)=>{const x=40+i*gap;return `<rect x="${x}" y="${H-20-a*20}" width="${bw}" height="${a*20}" rx="3" fill="var(--ink)"/><rect x="${x+bw+2}" y="${H-20-c*20}" width="${bw}" height="${c*20}" rx="3" fill="var(--ok)"/><text x="${x+bw}" y="${H-5}" text-anchor="middle">s${39+i}</text>`}).join("");
+  const grid=[0,2,4,6].map(v=>`<line x1="34" x2="${W}" y1="${H-20-v*20}" y2="${H-20-v*20}" stroke="var(--line)"/><text x="28" y="${H-16-v*20}" text-anchor="end">${v}</text>`).join("");
+  return `<div class="top"><div><div class="h">Resultados</div><div class="s">Últimos 90 días · <span class="demo">datos de ejemplo</span></div></div><div class="flt"><span>90 días ▾</span><span>Todos los clientes ▾</span></div></div>
+  <div class="kp">
+   <div class="k"><div class="n">23</div><div class="l">servicios cerrados</div></div>
+   <div class="k"><div class="n">22 d</div><div class="l">duración promedio</div></div>
+   <div class="k"><div class="n" style="color:var(--warn)">48 %</div><div class="l">del tiempo esperando a otros</div></div>
+   <div class="k"><div class="n">31 %</div><div class="l">margen de las obras</div></div>
+  </div>
+  <div class="cols" style="grid-template-columns:1fr 1fr">
+   <div class="panel"><h4><span>Servicios que entran y que se cierran, por semana</span></h4>
+    <svg viewBox="0 0 ${W+10} ${H}" width="100%" role="img" aria-label="Servicios por semana">${grid}${bars}</svg>
+    <div class="rw" style="justify-content:flex-start;gap:14px;font-size:12px"><span><span class="tag ink">■</span> entran</span><span><span class="tag ok">■</span> se cierran</span></div></div>
+   <div class="panel"><h4><span>Días promedio por tipo de servicio</span><span>trabajando · esperando a otros</span></h4>
+    <div class="bars">${[["Toma de posesión",10,12],["Regularización",14,26],["Reparación",19,6],["Venta",30,15],["Visita / recepción",2,1]].map(([n,a,b])=>`<div class="br" style="grid-template-columns:130px 1fr 40px"><span>${n}</span><span class="b"><i style="width:${a*2}%;background:var(--ink)"></i><i style="width:${b*2}%;background:var(--warn)"></i></span><span class="v">${a+b} d</span></div>`).join("")}</div>
+    <div class="mt" style="font-size:12px;color:var(--soft)">El amarillo sale de «esperando a…»: dice cuánto se va en conservadores, notarías y municipalidades.</div></div>
+   <div class="panel"><h4><span>Obras: costo del maestro, plan contra real</span><span>millones $</span></h4>
+    <div class="bars">${[["Agustinas 715",1.84,1.84],["Manuel Montt 940",3.1,3.55],["Bilbao 2210",0.9,0.86]].map(([n,p,r])=>`<div class="br" style="grid-template-columns:130px 1fr 70px"><span>${n}</span><span style="display:flex;flex-direction:column;gap:3px"><span class="b" style="height:7px"><i style="width:${p/4*100}%;background:var(--line);outline:1px solid var(--soft)"></i></span><span class="b" style="height:7px"><i style="width:${r/4*100}%;background:${r>p?'var(--bad)':'var(--ok)'}"></i></span></span><span class="v">${r.toFixed(2)} / ${p.toFixed(2)}</span></div>`).join("")}</div>
+    <div class="mt" style="font-size:12px;color:var(--soft)">Arriba lo aprobado, abajo lo facturado en Odoo. Rojo: se pasó.</div></div>
+   <div class="panel"><h4><span>Tareas hechas a tiempo, por persona</span></h4>
+    <div class="bars">${[["Pía",82],["Matías",91],["Cecilia",88],["Rocío",64]].map(([n,a])=>`<div class="br"><span>${n}</span><span class="b"><i style="width:${a}%;background:${a<70?'var(--warn)':'var(--ink)'}"></i></span><span class="v">${a} %</span></div>`).join("")}</div></div>
+  </div>`},
+ config:()=>`<div class="top"><div class="h">Configuración</div></div><div class="panel"><div class="mt">Maestros (proveedores de Odoo con su especialidad), clientes y sus usuarios, el equipo y quién es jefatura. Se usa poco; por eso queda al fondo del menú.</div></div>`,
+ dueno:()=>`<div class="top"><div><div class="h">Mis propiedades</div><div class="s">NPL · 6 propiedades · 3 con servicios en curso</div></div><button class="btn" data-dv="pedir">Pedir un servicio</button></div>
+  <div class="cols" style="grid-template-columns:repeat(3,1fr)">
+   <div class="panel" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:14px"><div class="photo" style="width:120px;height:70px;flex:none">José de Moraleda</div><div style="flex:1"><b>José de Moraleda 4510</b> <span class="tag ink">En venta · 78 días</span><div style="font-size:12.5px;margin-top:3px">UF 14.900 · 11 visitas · 2 ofertas · <b style="color:var(--warn)">una oferta espera tu respuesta</b></div></div><button class="btn" data-dv="venta">Ver reporte de venta</button></div>
+   ${[["Agustinas 715, of. 706","Reparación",70,"ok","Se recibió el baño (hoy)"],["Los Leones 1240, depto 52","Toma de posesión",50,"warn","El conservador pidió un documento"],["Huérfanos 1160, depto 1203","Toma de posesión",0,"mut","Recibido: lo estamos organizando"]].map(([d,s,a,t,u])=>`<div class="panel"><div class="photo" style="height:80px">${d}</div><b>${d}</b><span class="tag ${t}" style="align-self:flex-start">${s}</span><div class="prog"><i style="width:${a}%"></i></div><div style="font-size:12.5px">${u}</div><div class="flt"><button class="btn gh" data-dv="servicios">Seguimiento</button><button class="btn gh" data-prop="0">Ficha</button></div></div>`).join("")}
+  </div>
+  <div class="panel"><h4><span>Novedades</span><span>lo que el equipo marcó para ti</span></h4>
+   ${card("Se recibió el baño: grifería y sello conformes","Agustinas 715 · hoy 12:20 · 2 fotos")}
+   ${card("El conservador pide certificado de número. Lo pedimos hoy a la municipalidad.","Los Leones 1240 · ayer")}
+  </div>`,
+ autonomo:()=>`<div class="top"><div><div class="h">Hola, Carolina</div><div class="s">3 propiedades · las llevas tú · Proges te ayuda cuando lo pides</div></div><button class="btn" data-dv="pedir">Pedir a Proges</button></div>
+  <div class="kp">
+   <div class="k"><div class="n">2 de 3</div><div class="l">arriendos de noviembre pagados</div></div>
+   <div class="k"><div class="n">$1.180.000</div><div class="l">arriendos del mes</div></div>
+   <div class="k"><div class="n">$214.000</div><div class="l">gastos del mes (comunes, contribuciones)</div></div>
+   <div class="k"><div class="n" style="color:var(--warn)">4</div><div class="l">vencimientos en 60 días</div></div></div>
+  <div class="cols" style="grid-template-columns:1.25fr 1fr;align-items:start">
+   <div class="panel"><h4><span>Lo que viene</span><a href="#" data-dv="venc" style="color:var(--ink);text-transform:none;letter-spacing:0">ver todos</a></h4>
+    ${[["Arriendo de Ñuñoa atrasado","Irarrázaval 3010, depto 402 · 6 días","bad","Que Proges cobre"],
+       ["Contrato de Providencia termina","Providencia 2133, depto 1105 · 31 ene · el arrendatario avisó que se va","warn","Que Proges busque arrendatario"],
+       ["Contribuciones, 4ª cuota","las 3 propiedades · 30 nov","warn",""],
+       ["Mantención anual del calefont","San Miguel · la última fue en dic 2025","mut","Pedir un maestro"]].map(([t,m,c,b])=>`<div class="it"><div class="rw"><span class="tt">${t}</span>${b?`<button class="btn gh" data-dv="pedir">${b}</button>`:`<span class="tag ${c}">anotado</span>`}</div><span class="mt">${m}</span></div>`).join("")}
+    <div class="mt" style="font-size:12px;color:var(--soft)">Cada aviso trae su botón para pedírselo a Proges: es la puerta de venta de los servicios.</div></div>
+   <div style="display:flex;flex-direction:column;gap:14px">
+    ${[["Irarrázaval 3010, depto 402","Ñuñoa · arrendado","bad","atrasado 6 d"],["Providencia 2133, depto 1105","Providencia · arrendado","ok","al día"],["Gran Avenida 5420","San Miguel · casa · arrendada","ok","al día"]].map(([d,m,t,e])=>`<div class="panel tap" data-dv="ficha" style="flex-direction:row;align-items:center;gap:12px;cursor:pointer"><div class="photo" style="width:70px;height:52px;flex:none"></div><div style="flex:1"><b>${d}</b><div class="mt" style="font-size:12px;color:var(--soft)">${m}</div></div><span class="tag ${t}">${e}</span></div>`).join("")}
+    <div class="it" style="border-style:dashed;color:var(--soft)">+ Agregar una propiedad</div>
+   </div></div>`,
+ venc:()=>`<div class="top"><div><div class="h">Vencimientos</div><div class="s">Lo que antes era «Pendientes»: contratos, cobros, contribuciones, certificados y mantenciones</div></div></div>
+  <div class="panel" style="padding:6px"><table class="t"><tr><th>Cuándo</th><th>Qué</th><th>Propiedad</th><th></th></tr>
+   ${[["hace 6 d","Arriendo de noviembre sin pagar","Irarrázaval 3010","Que Proges cobre"],["30 nov","Contribuciones, 4ª cuota","las 3",""],["15 dic","Seguro de incendio se renueva","Gran Avenida 5420",""],["31 ene","Termina el contrato de arriendo","Providencia 2133","Que Proges busque arrendatario"],["mar 2027","Certificado de hipotecas: pedir uno nuevo antes de vender","Gran Avenida 5420","Que Proges lo consiga"]].map(([w,q,p,b])=>`<tr><td><b>${w}</b></td><td>${q}</td><td>${p}</td><td>${b?`<button class="btn gh" data-dv="pedir">${b}</button>`:''}</td></tr>`).join("")}</table></div>`,
+ duenoServ:()=>`<div class="top"><div><div class="h">Toma de posesión · Los Leones 1240, depto 52</div><div class="s">A cargo de Proges · empezó el 3 nov</div></div></div>
+  <div class="wait">Ahora esperamos al Conservador de Bienes Raíces de Santiago, desde el 6 nov</div>
+  <div class="cols" style="grid-template-columns:1.2fr 1fr"><div class="panel"><h4><span>Seguimiento</span></h4><div class="track">
+   <div class="st"><span class="dot ok"></span><div><div class="tt">Copias pedidas</div><div class="mt">3 nov</div></div></div>
+   <div class="st"><span class="dot ok"></span><div><div class="tt">Ingresado al conservador</div><div class="mt">6 nov</div></div></div>
+   <div class="st"><span class="dot warn"></span><div><div class="tt">El conservador pidió un documento</div><div class="mt">18 nov · certificado de número · lo estamos pidiendo</div></div></div>
+   <div class="st"><span class="dot"></span><div><div class="tt">Inscripción</div></div></div>
+   <div class="st"><span class="dot"></span><div><div class="tt">Entrega de llaves</div></div></div></div>
+   <div class="mt" style="font-size:12px;color:var(--soft)">Estos hitos salen de las notas marcadas para el dueño y de cada «esperando a…».</div></div>
+   <div class="panel"><h4><span>Documentos</span></h4>${card("Copia de inscripción con vigencia","PDF · 3 nov")}${card("Carátula de ingreso CBR","PDF · 6 nov")}</div></div>`,
+ pedir:()=>`<div class="top"><div class="h">Pedir un servicio</div></div><div class="panel" style="max-width:520px"><div class="mt">Elige la propiedad (o agrega una nueva), el tipo de servicio y cuéntanos qué necesitas. Llega como «Entró nuevo» al inicio de Cecilia.</div><div class="flt"><span>Propiedad ▾</span><span>Tipo ▾</span></div><div class="it" style="min-height:70px;color:var(--soft)">Qué necesitas…</div><button class="btn" style="align-self:flex-start">Enviar pedido</button></div>`,
+};
+/* ---------- la ficha de la propiedad: como la ficha clínica de un paciente ---------- */
+const HIST=[
+ ["rep","19 nov 2026","Reparación · en curso","Se recibió el baño: grifería y sello conformes","Pía · 2 fotos",true],
+ ["rep","16 nov 2026","Reparación · en curso","Presupuesto del maestro aprobado (Diseño y Espacios)","Cecilia",false],
+ ["rep","11 nov 2026","Reparación · se abre","Pedido: filtración en baño y remodelación de cocina","orden Odoo S00047",true],
+ ["rep","22 ago 2026","Reparación · cerrada","Pintura completa y cambio de piso flotante · 18 días","recibida conforme · 31 fotos",true],
+ ["vis","2 ago 2026","Visita","Inspección de estado al recibir: humedad en muro del baño","Matías · 24 fotos",true],
+ ["pap","15 jul 2026","Toma de posesión · cerrada","Inscrita a nombre de NPL · 21 días (12 esperando al conservador)","Pía",true],
+ ["pap","24 jun 2026","Toma de posesión · se abre","Llega a la cartera: compra de NPL","escritura en notaría",true],
+];
+const REPS=[
+ {id:"r2",t:"Reparación nov 2026",est:["warn","en curso · 70 %"],maestro:"Diseño y Espacios",dias:"8 de 20",cob:2650000,cos:1840000,
+  ps:[["Baño","Cambio de grifería y sello de tina","conforme",2],["Cocina","Muebles bajos y cubierta","pendiente",0],["General","Pintura de cielos","pendiente",0]]},
+ {id:"r1",t:"Reparación ago 2026",est:["ok","cerrada"],maestro:"John Franco Vera",dias:"18 (plan 15)",cob:1420000,cos:980000,
+  ps:[["Living","Piso flotante 32 m²","conforme",12],["General","Pintura muros y cielos","conforme",14],["Baño","Tratamiento de humedad","conforme",5]]},
+];
+const CLP=n=>"$"+n.toLocaleString("es-CL");
+const FT={
+ res:due=>`<div class="kp">
+   <div class="k"><div class="n">4</div><div class="l">servicios desde jun 2026</div></div>
+   <div class="k"><div class="n">${CLP(4070000)}</div><div class="l">${due?'pagado en reparaciones':'cobrado al dueño en reparaciones'}</div></div>
+   <div class="k"><div class="n">${due?'2':CLP(2820000)}</div><div class="l">${due?'reparaciones':'costo de maestros'}</div></div>
+   <div class="k"><div class="n" style="color:var(--warn)">2</div><div class="l">alertas</div></div></div>
+  <div class="cols" style="grid-template-columns:1.2fr 1fr">
+   <div class="panel"><h4><span>Lo último</span><a href="#" data-ptab="hist" style="color:var(--ink);text-transform:none;letter-spacing:0">ver todo el historial</a></h4>
+    <div class="track">${HIST.slice(0,4).filter(h=>!due||h[5]).map(h=>`<div class="st"><span class="dot ${h[2].includes('curso')?'warn':'ok'}"></span><div><div class="mt">${h[1]} · ${h[2]}</div><div class="tt">${h[3]}</div></div></div>`).join("")}</div></div>
+   <div style="display:flex;flex-direction:column;gap:14px">
+    <div class="panel"><h4><span>Alertas</span></h4>
+     ${card("Recepción final municipal","no está en los documentos: pedirla a la DOM",due?'<button class="btn" data-dv="pedir">Que Proges la consiga</button>':'<span class="tag bad">falta</span>',null)}
+     ${card("Contribuciones","2ª cuota vence el 30 nov",'<span class="tag warn">11 d</span>',null)}</div>
+    <div class="panel"><h4><span>En curso</span></h4>${card("Reparación","esperando a maestro · 70 %",'<span class="tag ink">abrir</span>',due?null:"servicio")}</div>
+   </div></div>`,
+ hist:due=>{
+  const fs=[["todo","Todo"],["rep","Reparaciones"],["pap","Papeles"],["vis","Visitas"],["arr","Arriendo y venta"]];
+  const list=HIST.filter(h=>(S.hf==="todo"||h[0]===S.hf)&&(!due||h[5]));
+  return `<div class="flt">${fs.map(([k,l])=>`<span style="cursor:pointer;${S.hf===k?'background:var(--fg);color:var(--bg);border-color:var(--fg)':''}" data-hf="${k}">${l}</span>`).join("")}</div>
+  <div class="panel"><div class="track">${list.length?list.map(h=>`<div class="st"><span class="dot ${h[0]==='rep'?'ink':h[0]==='pap'?'ok':''}"></span><div><div class="mt">${h[1]} · ${h[2]}</div><div class="tt">${h[3]}</div><div class="mt">${h[4]}${!h[5]?' · interno':''}</div></div></div>`).join(""):'<div class="mt">Nada de este tipo todavía.</div>'}</div></div>
+  <p class="hint">Todo lo que Proges hizo en la propiedad, de más nuevo a más antiguo: cada servicio, cada nota con fotos y cada «esperando a…». ${due?'El dueño ve solo lo marcado para él.':'Las notas internas no las ve el dueño.'}</p>`},
+ rep:due=>{
+  const tot=REPS.reduce((a,r)=>({cob:a.cob+r.cob,cos:a.cos+r.cos}),{cob:0,cos:0});
+  const rec={Baño:[1840000*0.45+150000,0],Cocina:[1840000*0.4,0],Living:[620000,0],General:[1840000*0.15+210000,0]};
+  const mx=900000;
+  return `<div class="cols" style="grid-template-columns:1.6fr 1fr;align-items:start"><div class="panel" style="padding:6px">
+   <table class="t"><tr><th>Reparación</th><th>Maestro</th><th>Días</th><th class="num">${due?'Pagado':'Cobrado'}</th>${due?'':'<th class="num">Costo maestro</th><th class="num">Margen</th>'}</tr>
+   ${REPS.map(r=>`<tr class="tap" data-rep="${r.id}"><td><b>${r.t}</b> <span class="tag ${r.est[0]}">${r.est[1]}</span></td><td>${due?'—':r.maestro}</td><td>${r.dias}</td><td class="num">${CLP(r.cob)}</td>${due?'':`<td class="num">${CLP(r.cos)}</td><td class="num">${CLP(r.cob-r.cos)}</td>`}</tr>
+    ${S.rep===r.id?`<tr><td colspan="${due?4:6}" style="background:var(--bg)"><table class="t"><tr><th>Recinto</th><th>Qué se hizo</th><th>Recepción</th><th class="num">Fotos</th></tr>${r.ps.map(p=>`<tr><td>${p[0]}</td><td>${p[1]}</td><td><span class="tag ${p[2]==='conforme'?'ok':'mut'}">${p[2]}</span></td><td class="num">${p[3]}</td></tr>`).join("")}</table></td></tr>`:''}`).join("")}
+   <tr><td><b>Total</b></td><td></td><td></td><td class="num"><b>${CLP(tot.cob)}</b></td>${due?'':`<td class="num"><b>${CLP(tot.cos)}</b></td><td class="num"><b>${CLP(tot.cob-tot.cos)}</b></td>`}</tr></table>
+   <p class="hint" style="padding:0 8px">Toca una reparación para ver partida por partida qué se hizo y cómo se recibió.</p></div>
+   <div class="panel"><h4><span>${due?'Pagado':'Costo de maestros'} por recinto</span><span>desde jun 2026</span></h4>
+    <div class="bars">${Object.entries(rec).map(([n,[v]])=>`<div class="br" style="grid-template-columns:70px 1fr 80px"><span>${n}</span><span class="b"><i style="width:${v/mx*100}%;background:var(--ink)"></i></span><span class="v">${CLP(Math.round(v/1000)*1000)}</span></div>`).join("")}</div>
+    <div class="mt" style="font-size:12px;color:var(--soft)">El baño se ha reparado dos veces en cinco meses: la humedad volvió.</div></div></div>`},
+ doc:due=>{
+  const G=[["Dominio",[["Escritura de compraventa","jun 2026","ok","vigente"],["Inscripción de dominio con vigencia","15 jul 2026","ok","vigente"],["Certificado de hipotecas y gravámenes","15 jul 2026","warn","pedir nuevo si se vende"]]],
+   ["Municipales",[["Certificado de número","pedido 19 nov","warn","en trámite"],["Recepción final","—","bad","falta"],["Certificado de avalúo fiscal","2026","ok","vigente"]]],
+   ["Planos y técnicos",[["Plano de la planta","jun 2026","ok","—"]]],
+   ["Informes de Proges",[["Informe de estado al recibir","2 ago 2026","ok","24 fotos"],["Informe final reparación ago","22 ago 2026","ok","31 fotos"]]]];
+  return `<div class="cols" style="grid-template-columns:1fr 1fr">${G.map(([g,ds])=>`<div class="panel"><h4><span>${g}</span><span>${ds.length}</span></h4>${ds.map(([n,f,t,e])=>`<div class="it"><div class="rw"><span class="tt">${n}</span><span class="tag ${t}">${e}</span></div><span class="mt">${f} · PDF en la carpeta del Drive</span></div>`).join("")}</div>`).join("")}</div>
+  <p class="hint">Los archivos viven en la carpeta del Drive de la propiedad; la ficha los ordena y avisa lo que falta o vence.</p>`},
+ dat:due=>`<div class="cols" style="grid-template-columns:1fr 1.1fr;align-items:start">
+   <div class="panel"><h4><span>Datos</span>${due?'<span>puedes editarlos</span>':'<span>editar</span>'}</h4>
+    <table class="t">${[["Tipo","Oficina"],["Superficie","48 m² útiles"],["Piso","7"],["Edificio","Agustinas 715"],["Rol","123-45"],["Avalúo fiscal","$62.400.000"],["Estacionamiento / bodega","no / no"],["Dueño","NPL (sociedad)"],["Contacto del dueño","—"],["Administración del edificio","Adm. Centro · gastos comunes $142.000"],["Carpeta del Drive","enlazada"],["Cuenta analítica Odoo","AG-715-706"]].map(([a,b])=>`<tr><td style="color:var(--soft);width:44%">${a}</td><td><b>${b}</b></td></tr>`).join("")}</table></div>
+   <div class="panel"><h4><span>Ubicación</span><a href="https://www.google.com/maps/search/?api=1&query=Agustinas+715+Santiago" target="_blank" rel="noopener" style="color:var(--ink);text-transform:none;letter-spacing:0">abrir en Google Maps</a></h4>
+    <svg viewBox="0 0 400 230" width="100%" role="img" aria-label="Mapa esquemático">
+     <rect x="0" y="0" width="400" height="230" fill="var(--bg)"/>
+     ${[30,110,190].map(y=>`<rect x="0" y="${y}" width="400" height="14" fill="var(--card)"/>`).join("")}
+     ${[60,170,280,370].map(x=>`<rect x="${x}" y="0" width="14" height="230" fill="var(--card)"/>`).join("")}
+     <text x="8" y="26">Huérfanos</text><text x="8" y="106">Agustinas</text><text x="8" y="186">Moneda</text><text x="176" y="222" >Bandera</text><text x="286" y="222">Morandé</text>
+     <circle cx="230" cy="117" r="9" fill="var(--bad)"/><circle cx="230" cy="117" r="3" fill="var(--card)"/>
+     <text x="244" y="104" style="fill:var(--fg);font-weight:600">Agustinas 715</text></svg>
+    <div class="mt" style="font-size:12.5px;color:var(--soft)">Agustinas 715, oficina 706, Santiago Centro · a 2 cuadras del Conservador de Bienes Raíces de Santiago</div></div></div>`,
+ arr:due=>`<div class="cols" style="grid-template-columns:1fr 1fr"><div class="panel"><h4><span>Arriendo</span></h4><div class="mt" style="font-size:13px;color:var(--soft)">Proges recién está empezando con administración y arriendos. Esta pestaña se diseña cuando haya los primeros casos reales; por ahora solo guarda el contrato y los pagos que ya existen.</div><button class="btn gh" style="align-self:flex-start">Poner en administración</button></div>
+  <div class="panel"><h4><span>Venta</span></h4><div class="mt" style="font-size:13px;color:var(--soft)">No ha estado en venta. Si se vende, aquí quedan los anuncios, las visitas, las ofertas y el historial de precios.</div><button class="btn gh" style="align-self:flex-start" data-dv="venta">Ver un ejemplo: José de Moraleda</button></div></div>`,
+};
+/* ---------- corretaje: el servicio de venta ---------- */
+const VIS=[
+ ["17 nov","Interesada · pareja con 2 hijos","Rocío","alto","Le gustó el patio; pide segunda visita con su papá","pidió 2ª visita"],
+ ["15 nov","Interesado · inversionista","Rocío","bajo","Busca rentabilidad: lo encuentra caro para arrendar",""],
+ ["12 nov","Interesada · profesional","Pía","medio","Cocina chica; consultó si se puede ampliar","ofertó"],
+ ["8 nov","Interesado · familia","Rocío","medio","Precio alto para el estado de los baños",""],
+ ["4 nov","Interesada · pareja","Rocío","bajo","Lejos del metro",""],
+];
+const OFS=[
+ ["14 nov","UF 13.800","crédito preaprobado 80 %","warn","Esperando al dueño"],
+ ["28 oct","UF 13.500","contado","bad","Rechazada · el dueño contraofertó UF 14.600 · no respondió"],
+];
+const venta=()=>{
+ const due=S.dwho==="due";
+ // precio en el tiempo: día 0 = 2 sep
+ const W=470,H=170,x=d=>40+d/80*(W-50),y=u=>H-24-(u-13400)/2600*(H-40);
+ const steps=[[0,15900],[38,15400],[64,14900],[78,14900]];
+ const path=steps.map((s,i)=>i===0?`M${x(s[0])},${y(s[1])}`:`H${x(s[0])}V${y(s[1])}`).join("")+"";
+ const grid=[13500,14500,15500].map(u=>`<line x1="38" x2="${W}" y1="${y(u)}" y2="${y(u)}" stroke="var(--line)"/><text x="34" y="${y(u)+4}" text-anchor="end">${(u/1000).toFixed(1)}k</text>`).join("");
+ const months=[[0,"2 sep"],[29,"oct"],[60,"nov"],[78,"hoy"]].map(([d,l])=>`<text x="${x(d)}" y="${H-6}" text-anchor="middle">${l}</text>`).join("");
+ const ofs=[[56,13500],[73,13800]].map(([d,u])=>`<circle cx="${x(d)}" cy="${y(u)}" r="5" fill="var(--warn)"/><text x="${x(d)}" y="${y(u)+17}" text-anchor="middle">${u.toLocaleString("es-CL")}</text>`).join("");
+ const wk=[[9,2],[7,1],[5,1],[4,0],[6,1],[3,1],[2,0],[5,2],[4,1],[3,2],[4,1]]; // consultas, visitas por semana
+ const cw=(W-40)/wk.length;
+ const wb=wk.map(([c,v],i)=>`<rect x="${40+i*cw}" y="${H-24-c*12}" width="${cw*0.42}" height="${c*12}" rx="2" fill="var(--ink)"/><rect x="${40+i*cw+cw*0.45}" y="${H-24-v*12}" width="${cw*0.42}" height="${v*12}" rx="2" fill="var(--ok)"/>`).join("")+
+  [0,4,8].map(v=>`<line x1="38" x2="${W}" y1="${H-24-v*12}" y2="${H-24-v*12}" stroke="var(--line)"/><text x="34" y="${H-20-v*12}" text-anchor="end">${v}</text>`).join("")+
+  `<text x="40" y="${H-6}">s36</text><text x="${W-10}" y="${H-6}" text-anchor="end">s46</text>`;
+ return `<div class="top" style="align-items:flex-start"><div><div class="s"><a href="#" data-dv="${due?'inicio':'servicios'}" style="color:var(--ink)">${due?'Mis propiedades':'Servicios'}</a> / Venta</div>
+   <div class="h">${due?'Reporte de venta':'Venta'} · José de Moraleda 4510</div><div class="s">Casa 3D 2B · 112 m² · Las Condes · corredora Rocío · publicada desde el 2 sep</div></div>
+   ${due?'':'<div class="flt"><button class="btn gh">Anotar visita</button><button class="btn gh">Registrar oferta</button><button class="btn gh">Cambiar precio</button></div>'}</div>
+  <div class="wait">${due?'Hay una oferta de UF 13.800 esperando tu respuesta':'Esperando a: dueño · responder oferta de UF 13.800 · 5 días'}</div>
+  <div class="kp">
+   <div class="k"><div class="n">UF 14.900</div><div class="l">precio publicado · bajó 6 % desde el inicio</div></div>
+   <div class="k"><div class="n">78 d</div><div class="l">publicada</div></div>
+   <div class="k"><div class="n">11</div><div class="l">visitas · 52 consultas</div></div>
+   <div class="k"><div class="n">2</div><div class="l">ofertas · la mejor UF 13.800</div></div></div>
+  <div class="cols" style="grid-template-columns:1fr 1fr">
+   <div class="panel"><h4><span>Precio publicado y ofertas</span><span>UF</span></h4>
+    <svg viewBox="0 0 ${W+10} ${H}" width="100%" role="img" aria-label="Historial de precio">${grid}<path d="${path}" fill="none" stroke="var(--ink)" stroke-width="2.5"/>${ofs}${months}</svg>
+    <div class="rw" style="justify-content:flex-start;gap:14px;font-size:12px"><span><span class="tag ink">—</span> precio publicado</span><span><span class="tag warn">●</span> ofertas</span></div></div>
+   <div class="panel"><h4><span>Consultas y visitas por semana</span></h4>
+    <svg viewBox="0 0 ${W+10} ${H}" width="100%" role="img" aria-label="Consultas y visitas por semana">${wb}</svg>
+    <div class="rw" style="justify-content:flex-start;gap:14px;font-size:12px"><span><span class="tag ink">■</span> consultas</span><span><span class="tag ok">■</span> visitas</span><span class="mt" style="color:var(--soft)">subieron tras bajar el precio el 5 nov</span></div></div>
+  </div>
+  <div class="panel" style="padding:6px"><h4 style="padding:6px 8px 0"><span>Anuncios</span><span>se publican desde Nexos · los números vienen de ahí</span></h4>
+   <table class="t"><tr><th>Dónde</th><th>Estado</th><th>Desde</th><th class="num">Vistas</th><th class="num">Consultas</th>${due?'':'<th>Enlace</th>'}</tr>
+   ${[["Portal Inmobiliario","ok","activo","2 sep",2140,31],["TocToc","ok","activo","2 sep",610,9],["Yapo","mut","pausado","2 sep",380,6],["Letrero en la casa","ok","puesto","4 sep","—",6]].map(([n,t,e,d,v,c])=>`<tr><td><b>${n}</b></td><td><span class="tag ${t}">${e}</span></td><td>${d}</td><td class="num">${typeof v==="number"?v.toLocaleString("es-CL"):v}</td><td class="num">${c}</td>${due?'':'<td style="color:var(--ink)">abrir ↗</td>'}</tr>`).join("")}</table></div>
+  <div class="cols" style="grid-template-columns:1.3fr 1fr;align-items:start">
+   <div class="panel"><h4><span>Visitas</span><span>11 · las últimas 5</span></h4>
+    ${VIS.map(([f,q,p,i,c,x])=>`<div class="it"><div class="rw"><span class="tt">${f} · ${due?q.split(" · ")[1]:q}</span><span class="tag ${i==='alto'?'ok':i==='medio'?'warn':'mut'}">interés ${i}</span></div><span class="mt">«${c}»${due?'':' · mostró '+p}${x?' · <b style="color:var(--fg)">'+x+'</b>':''}</span></div>`).join("")}
+    <div class="mt" style="font-size:12px;color:var(--soft)">Lo que más se repite: <b>precio</b> (6 de 11), <b>cocina chica</b> (3), <b>baños</b> (2).</div></div>
+   <div class="panel"><h4><span>Ofertas</span></h4>
+    ${OFS.map(([f,m,c,t,e])=>`<div class="it"><div class="rw"><span class="tt">${m}</span><span class="tag ${t}">${e.split(" · ")[0]}</span></div><span class="mt">${f} · ${c}${e.includes(" · ")?' · '+e.split(" · ").slice(1).join(" · "):''}</span></div>`).join("")}
+    ${due?'<div class="flt"><button class="btn">Aceptar</button><button class="btn gh">Contraofertar</button><button class="btn gh">Rechazar</button></div><div class="mt" style="font-size:11.5px;color:var(--soft)">Proges le hace llegar la oferta aquí y el dueño responde aquí; la respuesta le llega al corredor como tarea.</div>':''}
+    <h4 style="margin-top:6px"><span>${due?'Lo que te recomendamos':'Recomendación al dueño'}</span></h4>
+    <div class="it"><span class="mt" style="color:var(--fg)">Contraofertar UF 14.300: la oferta viene con crédito preaprobado y el precio es la objeción de 6 de cada 11 visitas.</span></div>
+   </div></div>
+  <p class="hint">Lo mismo sirve para buscar arrendatario: anuncios, visitas y postulantes en vez de ofertas. ${due?'Como dueño no ves nombres de los interesados ni notas internas.':'El dueño ve este mismo reporte sin nombres ni notas internas.'}</p>`;
+};
+const URL={venc:"vencimientos",venta:"servicios/venta-jose-de-moraleda-4510",inicio:"inicio",ficha:"propiedades/agustinas-715-of-706",servicios:"servicios",servicio:"servicios/reparacion-agustinas-715",propiedades:"propiedades",equipo:"equipo",resultados:"resultados",config:"configuracion",pedir:"pedir"};
+
+/* ---------- celular ---------- */
+const pbar=`<div class="pbar"><span>9:41</span><span>●●● 5G</span></div>`;
+const pnav=()=>`<div class="pnav">${[["hoy","Hoy"],["servicio","Servicios"],["prop","Propiedades"],["anotar","Anotar"]].map(([k,l])=>`<button data-ph="${k}" aria-current="${S.ph===k}"><i></i>${l}</button>`).join("")}</div>`;
+const ptask=(t,m,tag,done)=>`<div class="c tap" data-ph="servicio"><div class="rw" style="justify-content:flex-start;gap:9px"><span class="chk ${done?'done':''}"></span><div style="flex:1;min-width:0"><div class="tt">${t}</div><div class="mt">${m}</div></div>${tag||""}</div></div>`;
+const PH={
+ hoy:()=>`${pbar}<div class="pbody"><div class="rw"><span class="ph-h">Hoy</span><span class="mt" style="font-size:11px;color:var(--soft)">jue 19 · Pía</span></div>
+  <div class="sec"><span>Atrasada</span></div>${ptask("Pedir copia de inscripción","Los Leones 1240 · toma de posesión",'<span class="tag bad">2 d</span>')}
+  <div class="sec"><span>Hoy</span><span>3</span></div>${ptask("Recibir baño con el maestro","Agustinas 715 · reparación",'<span class="tag ink">11:00</span>')}${ptask("Comprar grifería","Agustinas 715",'',true)}${ptask("Mostrar depto","José de Moraleda 4510 · venta",'<span class="tag ink">17:30</span>')}
+  <div class="sec"><span>Mañana</span><span>1</span></div>${ptask("Firmar en notaría","Portales Oriente 1820")}
+  </div><div class="fab" data-ph="anotar">📷 Anotar</div>${pnav()}`,
+ servicio:()=>`${pbar}<div class="pbody"><span class="ph-h" style="font-size:18px">Reparación</span><div class="mt" style="font-size:12px;color:var(--soft)">Agustinas 715, of. 706 · NPL</div>
+  <div class="wait" style="font-size:12px">Esperando a: maestro · 3 días</div>
+  <div class="ppl"><span class="on">Maestro</span><span>Conservador</span><span>Notaría</span><span>Dueño</span><span>Nadie: nos toca</span></div>
+  <div class="sec"><span>Mis tareas aquí</span></div>${ptask("Recibir baño con el maestro","hoy 11:00")}
+  <div class="sec"><span>Bitácora</span></div><div class="c"><div class="tt">Se recibió el baño ✓</div><div class="mt">Pía · 12:20 · lo ve el dueño</div></div><div class="c"><div class="tt">Faltaba la llave del medidor</div><div class="mt">Matías · vie 13</div></div>
+  </div><div class="fab" data-ph="anotar">📷 Anotar</div>${pnav()}`,
+ prop:()=>`${pbar}<div class="pbody"><div class="photo" style="height:90px">Agustinas 715, of. 706</div><div class="mt" style="font-size:12px;color:var(--soft)">NPL · oficina 48 m² · rol 123-45</div>
+  <div class="ppl"><span class="on">Resumen</span><span>Historial</span><span>Reparaciones</span><span>Documentos</span><span>Datos</span></div>
+  <div class="c"><div class="rw"><span class="mt">Reparaciones desde jun 2026</span><b>2 · $4.070.000</b></div><div class="rw"><span class="mt">Alertas</span><span class="tag bad">falta recepción final</span></div></div>
+  <div class="sec"><span>En curso</span></div><div class="c tap" data-ph="servicio"><div class="tt">Reparación</div><div class="mt">esperando a maestro · 70 %</div></div>
+  <div class="sec"><span>Línea de tiempo</span></div><div class="track"><div class="st"><span class="dot ok"></span><div><div class="tt">Se recibió el baño</div><div class="mt">hoy</div></div></div><div class="st"><span class="dot"></span><div><div class="tt">Toma de posesión cerrada</div><div class="mt">ago 2026</div></div></div></div>
+  </div>${pnav()}`,
+ anotar:()=>`${pbar}<div class="pbody"><span class="ph-h" style="font-size:18px">Anotar</span><div class="photo" style="height:120px">📷 Foto tomada</div><div class="input">«Fui, faltaba la llave del medidor. Vuelvo el lunes.»</div>
+  <div class="c"><div class="mt">Se guarda en</div><div class="tt">Reparación · Agustinas 715</div><div class="mt">Sugerida: es donde tienes tareas hoy · cambiar</div></div>
+  <label class="rw" style="justify-content:flex-start;gap:8px;font-size:12.5px"><span class="chk"></span>Que la vea el dueño</label>
+  <div class="c tap" data-ph="hoy" style="background:var(--ink);color:var(--card);text-align:center;font-weight:700">Guardar</div></div>${pnav()}`,
+};
+
+/* ---------- respuesta ---------- */
+const OLDS=[
+ ["Resumen","Valor de la cartera y deudas por cliente.","queda","Es el inicio del dueño (arriendos y gastos del mes); para gerencia va en Resultados."],
+ ["Cuentas","Gastos comunes, luz, agua y gas por propiedad.","queda","Los gastos que anota el dueño, dentro de la ficha."],
+ ["Pendientes","Vencimientos de contratos y cobros, por fecha.","queda","Pasa a llamarse «Vencimientos» y es del dueño, con su botón «que Proges lo haga»."],
+ ["Dueños","Grupos económicos y sus sociedades.","esconde","Dentro de la ficha, en Datos y dueños."],
+ ["Contactos","Arrendatarios ligados a contratos.","esconde","Dentro del arriendo de cada propiedad."],
+ ["Etapas","El marcador de etapa de cada servicio (v4).","borra","Lo reemplazan las tareas y el «esperando a…»."],
+ ["«Por confirmar»","Servicios que la carga inicial dedujo del Drive.","queda","Una vez: Cecilia los confirma y la lista desaparece."],
+];
+const NOMBRES=[["servicio","Lo que el dueño contrata y como lo dicen hoy. Recomendado."],["proyecto","Calza con una obra grande, pero suena raro para un trámite."],["encargo","Neutral y claro, pero nadie lo usa hoy."]];
+const SCREENS=[["Inicio en el computador"],["Tablero de servicios"],["Ficha del servicio (con la obra)"],["Lista de propiedades"],["Ficha de la propiedad (historia clínica)"],["Corretaje: anuncios, visitas, ofertas y precio"],["Reporte de venta para el dueño"],["Dueño que se registra solo: inicio y vencimientos"],["Repartir"],["Resultados"],["Lo que ve el dueño"],["Celular: Hoy y Anotar"]];
+OLDS.forEach(o=>S.olds[o[0]]=o[2]); SCREENS.forEach(s=>S.scr[s[0]]="ok");
+
+function render(){
+  $("lenses").innerHTML=LENSES.map(([k,t,q,dev,w])=>`<button class="lens" data-lens="${k}" data-where="${w}"><span class="t">${t}</span><span class="q">${q}</span><span class="dev">${dev.map(d=>`<span class="tag ink">${d}</span>`).join("")}</span></button>`).join("");
+  $("dwho").innerHTML=[["ger","Diego o Álvaro (gerencia)"],["ce","Cecilia"],["due","Cliente grande (NPL)"],["aut","Dueño que se registra solo"]].map(([k,l])=>`<button data-dwho="${k}" aria-pressed="${S.dwho===k}">${l}</button>`).join("");
+  $("sb").innerHTML=nav();
+  $("dmain").innerHTML=S.dv==="venta"?venta():(D[S.dv]||D.inicio)();
+  $("url").textContent="portal.proges.cl/"+(URL[S.dv]||"inicio");
+  $("ph").innerHTML=PH[S.ph]();
+  $("olds").innerHTML=OLDS.map(([n,w,_,why])=>`<div class="old"><div><div class="n">${n}</div><div class="w">${w} ${why}</div></div><div class="opt">${["queda","esconde","borra"].map(o=>`<button data-old="${n}" data-v="${o}" aria-pressed="${S.olds[n]===o}">${o==="queda"?"Queda":o==="esconde"?"Se esconde":"Se borra"}</button>`).join("")}</div></div>`).join("");
+  $("nombre").innerHTML=NOMBRES.map(([n,w])=>`<div class="old"><div><div class="n">${n[0].toUpperCase()+n.slice(1)}</div><div class="w">${w}</div></div><div class="opt"><button data-nom="${n}" aria-pressed="${S.nombre===n}">${S.nombre===n?"Elegido":"Elegir"}</button></div></div>`).join("");
+  $("screens").innerHTML=SCREENS.map(([n])=>`<div class="old"><div class="n">${n}</div><div class="opt">${[["ok","Me gusta"],["cambiar","Cambiar"],["sobra","Sobra"]].map(([v,l])=>`<button data-scr="${n}" data-v="${v}" aria-pressed="${S.scr[n]===v}">${l}</button>`).join("")}</div></div>`).join("");
+  out();
+}
+function out(){
+  const c=$("coment").value.trim();
+  const sc=SCREENS.map(([n])=>`- ${n}: ${S.scr[n]==="ok"?"me gusta":S.scr[n]==="cambiar"?"cambiar":"sobra"}`);
+  const ol=OLDS.map(([n,,rec])=>`- ${n}: ${S.olds[n]==="queda"?"queda":S.olds[n]==="esconde"?"se esconde":"se borra"}${S.olds[n]!==rec?" (distinto de lo propuesto)":""}`);
+  $("out").textContent=`Rediseño de Proges: maqueta v2 (un portal, tres miradas)\n\nPantallas:\n${sc.join("\n")}\n\nLo de antes:\n${ol.join("\n")}\n\nNombre: ${S.nombre}${S.nombre!=="servicio"?" (distinto de lo propuesto)":""}\n\nComentarios:\n${c||"- ninguno"}`;
+}
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-dv],[data-dwho],[data-prop],[data-ph],[data-old],[data-nom],[data-scr],[data-lens],[data-ptab],[data-hf],[data-rep]"); if(!t) return;
+  if(t.tagName==="A") e.preventDefault();
+  const d=t.dataset;
+  if(d.lens){ if(d.where==="ph"){S.ph="hoy";document.querySelector(".mob").scrollIntoView({behavior:"smooth",block:"center"});} else {S.dv=d.lens; if(d.lens==="ficha")S.ptab="res"; if(d.lens==="resultados")S.dwho="ger"; if(S.dwho==="due"&&d.lens!=="ficha"&&d.lens!=="venta")S.dwho="ce"; document.querySelector(".win").scrollIntoView({behavior:"smooth",block:"center"});} }
+  else if(d.dwho){S.dwho=d.dwho;S.dv="inicio"; if(d.jump) setTimeout(()=>document.querySelector(".win").scrollIntoView({behavior:"smooth",block:"center"}),0);}
+  else if(d.dv){S.dv=d.dv;}
+  else if(d.prop!==undefined){S.prop=+d.prop;S.dv="ficha";S.ptab="res";}
+  else if(d.ptab){S.ptab=d.ptab;}
+  else if(d.hf){S.hf=d.hf;}
+  else if(d.rep){S.rep=S.rep===d.rep?null:d.rep;}
+  else if(d.ph){S.ph=d.ph;}
+  else if(d.old){S.olds[d.old]=d.v;}
+  else if(d.nom){S.nombre=d.nom;}
+  else if(d.scr){S.scr[d.scr]=d.v;}
+  render();
+});
+$("coment").addEventListener("input",out);
+$("copy").addEventListener("click",()=>{
+  const txt=$("out").textContent;
+  const sel=()=>{const r=document.createRange();r.selectNodeContents($("out"));const s=getSelection();s.removeAllRanges();s.addRange(r);};
+  try{navigator.clipboard.writeText(txt).then(()=>{$("okmsg").hidden=false;setTimeout(()=>$("okmsg").hidden=true,3000)},sel);}catch(_){sel();}
+});
+render();
+</script>

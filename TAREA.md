@@ -2,7 +2,7 @@
 
 **Estado (2026-11-19): plan v7 APROBADO con workflow.** Etapa 1 ✅ hecha (commit 3afe066). Etapa 2 por lanzar. Página del plan: https://claude.ai/artifact/Q5hLn7T56rPapBoimRFsEt. Maqueta aprobada: https://claude.ai/artifact/6oufJsWJ57469Ttg2X2RS8. Tamaño: grande, en tres etapas (un workflow por etapa). Branch: `plan/etapa-1-dos-caras`.
 
-**Paso siguiente exacto:** Diego escribe «instala …» con las librerías de la web (las mismas versiones del portal viejo: el guardia de librerías lo exige) y elige dónde se guardan los PDF (ver «Lo que dejó la etapa 1»). Con eso se lanza el workflow de la etapa 2: I (base de la web + los agregados chicos a la API) → J a P a la vez. Al terminar: leer informes, `npm run verificar`, probar en el navegador a 1280 y 390 px, commit, y Diego revisa (d9 a).
+**Paso siguiente exacto:** workflow de la etapa 2 lanzado: I (base de la web) e I2 (agregados a la API: PDF en Drive, /v1/equipo, carpeta de Drive, leerProveedor) a la vez → J a P a la vez → Z (huecos de la API que reporten J a P, conexión y borrar legado/). Librerías de la web ya instaladas (Diego, 2026-11-19: «instala las librerías de la web. PDF en Drive.»), con las versiones exactas del portal viejo. Al terminar: leer informes, `npm run verificar`, probar en el navegador a 1280 y 390 px, commit, y Diego revisa (d9 a).
 
 **Lo que dejó la etapa 1** (A a H hechas; `npm run verificar` pasa: 234 pruebas; /openapi.json lista 124 operaciones, todas con descripción):
 - Incidente: el coordinador le mandó un mensaje al agente de B mientras corría y eso levantó una copia que editó los mismos archivos ~5 min. Se detuvo; B se quedó con las versiones equivalentes. No se le responde por mensaje a un agente de workflow.
@@ -10,7 +10,7 @@
 - Convenciones que quedaron: un Evento ESPERA guarda en `nuevo`/`anterior` el valor de EsperandoA, o NOS_TOCA cuando no se espera a nadie (la columna no admite vacío); el detalle va en `motivo`. Un dueño solo ve las ofertas ya mostradas y no ve servicios por revisar, por confirmar ni cancelados. El margen solo se calcula con órdenes en pesos (con UF es null). Los formularios con archivos son multipart y sus números van como texto.
 - La web llama a la API solo desde el servidor (Server Components y server actions, con el token de Clerk): sin CORS y la dirección de la API no llega al navegador.
 - Le falta a la API para la web (van en la pieza I): GET /v1/equipo (personas activas, para elegir responsable); poder fijar la carpeta de Drive de una propiedad (`driveCarpetaId`) en el PATCH de propiedades; `leerProveedor(id)` en la integración de Odoo para que crear un maestro no pida `buscado`; declarar `@proges/contrato` en apps/api/package.json.
-- Los PDF (documentos y presupuestos de maestros) todavía responden 503: falta decidir dónde se guardan (Drive de la propiedad, como las fotos, o Vercel Blob).
+- Los PDF (documentos y presupuestos de maestros) todavía responden 503. **Diego eligió el 2026-11-19: van al Drive de la propiedad, como las fotos** (ADR 0017); se conectan en la pieza I2.
 - Por confirmar con Diego (no frenan): margen de obra = orden al dueño menos lo facturado por maestros; el comentario de una visita lo ve el dueño; si el dueño ve las fotos de recepción (ADR 0015 lo permite); IVA del presupuesto del maestro (ADR 0014, abierto).
 - Sin probar: el ingreso con una sesión real de Clerk (se prueba con la web, en la etapa 2).
 

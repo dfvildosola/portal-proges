@@ -15,6 +15,7 @@
     "@clerk/backend": "^3.26.5",
     "@hono/node-server": "^2.1.5",
     "@hono/zod-openapi": "^1.6.3",
+    "@proges/contrato": "*",
     "@proges/db": "*",
     "@scalar/hono-api-reference": "^0.12.17",
     "hono": "^4.13.14",
