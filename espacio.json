@@ -1,7 +1,7 @@
 {
   "repos": ["."],
-  "clonar": ["node_modules", "src/generated/prisma"],
-  "copiar": [".env"],
+  "clonar": ["node_modules", "apps/api/node_modules", "packages/db/src/generated/prisma"],
+  "copiar": [".env", "apps/api/.env.test"],
   "bases": {
     "dev": { "original": "proges_dev", "copiar": true }
   },
@@ -11,10 +11,10 @@
     }
   },
   "servicios": {
-    "portal": { "puerto": 0, "carpeta": ".", "comando": "npx next dev -p {puerto}" }
+    "api": { "puerto": 1, "carpeta": "apps/api", "comando": "PORT={puerto} npm run dev" }
   },
   "verificar": {
-    ".": ["npm run lint", "npm run build"]
+    ".": ["npm run verificar"]
   },
   "orden_mezcla": ["."]
 }

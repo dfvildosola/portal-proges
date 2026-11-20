@@ -1,0 +1,84 @@
+// Documentos de la propiedad (el binario vive en Vercel Blob) y valores UF/IPC.
+
+enum DocumentType {
+  ESCRITURA_TITULO
+  CONTRATO
+  AVALUO_TASACION
+  LEGAL_JUDICIAL
+  MUNICIPAL
+  SEGURO
+  MANTENCION
+  CONTRIBUCION
+  OTRO
+}
+
+// El papel concreto que es un documento (dominio vigente, recepción final…).
+// El cajón donde se archiva sigue en Document.tipo.
+enum Papel {
+  ESCRITURA
+  DOMINIO_VIGENTE
+  HIPOTECAS_GRAVAMENES
+  CERTIFICADO_AVALUO
+  PLANO
+  CIP
+  RECEPCION_FINAL
+  POLIZA_SEGURO
+  PERMISO_EDIFICACION
+  CERTIFICADO_NUMERO
+  REGLAMENTO_COPROPIEDAD
+  SUBDIVISION_SAG
+  DERECHOS_AGUA
+  CONTRATO_ARRIENDO
+}
+
+enum RateType {
+  UF
+  IPC
+}
+
+// Fuente del valor comercial de una propiedad. «Estimación automática» se
+// agrega cuando exista.
+enum ValorFuente {
+  TASACION
+  CORREDOR
+  ESTIMACION_PROPIA
+}
+
+// Metadatos + puntero al archivo. El binario vive en Vercel Blob (privado).
+// `extractedText`/embeddings (silver/gold) son post-MVP — reservados, no se llenan aún.
+model Document {
+  id               String       @id @default(cuid())
+  organizationId   String
+  propertyId       String
+  tipo             DocumentType
+  papel            Papel? // qué papel es (null = documento suelto, sin papel asignado)
+  nombre           String
+  blobKey          String // puntero al objeto en Vercel Blob
+  fechaEmision     DateTime?
+  fechaVencimiento DateTime? // alimenta alertas de vencimiento
+  // Campos Conservador (opcionales)
+  fojas            String?
+  numero           String?
+  anio             Int?
+  // Reservado para IA (post-MVP): texto extraído del PDF/imagen
+  extractedText    String?
+  subidoPorId      String? // quién lo subió
+  createdAt        DateTime     @default(now())
+
+  property  Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  subidoPor Usuario?   @relation("DocumentoSubidoPor", fields: [subidoPorId], references: [id], onDelete: SetNull)
+  movements Movement[]
+
+  @@index([organizationId])
+  @@index([propertyId])
+}
+
+// Valores UF/IPC para convertir entre CLP y UF en informes. Global (sin organizationId).
+model CurrencyValue {
+  id    String   @id @default(cuid())
+  fecha DateTime
+  tipo  RateType
+  valor Decimal  @db.Decimal(14, 4)
+
+  @@unique([fecha, tipo])
+}

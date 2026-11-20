@@ -1,0 +1,11 @@
+// Proges — esquema de la base. Está partido por tema en esta carpeta (Prisma 7 lee la carpeta entera):
+// base, cartera, documentos, acceso, servicios, venta, trabajo y obra.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}

@@ -1,0 +1,114 @@
+// Corretaje: visitas y ofertas de un servicio de venta.
+
+enum OfertaEstado {
+  RECIBIDA
+  ACEPTADA
+  RECHAZADA
+  CAIDA
+  CONTRAOFERTADA
+}
+
+// Lo que el dueño responde a una oferta que Proges le mostró.
+enum RespuestaOferta {
+  ACEPTA
+  CONTRAOFERTA
+  RECHAZA
+}
+
+// Dónde está publicado un servicio de venta o arriendo (Nexxos u otro portal).
+enum AnuncioEstado {
+  ACTIVO
+  PAUSADO
+  BAJADO
+}
+
+model Visita {
+  id                 String   @id @default(cuid())
+  organizationId     String
+  servicioEnCursoId  String
+  fecha              DateTime
+  realizadaPorId     String?
+  interesadoNombre   String? // el cliente no ve los datos del interesado
+  interesadoContacto String?
+  evaluacion         Int? // 1 a 5
+  comentario         String?
+  createdAt          DateTime @default(now())
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  realizadaPor    Usuario?        @relation(fields: [realizadaPorId], references: [id], onDelete: SetNull)
+
+  @@index([servicioEnCursoId])
+}
+
+model Oferta {
+  id                String       @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String
+  fecha             DateTime
+  monto             Decimal      @db.Decimal(14, 2)
+  moneda            Currency
+  oferente          String
+  estado            OfertaEstado @default(RECIBIDA)
+  nota              String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  // Lo que Proges recomienda hacer con esta oferta (se le muestra al dueño junto con ella).
+  recomendacion     String?
+  // Cuándo y quién se la mostró al dueño. Vacío = el dueño todavía no la ve.
+  mostradaAlDuenoEl DateTime?
+  mostradaPorId     String?
+  // La respuesta del dueño desde el portal: acepta, contraoferta (con monto) o rechaza.
+  respuestaDueno    RespuestaOferta?
+  contraofertaMonto Decimal?         @db.Decimal(14, 2) // en la moneda de la oferta
+  respondidaPorId   String?
+  respondidaEl      DateTime?
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  mostradaPor     Usuario?        @relation("OfertaMostradaPor", fields: [mostradaPorId], references: [id], onDelete: SetNull)
+  respondidaPor   Usuario?        @relation("OfertaRespondidaPor", fields: [respondidaPorId], references: [id], onDelete: SetNull)
+
+  @@index([servicioEnCursoId])
+}
+
+// Un aviso publicado de un servicio de venta o arriendo, en un portal inmobiliario.
+// Las cifras de cada semana (vistas y consultas) las anota el equipo a mano: ver AnuncioCifra.
+model Anuncio {
+  id                String        @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String
+  portal            String // «Nexxos», «Portal Inmobiliario»…
+  url               String?
+  estado            AnuncioEstado @default(ACTIVO)
+  desde             DateTime      @db.Date // desde cuándo está publicado (fecha civil)
+  creadoPorId       String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  creadoPor       Usuario?        @relation("AnuncioCreadoPor", fields: [creadoPorId], references: [id], onDelete: SetNull)
+  cifras          AnuncioCifra[]
+
+  @@index([organizationId])
+  @@index([servicioEnCursoId])
+}
+
+// Vistas y consultas de un anuncio en una semana (`semana` es el lunes). Una fila por
+// anuncio y semana; si la semana se vuelve a anotar, se corrige esa misma fila.
+model AnuncioCifra {
+  id             String   @id @default(cuid())
+  organizationId String
+  anuncioId      String
+  semana         DateTime @db.Date // el lunes de esa semana
+  vistas         Int?
+  consultas      Int?
+  anotadaPorId   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  anuncio    Anuncio  @relation(fields: [anuncioId], references: [id], onDelete: Cascade)
+  anotadaPor Usuario? @relation("CifraAnotadaPor", fields: [anotadaPorId], references: [id], onDelete: SetNull)
+
+  @@unique([anuncioId, semana])
+  @@index([organizationId])
+}

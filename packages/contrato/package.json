@@ -1,0 +1,17 @@
+{
+  "name": "@proges/contrato",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Lo que la API de Proges recibe y entrega, escrito una vez con zod: la API valida con esto, la web saca sus tipos y /docs se arma desde aquí.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "tipos": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "peerDependencies": {
+    "zod": "^4.4.3"
+  }
+}

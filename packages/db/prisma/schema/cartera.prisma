@@ -1,0 +1,397 @@
+// Cartera: propiedades, dueños, contratos, cobros, movimientos, contribuciones y cuentas.
+// Convenciones (valen para todo el esquema):
+// - Toda tabla de negocio lleva `organizationId`: el id del cliente dueño de esos datos.
+// - Montos y porcentajes en Decimal (nunca float para dinero); cada monto guarda su `moneda` (CLP/UF).
+// - Archivos nunca en la base: guardan metadatos + un puntero (Blob o Drive).
+
+enum PropertyType {
+  DEPARTAMENTO
+  CASA
+  OFICINA
+  LOCAL
+  BODEGA
+  ESTACIONAMIENTO
+  TERRENO
+  PARCELA
+  AGRICOLA
+}
+
+enum PropertyStatus {
+  ARRENDADA
+  DISPONIBLE
+  EN_VENTA
+  USO_PROPIO
+  DESOCUPADA
+}
+
+enum PropertyGoal {
+  INVERSION
+  USO_PROPIO
+  VENTA
+}
+
+enum Currency {
+  CLP
+  UF
+}
+
+enum OwnerType {
+  PERSONA
+  SOCIEDAD
+}
+
+enum PropertyUnitType {
+  ESTACIONAMIENTO
+  BODEGA
+}
+
+enum AdjustmentType {
+  NINGUNO
+  IPC
+  UF
+}
+
+enum ChargeStatus {
+  PENDIENTE
+  PAGADO
+  ATRASADO
+}
+
+enum MovementType {
+  INGRESO
+  GASTO
+}
+
+enum MovementCategory {
+  ARRIENDO
+  REPARACION
+  GASTO_COMUN
+  SEGURO
+  IMPUESTO
+  OTRO
+}
+
+enum TaxStatus {
+  PENDIENTE
+  PAGADA
+}
+
+enum BillType {
+  GASTO_COMUN
+  LUZ
+  AGUA
+  GAS
+  OTRO
+}
+
+enum BillStatus {
+  PENDIENTE
+  PAGADA
+}
+
+model Property {
+  id                   String         @id @default(cuid())
+  organizationId       String
+  // El ROL es opcional: el inventario del Drive no lo trae.
+  rolSII               String?
+  tipo                 PropertyType
+  direccion            String
+  comuna               String
+  region               String
+  objetivo             PropertyGoal   @default(INVERSION)
+  estado               PropertyStatus @default(DISPONIBLE)
+  monedaPrincipal      Currency       @default(CLP)
+  m2Terreno            Decimal?       @db.Decimal(10, 2)
+  m2Construidos        Decimal?       @db.Decimal(10, 2)
+  anoConstruccion      Int?
+  valorComercial       Decimal?       @db.Decimal(14, 2)
+  valorComercialMoneda Currency       @default(CLP)
+  // Fecha y fuente del valor comercial (para saber qué tan al día está).
+  valorComercialFecha  DateTime?
+  valorComercialFuente ValorFuente?
+  // Compra: cuándo y por cuánto se compró.
+  compraFecha          DateTime?
+  compraPrecio         Decimal?       @db.Decimal(14, 2)
+  compraMoneda         Currency       @default(CLP)
+  // Deuda hipotecaria vigente (todo vacío si no hay deuda). El dividendo va en
+  // la misma moneda que el saldo.
+  deudaSaldo           Decimal?       @db.Decimal(14, 2)
+  deudaMoneda          Currency       @default(UF)
+  deudaFecha           DateTime? // fecha a la que corresponde el saldo
+  deudaBanco           String?
+  deudaDividendo       Decimal?       @db.Decimal(14, 2)
+  deudaTermino         DateTime? // fecha del último dividendo
+  // Exenta de contribuciones: no paga cuotas (p. ej. bodegas de avalúo bajo).
+  exentaContribuciones Boolean        @default(false)
+  // Id de la carpeta de esta propiedad en Google Drive (para abrirla desde la ficha).
+  driveCarpetaId       String?
+  // El edificio es solo un texto que agrupa unidades («Monjitas 550»): la unidad es la propiedad.
+  edificio             String?
+  // Código de la cuenta analítica de Odoo de esta unidad. Puede repetirse entre propiedades
+  // (una cuenta puede cubrir dos deptos): sirve para sugerir la unidad al enlazar una orden.
+  odooCuentaAnalitica  String?
+  // Quién guardó por última vez (el equipo y el dueño editan lo mismo: vale el último).
+  modificadoPorId      String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  modificadoPor Usuario? @relation("PropertyModificadoPor", fields: [modificadoPorId], references: [id], onDelete: SetNull)
+
+  owners           PropertyOwner[]
+  tags             PropertyTag[]        @relation("PropertyToTag")
+  units            PropertyUnit[]
+  assessments      PropertyAssessment[]
+  documents        Document[]
+  contracts        LeaseContract[]
+  movements        Movement[]
+  taxes            PropertyTax[]
+  bills            PropertyBill[]
+  servicios        ServicioEnCurso[]
+  solicitudes      Solicitud[]
+  administraciones Administracion[]
+
+  @@index([organizationId])
+}
+
+// Anexo de una propiedad: estacionamiento o bodega. En Chile suelen tener su
+// propio ROL y avalúo (para contribuciones), pero se administran junto a la
+// unidad principal. ROL y avalúo son opcionales.
+model PropertyUnit {
+  id             String           @id @default(cuid())
+  organizationId String
+  propertyId     String
+  tipo           PropertyUnitType
+  numero         String
+  rolSII         String?
+  avaluoFiscal   Decimal?         @db.Decimal(14, 2)
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([propertyId])
+}
+
+// Historial de avalúos fiscales de la propiedad (uno por año).
+// Se usa para calcular el % de reajuste entre períodos.
+model PropertyAssessment {
+  id             String   @id @default(cuid())
+  organizationId String
+  propertyId     String
+  anio           Int
+  valor          Decimal  @db.Decimal(14, 2)
+  createdAt      DateTime @default(now())
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, anio])
+  @@index([organizationId])
+  @@index([propertyId])
+}
+
+model PropertyTag {
+  id             String     @id @default(cuid())
+  organizationId String
+  nombre         String
+  properties     Property[] @relation("PropertyToTag")
+
+  @@unique([organizationId, nombre])
+  @@index([organizationId])
+}
+
+// Grupo económico / controlador: el "dueño real" (familia o persona) que controla
+// varias entidades legales (personas y sociedades). Permite consolidar el
+// patrimonio de todas sus entidades en los informes. Opcional: una entidad puede
+// no pertenecer a ningún grupo.
+model Grupo {
+  id             String   @id @default(cuid())
+  organizationId String
+  nombre         String
+  rut            String? // RUT del controlador/persona, opcional
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  owners Owner[]
+
+  @@index([organizationId])
+}
+
+// Entidad legal dueña de propiedades: persona natural o sociedad. Reutilizable
+// entre propiedades (una misma entidad participa en varias vía PropertyOwner).
+model Owner {
+  id             String          @id @default(cuid())
+  organizationId String
+  nombre         String
+  rut            String
+  tipo           OwnerType       @default(PERSONA)
+  grupoId        String?
+  grupo          Grupo?          @relation(fields: [grupoId], references: [id], onDelete: SetNull)
+  properties     PropertyOwner[]
+
+  @@index([organizationId])
+  @@index([grupoId])
+}
+
+// Puente de copropiedad: varios dueños por propiedad, cada uno con su %.
+model PropertyOwner {
+  id             String  @id @default(cuid())
+  organizationId String
+  propertyId     String
+  ownerId        String
+  porcentaje     Decimal @db.Decimal(5, 2)
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  owner    Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, ownerId])
+  @@index([organizationId])
+}
+
+model Tenant {
+  id             String          @id @default(cuid())
+  organizationId String
+  nombre         String
+  rut            String
+  email          String?
+  telefono       String?
+  contracts      LeaseContract[]
+
+  @@index([organizationId])
+}
+
+model LeaseContract {
+  id                      String         @id @default(cuid())
+  organizationId          String
+  propertyId              String
+  tenantId                String
+  monto                   Decimal        @db.Decimal(14, 2)
+  moneda                  Currency       @default(CLP)
+  aplicaReajuste          Boolean        @default(false)
+  reajusteTipo            AdjustmentType @default(NINGUNO)
+  reajusteFrecuenciaMeses Int?
+  fechaInicio             DateTime
+  fechaTermino            DateTime
+  diaPago                 Int
+  renovacionAutomatica    Boolean        @default(true) // se renueva sola por el mismo plazo salvo aviso
+  diasAviso               Int            @default(60) // días antes del término para avisar que no se renueva
+  plazoMeses              Int // duración de cada período (y de cada renovación), en meses
+  fechaSalida             DateTime? // si hay, el contrato termina ese día y no se renueva
+  garantia                Decimal?       @db.Decimal(14, 2) // garantía, en la moneda del arriendo
+  ultimoReajuste          DateTime? // fecha del último reajuste aplicado
+  modificadoPorId         String? // quién guardó por última vez
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+
+  property      Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  modificadoPor Usuario?     @relation("ContratoModificadoPor", fields: [modificadoPorId], references: [id], onDelete: SetNull)
+  charges       RentCharge[]
+
+  @@index([organizationId])
+  @@index([propertyId])
+}
+
+// Cobro de arriendo por período. El corazón de la cobranza.
+model RentCharge {
+  id               String       @id @default(cuid())
+  organizationId   String
+  contractId       String
+  periodo          String // "YYYY-MM"
+  montoEsperado    Decimal      @db.Decimal(14, 2)
+  moneda           Currency     @default(CLP)
+  fechaVencimiento DateTime
+  estado           ChargeStatus @default(PENDIENTE)
+  fechaPago        DateTime?
+  montoPagado      Decimal?     @db.Decimal(14, 2)
+  interesMora      Decimal?     @db.Decimal(14, 2) // manual en MVP
+  notas            String?
+  modificadoPorId  String? // quién lo marcó pagado o lo cambió por última vez
+
+  contract      LeaseContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  modificadoPor Usuario?      @relation("CobroModificadoPor", fields: [modificadoPorId], references: [id], onDelete: SetNull)
+  movements     Movement[]
+
+  @@unique([contractId, periodo])
+  @@index([organizationId])
+}
+
+model Movement {
+  id             String           @id @default(cuid())
+  organizationId String
+  propertyId     String
+  tipo           MovementType
+  categoria      MovementCategory
+  monto          Decimal          @db.Decimal(14, 2)
+  moneda         Currency         @default(CLP)
+  fecha          DateTime
+  descripcion    String?
+  documentId     String?
+  rentChargeId   String?
+
+  property   Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  document   Document?   @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  rentCharge RentCharge? @relation(fields: [rentChargeId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([propertyId])
+}
+
+model PropertyTax {
+  id               String    @id @default(cuid())
+  organizationId   String
+  propertyId       String
+  anio             Int
+  cuota            Int // 1-4
+  monto            Decimal?  @db.Decimal(14, 2)
+  fechaVencimiento DateTime
+  estado           TaxStatus @default(PENDIENTE)
+  fechaPago        DateTime?
+  anotadoPorId     String? // quién la anotó
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  anotadoPor Usuario? @relation("ContribucionAnotadaPor", fields: [anotadoPorId], references: [id], onDelete: SetNull)
+
+  @@unique([propertyId, anio, cuota])
+  @@index([organizationId])
+}
+
+// Cuenta que el dueño debe pagar por una propiedad (gasto común, luz, agua,
+// gas, otro). Las contribuciones siguen aparte en PropertyTax.
+model PropertyBill {
+  id               String     @id @default(cuid())
+  organizationId   String
+  propertyId       String
+  tipo             BillType
+  periodo          String // "YYYY-MM"
+  monto            Decimal?   @db.Decimal(14, 2)
+  moneda           Currency   @default(CLP)
+  fechaVencimiento DateTime
+  estado           BillStatus @default(PENDIENTE)
+  fechaPago        DateTime?
+  notas            String?
+  anotadoPorId     String? // quién la anotó
+  createdAt        DateTime   @default(now())
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  anotadoPor Usuario? @relation("CuentaAnotadaPor", fields: [anotadoPorId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([propertyId])
+}
+
+// Una propiedad que Proges administra: el arrendatario le paga directo al dueño, Proges
+// controla que pague y cobra su comisión (arriendo × %, calculada al mirar, no guardada).
+model Administracion {
+  id             String    @id @default(cuid())
+  organizationId String
+  propertyId     String
+  desde          DateTime // fecha civil (medianoche UTC)
+  hasta          DateTime? // vacío = sigue vigente
+  comisionPct    Decimal   @db.Decimal(5, 2)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([propertyId])
+}

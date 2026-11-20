@@ -1,0 +1,74 @@
+// Trabajo del equipo: tareas, bitácora (notas) y fotos.
+
+// Lo que alguien tiene que hacer en un proyecto: qué, quién y para cuándo. Sin estados
+// intermedios: o está abierta o está hecha (`hechaEl`).
+model Tarea {
+  id                String    @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String
+  que               String
+  responsableId     String?
+  vence             DateTime? // fecha civil (medianoche UTC)
+  hechaEl           DateTime?
+  hechaPorId        String?
+  creadaPorId       String
+  // Si la abrió una recepción observada: la partida que hay que corregir.
+  partidaId         String?
+  // true en la tarea «Revisar y repartir» que abre un pedido del cliente: así se la reconoce
+  // sin depender de cómo empiece su texto (que cualquiera puede escribir igual a mano).
+  esRevision        Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  responsable     Usuario?        @relation("TareaResponsable", fields: [responsableId], references: [id], onDelete: SetNull)
+  hechaPor        Usuario?        @relation("TareaHechaPor", fields: [hechaPorId], references: [id], onDelete: SetNull)
+  creadaPor       Usuario         @relation("TareaCreadaPor", fields: [creadaPorId], references: [id], onDelete: Restrict)
+  partida         Partida?        @relation(fields: [partidaId], references: [id], onDelete: SetNull)
+  notas           Nota[]
+
+  @@index([organizationId])
+  @@index([servicioEnCursoId])
+  @@index([responsableId, hechaEl])
+}
+
+// La bitácora del proyecto: lo que pasa, anotado en el momento. `paraDueno` marca las
+// notas (y sus fotos) que el dueño puede ver; las demás son solo del equipo.
+model Nota {
+  id                String   @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String
+  autorId           String
+  texto             String
+  paraDueno         Boolean  @default(false)
+  tareaId           String?
+  createdAt         DateTime @default(now())
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  autor           Usuario         @relation(fields: [autorId], references: [id], onDelete: Restrict)
+  tarea           Tarea?          @relation(fields: [tareaId], references: [id], onDelete: SetNull)
+  fotos           Foto[]
+
+  @@index([organizationId])
+  @@index([servicioEnCursoId, createdAt])
+}
+
+// Una foto guardada en el Drive de la propiedad (subcarpeta «Portal»). Solo se guarda su id
+// de Drive: el archivo se ve a través de la ruta /archivos/[driveFileId], que revisa permisos.
+// Cuelga de una nota (bitácora) o de una partida (recepción).
+model Foto {
+  id             String   @id @default(cuid())
+  organizationId String
+  notaId         String?
+  partidaId      String?
+  driveFileId    String   @unique
+  nombre         String
+  mime           String
+  createdAt      DateTime @default(now())
+
+  nota    Nota?    @relation(fields: [notaId], references: [id], onDelete: Cascade)
+  partida Partida? @relation(fields: [partidaId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([notaId])
+  @@index([partidaId])
+}
