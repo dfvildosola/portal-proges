@@ -1,0 +1,100 @@
+codigo;nombre;unidad
+ADMP-0;Administración de patrimonio;Minimo por propiedad
+ADMP-100;Coordinación Mantenimiento exterior;Adicional al minimo Mensual
+ADMP-101;Coordinación Mantenimiento Interior;Adicional al minimo Mensual
+ADMP-200;Gestión de Seguridad;Adicional al minimo Mensual
+ADMP-300;Coordinación de reparaciones correctivas menores;Adicional al minimo Mensual
+ADMP-400;Gestión de contratos de arriendo;Adicional al minimo Mensual
+ADMP-500;Gestión de desalojos;Por Servicio
+ET-100;Evaluación comercial de propiedades;Servicio
+IRP-0;Inspección, Regularización y toma posesión de propiedades;
+IRP-100;Acercamiento comercial RM;Servicio
+IRP-101;Acercamiento comercial 150 Km;Servicio
+IRP-102;Acercamiento comercial +150 Km;Servicio
+IRP-200;Investigación de Títulos de Propiedad;Servicio
+IRP-300;Investigación de Mercados;Servicio
+IRP-400;Toma de posesión y verificación de estado RM;Servicio
+IRP-401;Toma de posesión y verificación de estado 150 Km;Servicio
+IRP-402;Toma de posesión y verificación de estado +150 Km;Servicio
+IRP-500;Recepción propiedad;Servicio
+IRP-600;Gestión de trámites y Documentos;Hora
+NV-0;Negociación y venta de propiedades;
+NV-100;Venta de propiedad;Venta
+NV-200;Gestión de Visitas;Visita
+NV-300;Preparación de la Propiedad para la Venta;Hora
+RR-0;Renovaciones y remodelación de entornos;Proyecto
+RR-101;Pintura de cielos;m²
+RR-102;Pintura de muros;m²
+RR-103;Pintura exterior;m²
+RR-104;Reparación, lijado y empastado de muros;m²
+RR-105;Retiro Papel Mural;m²
+RR-201;Fabricación de duchas in situ;unidad
+RR-202;Proveer e instalar tapas de WC;unidad
+RR-203;Proveer e instalar mamparas de ducha;unidad
+RR-204;Proveer e instalar griferías de ducha;unidad
+RR-205;Proveer e instalar WC y griferia;unidad
+RR-206;Proveer e instalar vanitorios;unidad
+RR-207;Proveer e instalar espejos;unidad
+RR-301;Proveer e instalar muebles base y aéreos con cubiertas;unidad
+RR-302;Proveer e instalar lavaplatos y grifería;unidad
+RR-303;Reubicación o cambio de llaves de paso de agua;unidad
+RR-304;Reubicación o cambio llaves de paso de gas;unidad
+RR-305;Proveer e instalar encimera, horno y campana;unidad
+RR-306;Proveer e instalar encimera vitroceramica;unidad
+RR-307;Proveer e instalar Calefont;unidad
+RR-401;Proveer e instalar pisos flotantes;m²
+RR-402;Proveer e instalar piso ceramicos;m²
+RR-403;Refrague de cerámicos;m²
+RR-404;Retiro de piso flotante;m²
+RR-405;Retiro de ceramicas;m²
+RR-406;Retiro de alfombras;m²
+RR-407;Instación de pisos en escaleras;m²
+RR-501;Instalación de puerta principal;unidad
+RR-502;Instalación de puertas interiores;m²
+RR-503;Reparación y pintura de puertas;m²
+RR-504;Instalación de cerraduras;unidad
+RR-505;Instalación de guardapolvos;m
+RR-506;Reparación de ventanas (Ruedas, seguros, vidrios, picaportes, etc);unidad
+RR-507;Reparación o instalación de closets;unidad
+RR-508;Instalación de cornisas;m
+RR-509;Retiro de closets y puertas;unidad
+RR-601;Proveer e instalar luminarias;unidad
+RR-601;Retiro de escombros;unidad
+RR-602;Proveer e instalar interruptores;unidad
+RR-602;Aseo general;unidad
+RR-603;Proveer e instalar enchufes;unidad
+RR-604;Normalización de circuitos eléctricos;unidad
+RR-604;Fletes;Servicio
+RR-700;Asesoría y Diseño;Servicio
+RR-800;Ampliaciones de Espacio;Proyecto
+RR-801;Proveer e instalar portones;unidad
+RR-802;Proveer e instalar rejas;unidad
+RR-803;Proveer e instalar balcones;unidad
+RR-804;Desarme general;unidad
+RR-805;Limpieza General;unidad
+RR-900;Supervisión y Control de Obras;Proyecto
+RR-902;Limpieza General Interiores;
+RR-903;Proveer e instalar lámparas;C/U
+RR-904;Proveer e instalar muebles;C/U
+RR-905;Proveer e instalar grifería;C/U
+RR-906;Proveer e instalar ventanas;C/U
+RR-907;Retiro de sellos y aplicación de silicona nueva;
+RR-908;Proveer e instalar llave de agua;
+RR-909;Cerrajero;Servicio
+RR-910;Instalar Lavamanos;C/U
+RR-911;Ajustar Bisagras;C/U
+RR-912;Proveer e instalar cubrejuntas;C/U
+RR-913;Proveer e instalar ceramica;
+RR-914;Detección y reparación de filtración;
+RR-915;Mantención y cuidado de la propiedad;
+RR-916;Aplicación de barniz en madera cant (GL);
+RR-917;Conexión de lavadora;
+SC-0;Servicios Complementarios;
+SC-100;Persona Extra;Hora
+SC-200;Viaje a Regiones;Por Servicio
+SC-300;Hora de Traslado;Hora
+SC-400;Certificacion Gas;Por Servicio
+SC-500;Gastos de viaje y estadia;
+SC-600;Comision por servicio de corretaje arriendo;
+SC-700;Coordinación de especialistas y visitas técnicas;
+SC-800;Otros;

@@ -1,0 +1,149 @@
+// Obra: maestros, orden de venta de Odoo, partidas, presupuestos y facturas de maestros.
+
+enum RecepcionPartida {
+  PENDIENTE
+  CONFORME
+  OBSERVADA
+}
+
+enum PresupuestoTipo {
+  ORIGINAL
+  ADICIONAL
+}
+
+enum PresupuestoEstado {
+  RECIBIDO
+  APROBADO
+  RECHAZADO
+}
+
+// El maestro es un proveedor de Odoo (res.partner); acá solo se le suma lo que Odoo no
+// tiene. Vive en el espacio de Proges y vale para todos los clientes.
+model Maestro {
+  id             String  @id @default(cuid())
+  organizationId String // siempre org_proges
+  odooPartnerId  Int     @unique
+  nombre         String // copiado de Odoo al agregarlo
+  especialidad   String?
+  telefono       String?
+  activo         Boolean @default(true)
+
+  partidas     Partida[]
+  presupuestos PresupuestoMaestro[]
+  facturas     FacturaMaestro[]
+
+  @@index([organizationId])
+}
+
+// La orden de venta de Odoo que el dueño aprobó (S00047). Se trae por su número; el portal
+// nunca escribe en Odoo. `facturado` es lo que ya se le facturó al dueño (los anticipos).
+model OrdenDueno {
+  id                String   @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String   @unique
+  numero            String // «S00047»
+  odooOrderId       Int
+  total             Decimal  @db.Decimal(14, 2) // sin impuesto
+  moneda            Currency @default(CLP)
+  facturado         Decimal  @default(0) @db.Decimal(14, 2)
+  traidaEl          DateTime @default(now())
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  partidas        Partida[]
+
+  @@index([organizationId])
+}
+
+// Una línea de trabajo: lo que hay que hacer (en una reparación, agrupada por recinto; en un
+// servicio suelto, una lista para marcar). Se reconoce por `odooLineId` al volver a traer la
+// orden: las nuevas se suman, las que Odoo ya no tiene se marcan `quitadaEnOdoo`, nunca se borran.
+model Partida {
+  id                String           @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String
+  ordenId           String?
+  recinto           String?
+  codigo            String?
+  descripcion       String
+  cantidad          Decimal?         @db.Decimal(14, 3)
+  unidad            String?
+  precioDueno       Decimal?         @db.Decimal(14, 2)
+  moneda            Currency         @default(CLP)
+  odooLineId        Int?
+  posicion          Int              @default(0)
+  maestroId         String?
+  avance            Int              @default(0) // 0 a 100
+  recepcion         RecepcionPartida @default(PENDIENTE)
+  observacion       String?
+  recibidaEl        DateTime?
+  recibidaPorId     String?
+  quitadaEnOdoo     Boolean          @default(false)
+
+  servicioEnCurso ServicioEnCurso      @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  orden           OrdenDueno?          @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  maestro         Maestro?             @relation(fields: [maestroId], references: [id], onDelete: SetNull)
+  recibidaPor     Usuario?             @relation(fields: [recibidaPorId], references: [id], onDelete: SetNull)
+  presupuestos    PresupuestoMaestro[] @relation("PresupuestoPartidas")
+  fotos           Foto[]
+  tareas          Tarea[]
+
+  @@unique([ordenId, odooLineId])
+  @@index([organizationId])
+  @@index([servicioEnCursoId, posicion])
+}
+
+// El presupuesto que manda un maestro para un proyecto (pesos chilenos). Lo aprueba la
+// jefatura; el aprobado es el plan de costo. Un adicional es un cambio de alcance y se aprueba igual.
+model PresupuestoMaestro {
+  id                String            @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String
+  maestroId         String
+  tipo              PresupuestoTipo   @default(ORIGINAL)
+  total             Decimal           @db.Decimal(14, 2) // CLP
+  plazoDias         Int?
+  pdfDriveFileId    String?
+  estado            PresupuestoEstado @default(RECIBIDO)
+  nota              String?
+  cargadoPorId      String
+  resueltoPorId     String?
+  resueltoEl        DateTime?
+  createdAt         DateTime          @default(now())
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  maestro         Maestro         @relation(fields: [maestroId], references: [id], onDelete: Restrict)
+  cargadoPor      Usuario         @relation("PresupuestoCargadoPor", fields: [cargadoPorId], references: [id], onDelete: Restrict)
+  resueltoPor     Usuario?        @relation("PresupuestoResueltoPor", fields: [resueltoPorId], references: [id], onDelete: SetNull)
+  partidas        Partida[]       @relation("PresupuestoPartidas")
+
+  @@index([organizationId])
+  @@index([servicioEnCursoId])
+  @@index([pdfDriveFileId])
+}
+
+// Una factura del maestro asignada a un proyecto. Con `odooMoveId` solo se guarda la
+// asignación: número, fecha, total, estado y pago se leen de Odoo al mirar. Sin él es una
+// factura «fuera de Odoo» que el equipo anota a mano (número, fecha, si está pagada y nota).
+// Una factura puede repartirse entre proyectos; la suma asignada nunca pasa su total.
+model FacturaMaestro {
+  id                String    @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String
+  maestroId         String
+  odooMoveId        Int?
+  numero            String? // solo las anotadas a mano
+  fecha             DateTime? // solo las anotadas a mano (fecha civil)
+  pagada            Boolean   @default(false) // solo las anotadas a mano
+  nota              String?
+  montoAsignado     Decimal   @db.Decimal(14, 2) // CLP
+  asignadaPorId     String
+  createdAt         DateTime  @default(now())
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  maestro         Maestro         @relation(fields: [maestroId], references: [id], onDelete: Restrict)
+  asignadaPor     Usuario         @relation(fields: [asignadaPorId], references: [id], onDelete: Restrict)
+
+  @@unique([servicioEnCursoId, odooMoveId])
+  @@index([organizationId])
+  @@index([odooMoveId])
+}

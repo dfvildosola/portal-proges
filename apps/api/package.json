@@ -1,0 +1,29 @@
+{
+  "name": "@proges/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "La API de Proges (Hono, versionada en /v1). Toda lectura y escritura de datos pasa por aquí.",
+  "scripts": {
+    "dev": "tsx watch src/servidor.ts",
+    "inicio": "node --import tsx src/servidor.ts",
+    "tipos": "tsc --noEmit",
+    "lint": "eslint .",
+    "prueba": "node --env-file-if-exists=.env.test scripts/probar.mjs"
+  },
+  "dependencies": {
+    "@clerk/backend": "^3.26.5",
+    "@hono/node-server": "^2.1.5",
+    "@hono/zod-openapi": "^1.6.3",
+    "@proges/contrato": "*",
+    "@proges/db": "*",
+    "@scalar/hono-api-reference": "^0.12.17",
+    "hono": "^4.13.14",
+    "tsx": "^4.22.4",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  }
+}

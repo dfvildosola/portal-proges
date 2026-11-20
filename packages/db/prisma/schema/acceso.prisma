@@ -1,0 +1,101 @@
+// Acceso: clientes (organizaciones) y personas que entran al portal.
+
+enum UsuarioRol {
+  EQUIPO
+  CLIENTE
+}
+
+// Un espacio es de Proges (catálogo y maestros, comunes a todos) o de un cliente (su cartera).
+enum OrganizacionTipo {
+  PROGES
+  CLIENTE
+}
+
+// Cómo usa el portal un cliente: ATENDIDO (Proges le hace los servicios; ve el avance) o
+// AUTONOMO (el dueño lleva su propia cartera y le pide servicios a Proges cuando quiere).
+// Solo cambia su pantalla de inicio, no lo que puede hacer.
+enum ModoCliente {
+  ATENDIDO
+  AUTONOMO
+}
+
+// Un espacio de trabajo. Cada cliente es uno (su cartera vive ahí) y Proges tiene el suyo
+// (`org_proges`: el catálogo y los maestros, comunes a todos los clientes). Es la «carpeta» que
+// todas las tablas de negocio nombran en su columna `organizationId`; esa columna es texto
+// simple, sin relación con esta tabla, para no tocar las tablas que ya existían.
+model Organizacion {
+  id        String           @id
+  nombre    String
+  tipo      OrganizacionTipo
+  activa    Boolean          @default(true)
+  modo      ModoCliente      @default(ATENDIDO)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+// Persona que entra al portal. El correo (en minúsculas) la une con Clerk.
+// Rol EQUIPO (organizationId = org_proges) trabaja para Proges; rol CLIENTE
+// (organizationId = su cliente) administra la cartera de su espacio.
+model Usuario {
+  id             String     @id @default(cuid())
+  organizationId String
+  email          String     @unique // siempre en minúsculas
+  clerkUserId    String?    @unique // el enlace con Clerk (el login); se llena al primer ingreso
+  nombre         String
+  rol            UsuarioRol
+  admin          Boolean    @default(false) // crea clientes, usuarios y llaves de la API
+  jefatura       Boolean    @default(false) // solo EQUIPO: aprueba presupuestos de maestros y cierra obras
+  activo         Boolean    @default(true)
+  ultimoIngreso  DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  responsable          ServicioEnCurso[]
+  eventos              Evento[]
+  visitas              Visita[]
+  solicitudesPedidas   Solicitud[]       @relation("SolicitudPedidaPor")
+  solicitudesResueltas Solicitud[]       @relation("SolicitudResueltaPor")
+
+  propiedadesModificadas Property[]           @relation("PropertyModificadoPor")
+  contratosModificados   LeaseContract[]      @relation("ContratoModificadoPor")
+  cobrosModificados      RentCharge[]         @relation("CobroModificadoPor")
+  tareasResponsable      Tarea[]              @relation("TareaResponsable")
+  tareasHechas           Tarea[]              @relation("TareaHechaPor")
+  tareasCreadas          Tarea[]              @relation("TareaCreadaPor")
+  notas                  Nota[]
+  partidasRecibidas      Partida[]
+  presupuestosCargados   PresupuestoMaestro[] @relation("PresupuestoCargadoPor")
+  presupuestosResueltos  PresupuestoMaestro[] @relation("PresupuestoResueltoPor")
+  facturasAsignadas      FacturaMaestro[]
+
+  ofertasMostradas       Oferta[]       @relation("OfertaMostradaPor")
+  ofertasRespondidas     Oferta[]       @relation("OfertaRespondidaPor")
+  anunciosCreados        Anuncio[]      @relation("AnuncioCreadoPor")
+  cifrasAnotadas         AnuncioCifra[] @relation("CifraAnotadaPor")
+  llavesCreadas          LlaveApi[]     @relation("LlaveCreadaPor")
+  documentosSubidos      Document[]     @relation("DocumentoSubidoPor")
+  cuentasAnotadas        PropertyBill[] @relation("CuentaAnotadaPor")
+  contribucionesAnotadas PropertyTax[]  @relation("ContribucionAnotadaPor")
+
+  @@index([organizationId])
+}
+
+// La llave con que el sistema de un cliente (por ejemplo el de NPL) consulta la API.
+// Es de un cliente y de solo lectura. La llave completa se muestra una sola vez al crearla y
+// NUNCA se guarda: solo su huella (sha256), con la que se la reconoce al llegar. `prefijo` son
+// los primeros caracteres, para que la gente identifique cuál es cuál en Configuración.
+model LlaveApi {
+  id             String    @id @default(cuid())
+  organizationId String // el cliente al que pertenece: solo lee lo suyo
+  nombre         String // para qué es («Sistema de NPL»)
+  prefijo        String
+  huella         String    @unique // sha256 de la llave
+  creadaPorId    String?
+  createdAt      DateTime  @default(now())
+  ultimoUso      DateTime?
+  revocadaEl     DateTime? // revocada = deja de funcionar, pero la fila queda de registro
+
+  creadaPor Usuario? @relation("LlaveCreadaPor", fields: [creadaPorId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+}

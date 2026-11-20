@@ -1,7 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+# (en cualquier carpeta: cada workspace puede tener el suyo, como apps/api/node_modules)
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -16,6 +17,8 @@
 # next.js
 /.next/
 /out/
+/apps/web/.next/
+/apps/web/out/
 
 # production
 /build
@@ -33,6 +36,7 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+!.env.test.ejemplo
 
 # vercel
 .vercel
@@ -41,7 +45,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-/src/generated/prisma
+/packages/db/src/generated/prisma
 
 # Datos reales para el guion de ejemplo (direcciones y ROL): nunca a GitHub, el repo es público
-/prisma/datos-reales.json
+/packages/db/scripts/datos-reales.json

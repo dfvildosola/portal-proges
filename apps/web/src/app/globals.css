@@ -1,0 +1,147 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Identidad visual de la web de Proges: los colores de la maqueta (docs/maqueta-v7.html).
+ *
+ * Esta es la ÚNICA parte del código donde se escriben colores. Todo lo demás usa los nombres de
+ * abajo (bg-card, text-soft, border-line, bg-ink…), así cambiar un color es cambiarlo aquí y listo.
+ * Cada color tiene su versión clara y su versión oscura: la web sigue el modo del aparato
+ * (prefers-color-scheme). El atributo data-theme ("light" o "dark") en <html> la fuerza, por si
+ * algún día se agrega un botón para elegir.
+ *
+ *   bg      fondo de la página         fg      texto principal      soft    texto de apoyo
+ *   line    bordes y divisores         card    tarjetas y paneles   scr     fondo de lo que va dentro de una tarjeta
+ *   side    menú lateral               ink     color de marca (botones, enlaces, selección)
+ *   ok / warn / bad  verde, ámbar y rojo; cada uno con su versión «soft» (fondo suave para insignias)
+ */
+:root {
+  --bg: #f3f5f6;
+  --fg: #14202b;
+  --soft: #56636e;
+  --line: #dbe1e5;
+  --card: #ffffff;
+  --scr: #f7f9fa;
+  --side: #14202b;
+  --sidefg: #c9d4dc;
+  --side-on: #ffffff;
+  --side-hover: rgb(255 255 255 / 0.06);
+  --side-activo: rgb(255 255 255 / 0.12);
+  --ink: #1f4e6e;
+  --ink-soft: #e7eef4;
+  --ok: #2f7d5b;
+  --ok-soft: #e3f1ea;
+  --warn: #a8691a;
+  --warn-soft: #fbefdc;
+  --bad: #b4412f;
+  --bad-soft: #f8e5e1;
+  --velo: rgb(15 24 32 / 0.45);
+  --sombra: rgb(0 0 0 / 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111a22;
+    --fg: #eef2f4;
+    --soft: #9aa6af;
+    --line: #2a3741;
+    --card: #18242e;
+    --scr: #141f28;
+    --side: #0b1218;
+    --sidefg: #9fb0bd;
+    --ink: #8eb6d3;
+    --ink-soft: #1d3344;
+    --ok: #6fbf98;
+    --ok-soft: #173329;
+    --warn: #e0a85a;
+    --warn-soft: #3a2c17;
+    --bad: #e88a77;
+    --bad-soft: #3d211c;
+    --velo: rgb(0 0 0 / 0.6);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #111a22;
+  --fg: #eef2f4;
+  --soft: #9aa6af;
+  --line: #2a3741;
+  --card: #18242e;
+  --scr: #141f28;
+  --side: #0b1218;
+  --sidefg: #9fb0bd;
+  --ink: #8eb6d3;
+  --ink-soft: #1d3344;
+  --ok: #6fbf98;
+  --ok-soft: #173329;
+  --warn: #e0a85a;
+  --warn-soft: #3a2c17;
+  --bad: #e88a77;
+  --bad-soft: #3d211c;
+  --velo: rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
+/* Conecta los colores de arriba con Tailwind: con esto existen clases como bg-card, text-soft,
+ * border-line o bg-ink-soft. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-soft: var(--soft);
+  --color-line: var(--line);
+  --color-card: var(--card);
+  --color-scr: var(--scr);
+  --color-side: var(--side);
+  --color-sidefg: var(--sidefg);
+  --color-side-on: var(--side-on);
+  --color-side-hover: var(--side-hover);
+  --color-side-activo: var(--side-activo);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-velo: var(--velo);
+  --shadow-ventana: 0 22px 50px -26px var(--sombra);
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, Menlo, monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* El foco del teclado se ve siempre, con el color de la marca. */
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+  /* En el celular, un campo de texto con menos de 16 px hace que el navegador amplíe la pantalla
+   * al tocarlo. Por eso los campos se quedan en 16 px en celular. */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+  @media (min-width: 1024px) {
+    input,
+    textarea,
+    select {
+      font-size: 14px;
+    }
+  }
+}

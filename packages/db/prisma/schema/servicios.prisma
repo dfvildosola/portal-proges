@@ -1,0 +1,166 @@
+// Servicios: lo que Proges hace en una propiedad (en la base, ServicioEnCurso), su historial y los pedidos.
+
+// Cómo va un pedido de servicio: llega NUEVA; el equipo la acepta (abre un servicio) o la rechaza.
+enum SolicitudEstado {
+  NUEVA
+  ACEPTADA
+  RECHAZADA
+}
+
+// Los seis tipos de servicio están fijos en el código.
+enum ServicioTipo {
+  EVALUACION
+  INSPECCION
+  VENTA
+  ARRIENDO
+  OBRA
+  ADMINISTRACION
+}
+
+enum ServicioEstado {
+  ABIERTO
+  TERMINADO
+  CANCELADO
+}
+
+enum EventoTipo {
+  PRECIO
+  ESPERA // cambio de «esperando a»: anterior y nuevo guardan los valores, así se calcula cuánto se esperó a otros
+}
+
+// A quién espera Proges para avanzar un servicio.
+enum EsperandoA {
+  CONSERVADOR
+  NOTARIA
+  MUNICIPALIDAD
+  MAESTRO
+  DUENO
+  BANCO
+  OTRO
+}
+
+// Quién fijó un precio: el propietario, o lo sugirió Proges (por una evaluación).
+enum PrecioOrigen {
+  PROPIETARIO
+  SUGERIDO_PROGES
+}
+
+// El catálogo de servicios (viene de la Sheet / Odoo). El código solo NO es
+// único: la fuente trae tres códigos repetidos con nombres distintos.
+model Servicio {
+  id             String  @id @default(cuid())
+  organizationId String
+  codigo         String
+  familia        String // prefijo del código antes del guion (NV, RR, ADMP…)
+  nombre         String
+  unidad         String?
+  activo         Boolean @default(true)
+
+  enCurso ServicioEnCurso[]
+
+  @@unique([organizationId, codigo, nombre])
+  @@index([organizationId])
+}
+
+// La unidad de trabajo: un servicio que se está prestando sobre una propiedad.
+// Una propiedad puede tener varios a la vez. En la web y la API se llama «servicio».
+model ServicioEnCurso {
+  id             String         @id @default(cuid())
+  organizationId String
+  propertyId     String
+  servicioId     String
+  tipo           ServicioTipo
+  responsableId  String?
+  estado         ServicioEstado @default(ABIERTO)
+  motivoCierre   String? // al cancelar o terminar
+  porConfirmar   Boolean        @default(false) // deducido de la carga inicial, falta que el equipo lo confirme
+  nota           String?
+  abiertoEl      DateTime       @default(now())
+  cerradoEl      DateTime?
+
+  // «Esperando a…»: a quién se espera, un detalle libre y desde qué día (fecha civil).
+  esperandoA       EsperandoA?
+  esperandoDetalle String?
+  esperandoDesde   DateTime?   @db.Date
+
+  // Solo para VENTA y ARRIENDO.
+  precio             Decimal?  @db.Decimal(14, 2)
+  precioMoneda       Currency?
+  avisoUrl           String? // enlace del aviso publicado (Nexxos solo publica)
+  recomendacion      String?
+  recomendacionFecha DateTime?
+
+  // Nace de un pedido del cliente y la jefatura todavía no lo revisó ni lo repartió.
+  porRevisar        Boolean   @default(false)
+  // Solo para OBRA (fechas civiles, medianoche UTC): cuándo empezó el trabajo y cuándo se
+  // le prometió al dueño que terminaba.
+  inicioObra        DateTime?
+  fechaComprometida DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  property        Property             @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  servicio        Servicio             @relation(fields: [servicioId], references: [id], onDelete: Restrict)
+  anuncios        Anuncio[]
+  responsable     Usuario?             @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+  eventos         Evento[]
+  visitas         Visita[]
+  ofertas         Oferta[]
+  solicitud       Solicitud? // el pedido del cliente que abrió este servicio, si lo hubo
+  tareas          Tarea[]
+  notas           Nota[]
+  orden           OrdenDueno? // la orden de venta de Odoo enlazada, si ya existe
+  partidas        Partida[]
+  presupuestos    PresupuestoMaestro[]
+  facturasMaestro FacturaMaestro[]
+
+  @@index([propertyId])
+  @@index([organizationId, estado])
+}
+
+// Historial de un servicio: cada cambio de precio o de «esperando a» deja una fila.
+model Evento {
+  id                String        @id @default(cuid())
+  organizationId    String
+  servicioEnCursoId String
+  tipo              EventoTipo
+  anterior          String?
+  nuevo             String // PRECIO: el monto como texto; ESPERA: a quién se esperaba (el valor de EsperandoA)
+  moneda            Currency?
+  origen            PrecioOrigen? // solo en PRECIO
+  motivo            String?
+  autorId           String?
+  fecha             DateTime      @default(now())
+
+  servicioEnCurso ServicioEnCurso @relation(fields: [servicioEnCursoId], references: [id], onDelete: Cascade)
+  autor           Usuario?        @relation(fields: [autorId], references: [id], onDelete: SetNull)
+
+  @@index([servicioEnCursoId])
+}
+
+// Un pedido de servicio de un cliente sobre una de sus propiedades. Llega NUEVA; el equipo
+// la acepta (abre el servicio y queda enlazado en `servicioEnCursoId`) o la rechaza con motivo.
+// No lleva precio: se cotiza después, fuera del portal.
+model Solicitud {
+  id                String          @id @default(cuid())
+  organizationId    String // el cliente que la pidió
+  propertyId        String
+  tipo              ServicioTipo
+  descripcion       String // qué necesita, en texto libre
+  pedidaPorId       String
+  estado            SolicitudEstado @default(NUEVA)
+  motivoRechazo     String?
+  resueltaPorId     String?
+  resueltaEl        DateTime?
+  servicioEnCursoId String?         @unique
+  createdAt         DateTime        @default(now())
+
+  property        Property         @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  pedidaPor       Usuario          @relation("SolicitudPedidaPor", fields: [pedidaPorId], references: [id], onDelete: Restrict)
+  resueltaPor     Usuario?         @relation("SolicitudResueltaPor", fields: [resueltaPorId], references: [id], onDelete: SetNull)
+  servicioEnCurso ServicioEnCurso? @relation(fields: [servicioEnCursoId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, estado])
+  @@index([propertyId])
+}

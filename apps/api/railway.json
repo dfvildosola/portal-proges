@@ -1,0 +1,11 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "watchPatterns": ["/apps/api/**", "/packages/**", "/package.json", "/package-lock.json"]
+  },
+  "deploy": {
+    "preDeployCommand": "npm run migrar-produccion -w @proges/db",
+    "startCommand": "npm run inicio -w @proges/api",
+    "healthcheckPath": "/v1/salud"
+  }
+}
