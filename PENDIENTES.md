@@ -2,30 +2,27 @@
 
 Ordenados por prioridad el 2026-10-06 con Diego.
 
-## 0. Poner en uso la etapa 1 (en este orden)
+## 0. Poner en uso el portal v7 (en este orden)
 
-Etapa 1 «dos caras», v4: cada cliente en su portal, Proges en todos (ADR 0010 y 0011), construida en `plan/etapa-1-dos-caras`. Los datos de producción no se tocan hasta el paso 4.
+El portal v7 (API propia en Railway y web nueva en Vercel; ADR 0016 y 0017) está construido en `plan/etapa-1-dos-caras` y no se ha publicado. Subir a `main` lo publica y migra producción: la migración `v7_api_propia` quita las etapas de la v4.
 
-1. [diego] **Probar en local y mezclar.** Recorrer la lista «Qué revisar» de la página del plan. Antes de subir, revisar que Vercel tenga las llaves de producción de Clerk (`pk_live_…`) y crear el usuario de Diego también en producción: al subir, producción queda con login. (2026-11-18)
-2. [diego] **Crear los clientes y sus usuarios** en `/equipo`: NPL (con un usuario de NPL a cargo de Proges, con un correo que controle Proges), Diego y su amigo; y el equipo (correos `@progesspa.cl`). (2026-11-18)
-3. [diego] **Revisar las etapas con Leo, François y Cecilia** en `/equipo/etapas` antes de la carga real. (2026-11-18)
-4. [diego] **Borrar los datos inventados de producción, confirmar con el equipo la lista de las 42 y cargarlas en NPL** (`scripts/cargar-catalogo.ts`, después `scripts/carga-inicial.ts --cliente NPL`). Quedan en «Sociedad por confirmar»: asignarle a cada una su empresa de NPL. (2026-11-18)
-5. [diego] **Revisar en «Operación» los servicios «por confirmar»** y los tipos de propiedad supuestos; resolver los posibles duplicados (Mirador 1851, unidades de Agustinas 715 y Monjitas 550). El cliente no ve un servicio hasta que se confirma. (2026-11-18)
-6. [diego] **Contarle al equipo cómo llegan los pedidos** (la bandeja de «Operación», mirarla cada día hábil) y el registro de visitas; después abrirle el portal al piloto y a NPL. Antes de abrirlo a NPL: `/code-review` completo de la etapa 1 (decisión d7). (2026-11-18)
+1. [diego] **Revisar el cierre y mezclar.** Recorrer la página del plan en su estado de cierre y responder lo que quedó abierto. (2026-11-19)
+2. [diego, mediana] **Crear la API en Railway.** Un servicio nuevo, en la cuenta de RASA o en una propia. La carpeta raíz es el repo (por los workspaces) y el archivo de configuración es `/apps/api/railway.json`. Variables: `DATABASE_URL` (Neon con pooling), `DIRECT_URL` (sin pooling, para migrar), `CLERK_SECRET_KEY` de producción, `ODOO_*` y `GOOGLE_SERVICE_ACCOUNT_*`. El ambiente tiene que llamarse `production`, o no migra. Darle su dominio. (2026-11-19)
+3. [diego] **Pasar la web de Vercel a `apps/web`.** En el proyecto `portal-proges`: Root Directory `apps/web`, `API_URL` con el dominio de la API (solo en producción: las vistas previas no deben escribir en la base real) y las llaves de Clerk de producción. Sacar `DIRECT_URL` y `BLOB_READ_WRITE_TOKEN`, que ya no se usan ahí. (2026-11-19)
+4. [diego] **Compartir el Drive con la cuenta de servicio.** La unidad compartida de las propiedades, con el correo de la cuenta de servicio; después enlazar la carpeta de cada propiedad en su ficha (Datos). Sin carpeta no se suben fotos ni PDF. (2026-11-19)
+5. [diego] **Subir a `main`** (lo pide Diego en el momento). Railway migra y publica la API; Vercel publica la web. Probar en producción: entrar, abrir una ficha y crear una tarea. (2026-11-19)
+6. [diego] **Clientes, usuarios y datos reales.** En Configuración: NPL en modo atendido; el equipo con sus correos `@progesspa.cl`; jefatura para Cecilia y Álvaro. Borrar los datos inventados de producción y cargar las propiedades de NPL (`packages/db/scripts/cargar-catalogo.ts`, después `carga-inicial.ts --cliente NPL`). Revisar los posibles duplicados (Mirador 1851, unidades de Agustinas 715 y Monjitas 550). (2026-11-19)
+7. [diego] **Contarle al equipo y abrirle el portal a NPL.** Al equipo: «Hoy» y «Anotar» en el celular, marcar a quién se espera y Repartir. A NPL: su portal, y una llave de la API si su área de sistemas la pide (`docs/api.md`). (2026-11-19)
 
+- [chica] **Un PDF de más de 4,5 MB no va a subir desde la web publicada.** La subida pasa por una server action de Vercel, que tiene ese tope (en el Mac no se nota), aunque el ADR 0016 dice que no lo hay. Arreglo: que el navegador suba directo a la API con su token. Hacerlo antes del paso 7. (2026-11-19)
 - [diego] **Respuesta de Convecta.** No ha respondido; el plan no depende de Nexxos. (2026-11-18)
 
 ## 1. Lo que hace Diego (no es código)
 
 - **Crear la cuenta en la API del Banco Central** (BDE). Es lo único que traba la UF automática, que necesita «Cobrar según lo que dice cada contrato». 2026-10-06.
 - **Responder las preguntas abiertas** de la sección «Esperan respuesta de Diego». Desbloquean cuentas, el resto de la cobranza y el tablero de Inicio. 2026-10-06.
-- **Mirar la ficha en el celular.** La vista en una columna se revisó en el código, pero no en pantalla (Chrome estaba en pantalla completa). Diego la tiene que mirar. 2026-10-01.
 
 - [diego] **Códigos repetidos en el catálogo de servicios.** En la Sheet «CODIGOS SERVICIOS PROGES», `RR-601`, `RR-602` y `RR-604` nombran dos servicios distintos cada uno, y `RR-901` no tiene nombre. Corregirlos en la Sheet y en Odoo; después se vuelve a cargar el catálogo del portal (`scripts/cargar-catalogo.ts`). (2026-11-18)
-
-## 1b. Siguiente tarea: seguimiento de obra
-
-- [grande] **Llevar la obra en el portal.** Pedido de Diego (2026-11-18): una vez aprobado el presupuesto, planificar la obra y controlarla en el portal, con hitos y avance en % por tarea o etapa; sencillo y directo; que se arme desde el presupuesto aprobado en Odoo (ejemplo: orden S00047, secciones por recinto con partidas RR y anticipos). Las tareas cuelgan del servicio en curso de tipo OBRA (ADR 0011). Antes de planificar: preguntarle a Leo cómo lleva hoy una obra (regla 8) y decidir cómo llega la orden de Odoo (conexión o pegar la orden). Se retoma cuando la etapa 1 esté en uso. (2026-11-18)
 
 ## 2. En espera: cobrar según cada contrato
 
@@ -55,14 +52,11 @@ Pausada por Diego el 2026-11-18, mientras corre la etapa 1.
 
 Va al final porque necesita los campos de la tarea 2 y que funcione la subida de documentos. La línea «Leer con IA» está en «Datos automáticos».
 
-- **Subir documentos no funciona en local: `BLOB_READ_WRITE_TOKEN` está vacío en `.env`.** Toda subida responde «Error al subir el archivo…» antes de llegar a Vercel; en la etapa 3 de la ficha (papeles) el flujo se probó hasta ese paso, pero no la escritura del documento. Decidir antes de cargar el token:
-  - un almacén de Vercel Blob aparte para desarrollo, para que ni `npm run dev` ni los espacios (que copian el `.env` del original) escriban en el de producción;
-  - si los documentos pasan a almacenamiento **privado**: hoy se suben con `access: "public"`, así que una escritura o un certificado quedan en una URL pública, difícil de adivinar pero sin protección. Vercel Blob ya ofrece almacenamiento privado.
-  2026-10-01.
 - **Cambiar el papel de un documento ya subido.** El papel solo se elige al subir: un documento subido como «Otro» por error, o uno anterior a la etapa 3 (sin papel), no cuenta para la lista hasta que se vuelva a subir. Hoy no hay documentos cargados, así que no afecta a nadie todavía. Hacerlo antes de que se carguen documentos reales: un cuadro «Editar» en cada documento (papel, nombre y fechas). Salió del `/code-review` de la branch. 2026-10-01.
 
 ## Esperan respuesta de Diego
 
+- **Cuatro detalles del portal v7.** Quedaron como se construyeron y Diego los confirma o cambia: el margen de una obra es la orden al dueño menos lo facturado por los maestros (y solo con costo aprobado); el comentario de una visita lo ve el dueño; el dueño no ve las fotos de recepción de las partidas (ADR 0015 lo permitiría); el total del presupuesto del maestro, ¿con o sin IVA? (ADR 0014). 2026-11-19.
 - **Cuentas: quién paga cada una.** En una propiedad arrendada, unas cuentas las paga el arrendatario (el dueño solo vigila que estén al día) y otras el dueño (son costo). Hoy todas se tratan igual. Primero preguntarle a Diego cómo se hace hoy (regla 8): quién las paga y quién revisa. Va antes que la línea anterior, porque solo las que paga el dueño deberían pasar a gasto. 2026-10-04.
 - **Cuentas pagadas no llegan a la rentabilidad.** Marcar pagada una `PropertyBill` no crea un `Movement` (gasto), así que ese gasto no aparece en la rentabilidad de la propiedad. Resolver cuando el flujo lleve un tiempo en uso real. 2026-10-01.
 - **Cobranza, lo que sigue.** Salió de la revisión del 2026-10-04 y espera respuestas de Diego (¿cómo se entera el dueño de que le pagaron: cartola, aviso de transferencia, comprobante? ¿cada sociedad cobra en su propia cuenta bancaria?):
@@ -78,7 +72,6 @@ Va al final porque necesita los campos de la tarea 2 y que funcione la subida de
 ## Sin prioridad por ahora
 
 - **Abonos que cruzan de mes se cuentan dos veces en el ingreso.** Un cobro guarda un solo total pagado y la fecha del último abono, así que si se abona una parte en septiembre y el resto en octubre, Inicio y el Resumen cuentan lo de septiembre otra vez en octubre (ADR 0006, consecuencias). Si pasa seguido, pasar a una tabla de abonos (un pago por fila, con su fecha). 2026-10-05.
-- **La agenda se calcula entera en cada página.** El menú muestra el contador de Pendientes, así que cada página (incluidas Contratos y Cuentas) calcula la agenda de toda la cartera: unas 8 consultas que traen todas las propiedades con sus contratos y documentos. La ficha también la calcula entera para mostrar solo sus ítems. Con 80 propiedades no se nota. Si la app se pone lenta con carteras grandes, darle al contador una consulta más liviana y filtrar la agenda por propiedad en la base. De paso: Inicio pide la última UF dos veces (la agenda ya la trae) y la agenda carga los contratos dos veces. 2026-10-05.
 - **Filtro por dueño o sociedad, y por objetivo, en todos los paneles.** Un inversionista con varias sociedades u objetivos distintos (renta, plusvalía) quiere mirar cada grupo por separado. 2026-10-04.
 - **Inicio como tablero.** Que responda de un vistazo cuatro preguntas: ¿me pagaron?, ¿pagué lo mío?, ¿qué se viene?, ¿qué me cuesta plata? Hoy Inicio ya muestra lo urgente de la agenda (ADR 0008). 2026-10-04.
 - **Borrar el contenedor viejo de Docker** (`proges-db-prueba` y su volumen `proges_proges-pgdata`) y el respaldo `.env.respaldo-docker` cuando la base `proges_dev` del Mac lleve un tiempo funcionando bien. Hoy el contenedor está apagado, no borrado. 2026-10-01.
@@ -88,7 +81,7 @@ Va al final porque necesita los campos de la tarea 2 y que funcione la subida de
 Ordenados de más a menos factible. Salen de la investigación de la ficha de propiedad (ver `docs/decisiones/0002-ficha-cifras-y-mapa.md`). 2026-10-01.
 
 - **UF e IPC automáticos** desde la API del Banco Central (BDE), que es oficial y gratis. Diego tiene que crear la cuenta; el token dura un año. La CMF queda de respaldo. Hoy la última UF en la base es del 2026-06-01, así que todo lo que está en UF se convierte con un valor viejo. Con el IPC en la base, «Reajustar» un contrato podría proponer el porcentaje solo; hoy se ingresa a mano (2026-10-04). Diego confirmó el Banco Central como fuente el 2026-10-05; lo necesita «Cobrar según lo que dice cada contrato» para la UF del día del pago.
-- **Leer con IA** el certificado de avalúo y la escritura, para llenar los datos de la ficha sin tipearlos. También el **contrato de arriendo**, para llenar sus condiciones (monto, moneda, día de pago, multas, intereses): es la idea de la app según Diego (2026-10-05). Necesita los campos de «Cobrar según lo que dice cada contrato», que la subida de documentos funcione (`BLOB_READ_WRITE_TOKEN`) y decidir el servicio de IA (regla de código 3).
+- **Leer con IA** el certificado de avalúo y la escritura, para llenar los datos de la ficha sin tipearlos. También el **contrato de arriendo**, para llenar sus condiciones (monto, moneda, día de pago, multas, intereses): es la idea de la app según Diego (2026-10-05). Necesita los campos de «Cobrar según lo que dice cada contrato», que la subida de documentos funcione (Drive, paso 4 de la sección 0) y decidir el servicio de IA (regla de código 3).
 - **Tasación y arriendo de mercado.** Piloto de un mes con un proveedor con API (Data Inmobiliaria o HousePricing) y 5 a 10 propiedades. Preguntar por escrito si se pueden guardar y mostrar los valores. Guardarlos como «estimación», con fuente, fecha y rango. Sin scraping de portales: sus condiciones lo prohíben.
 - **Avalúo desde el SII.** Sin scraping: los términos del SII piden autorización expresa. Pedir un canal oficial, y revisar a mano la descarga pública de transferencias (F2890) en la página de transparencia del SII.
 - **Reavalúo no agrícola.** Confirmar si entra el 1-ene-2027 (Ley 21.806, según la investigación) y preparar la carga de los avalúos nuevos.
@@ -101,7 +94,7 @@ Ideas que salieron al rediseñar la ficha y que no entran en esta tarea. 2026-10
 - Bitácora de notas por propiedad.
 - Flujo de venta: primero preguntar cómo se vende hoy (regla 8).
 - Mapa de toda la cartera: requiere guardar coordenadas de cada propiedad.
-- Papeles personalizables por empresa, cuando un cliente lo pida. Hoy la lista es fija, en `src/lib/papeles.ts` (ADR 0004, decisión 5).
+- Papeles personalizables por empresa, cuando un cliente lo pida. Hoy la lista es fija, en `apps/api/src/dominio/ficha/papeles.ts` (ADR 0004, decisión 5).
 - `rolSII` único por comuna y organización (hoy la base no lo impide).
 - Foto de fachada.
 - **Separar los intereses del dividendo** para la rentabilidad neta. Hoy el dividendo solo se muestra y no entra al costo, porque mezcla abono a capital (ahorro) con intereses (gasto). Ver ADR 0003, decisión 9.
