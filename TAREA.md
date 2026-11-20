@@ -1,8 +1,37 @@
 # TAREA — Etapa 1 de Proges: portal nuevo sobre una API propia (v7)
 
-**Estado (2026-11-19): plan v7 por aprobar.** Página del plan: https://claude.ai/artifact/Q5hLn7T56rPapBoimRFsEt. Maqueta aprobada: https://claude.ai/artifact/6oufJsWJ57469Ttg2X2RS8. Tamaño: grande, en tres etapas (un workflow por etapa). Branch: `plan/etapa-1-dos-caras`.
+**Estado (2026-11-19): plan v7 APROBADO con workflow.** Etapa 1 en curso. Página del plan: https://claude.ai/artifact/Q5hLn7T56rPapBoimRFsEt. Maqueta aprobada: https://claude.ai/artifact/6oufJsWJ57469Ttg2X2RS8. Tamaño: grande, en tres etapas (un workflow por etapa). Branch: `plan/etapa-1-dos-caras`.
 
-**Paso siguiente exacto:** Diego marca en la página las decisiones d1–d9 y los supuestos, y pega la respuesta. Con «ok, con workflow»: pegar la respuesta aquí, commit del plano aprobado y lanzar el workflow de la etapa 1 (A → B → C a H a la vez). Sin el ok no se escribe código.
+**Paso siguiente exacto:** lanzar el workflow de la etapa 1 (A → B → C a H a la vez). Al terminar: leer informes, `npm run verificar`, commit, y seguir con la etapa 2 sin pausa (d9 a). Diego revisa al terminar la etapa 2.
+
+**Respuesta de Diego (2026-11-19), tal cual:**
+
+```
+ok, con workflow
+Plan: portal nuevo de Proges sobre API propia, versión 7
+
+Decisiones:
+- ¿Quién habla con la base de datos? Solo la API; la web le pide todo a la API (como en RASA)
+- ¿Con qué se construye la API? Hono, en TypeScript
+- ¿Dónde corre la API? Railway, como rasa-api (distinto de lo propuesto)
+- ¿Qué pueden hacer los sistemas de afuera con su llave? Solo leer lo de su cliente
+- ¿El dueño autónomo entra en esta tarea? Sí, por invitación: sus pantallas y su cartera; sin registro abierto ni plan gratuito
+- ¿Cómo se llama lo que Proges hace en una propiedad? Servicio
+- ¿Cómo entran las cifras de Nexxos (vistas y consultas por anuncio)? A mano, una vez por semana, en la ficha de venta
+- ¿Cómo responde el dueño una oferta? En el portal: acepta, contraoferta o rechaza, y le llega una tarea al corredor
+- ¿Cuándo miras lo construido? Al terminar el portal del equipo (etapas 1 y 2 seguidas) y al final
+
+Supuestos que no son así:
+- ninguno marcado
+
+Supuestos que no sé:
+- La cuenta de Vercel admite un segundo proyecto (la API) sin cambiar de plan.
+- NPL u otro cliente grande va a querer consultar la API desde su sistema.
+- La lista «conservador, notaría, municipalidad, maestro, dueño, banco, otro» cubre a quién se espera.
+- Un cliente grande y un dueño autónomo pueden hacer lo mismo con su cartera; solo cambia la pantalla de inicio.
+```
+
+**Lo que cambió en el plano por la respuesta:** d3 b (Railway): la API corre en Railway y la web en Vercel; las migraciones corren en Railway antes de publicar la API (cambia ADR 0009); los PDF suben por la API (no hay límite de 4,5 MB); R5 pasa a ser «Railway tiene un solo ambiente»; el supuesto s1 de Vercel deja de aplicar y queda «Proges puede tener su propio proyecto en Railway». Los «no sé» no frenan: la lista de «esperando a» lleva «otro» con texto, y cartera igual para los dos tipos de dueño se puede separar después con el modo del cliente.
 
 ## Cómo se llegó a la v7
 
@@ -61,7 +90,7 @@
   - 🆕 **Lo nuevo en la base** (pieza A): A quién se espera y desde cuándo; anuncios y sus cifras semanales; respuesta del dueño a la oferta; llaves de la API; modo del cliente (atendido o autónomo); quién anotó cada documento, gasto y contribución; enlace del usuario con Clerk. Dónde: Una migración nueva (pieza A).
 - **Archivos** (Fotos y PDF, fuera de la base):
   - **Google Drive**: Fotos de la bitácora, en la subcarpeta «Portal» de cada propiedad. Se entregan por la API, nunca con enlace público. Dónde: apps/api/src/integraciones/drive.ts (hoy src/lib/archivos.ts).
-  - **Vercel Blob**: Los PDF de documentos. Suben directo desde el navegador con un permiso que firma la API. Dónde: apps/api/src/integraciones/blob.ts.
+  - **Vercel Blob**: Los PDF de documentos. Suben por la API, que los guarda y los entrega revisando el permiso. Dónde: apps/api/src/integraciones/blob.ts.
 - **Web** (Lo que corre en el navegador; pide todo a la API):
   - 🆕 **Portal del equipo** (pieza I–P): Computador: Inicio, Servicios, Propiedades, Repartir, Resultados, Configuración. Celular: Hoy, Anotar, Servicios, Propiedades. Dónde: apps/web/src/app/(equipo)/.
   - 🆕 **Portal del dueño** (pieza Q–R): Cliente grande: mis propiedades, seguimiento, reporte de venta, pedir. Autónomo: además, cartera y vencimientos. Dónde: apps/web/src/app/(dueno)/.
@@ -130,14 +159,15 @@ De Claude:
 - **Pruebas con node:test y tsx, contra una base proges_test.** Sin librería nueva. Los scripts probar-*.ts de hoy pasan a ser pruebas de la API.
 - **El código de hoy se mueve a legado/ y se borra al cerrar la etapa 1.** Los agentes de la API lo leen para trasladar las reglas; ninguna pantalla vieja llega a la web nueva.
 - **Se quitan de la base las etapas de la v4.** «Esperando a…» y las tareas las reemplazan, y todos los datos son ficticios (lo confirmaste el 2026-11-19): no hay nada que cuidar. Las propiedades reales se cargan después de publicar.
-- **Las fotos se achican en el teléfono; los PDF suben directo a Blob.** Vercel no acepta envíos de más de 4,5 MB, y en terreno ahorra datos móviles.
+- **Las fotos se achican en el teléfono antes de subir.** En terreno ahorra datos móviles y tiempo. Con la API en Railway no hay límite de 4,5 MB, así que los PDF suben por la API.
+- **La API corre en Railway y la web en Vercel.** Lo elegiste (d3 b). Las migraciones pasan a correr en Railway antes de publicar la API, ya no en el build de Vercel: cambia el ADR 0009.
 - **La respuesta del dueño a una oferta crea una tarea para el corredor.** Así nadie tiene que estar mirando la oferta para enterarse.
 - **Resultados se calcula al mirar.** Hay pocos datos: una tabla de resumen sería otra cosa que mantener al día.
 - **La identidad visual parte de la maqueta.** Colores pizarra de Proges y Plus Jakarta Sans; las pantallas se hacen desde cero, sin copiar ninguna de hoy.
 - **Se sigue en la branch plan/etapa-1-dos-caras.** Nunca se mezcló y ya tiene el back de la v6 que se reutiliza.
 
 ## 6. Supuestos (por marcar: cierto, no es así, no sé)
-- s1. La cuenta de Vercel admite un segundo proyecto (la API) sin cambiar de plan.
+- s1. Proges puede tener su propio proyecto en Railway (en la cuenta de RASA o en una nueva).
 - s2. NPL u otro cliente grande va a querer consultar la API desde su sistema.
 - s3. El equipo en terreno usa celulares con cámara y datos móviles.
 - s4. Clerk sigue siendo el login, para el equipo y para los dueños.
@@ -167,7 +197,7 @@ De Claude:
 Tandas: 1) A · 2) B · 3) C D E F G H · 4) I · 5) J K L M N O P · 6) Q R S. Etapa 1 = A–H, etapa 2 = I–P, etapa 3 = Q–S (un workflow por etapa).
 
 - ◻️ **A. Etapa 1 · Monorepo y base** (Sonnet). Archivos: package.json raíz con workspaces; legado/ (el código de hoy, solo para consultar); packages/db: prisma/schema/*.prisma, migrations intactas, cliente, scripts de carga y migrar-produccion.mjs; una migración nueva: agrega lo de la v7 y quita las etapas de la v4. Verificación: npm install; npx prisma migrate dev en proges_dev aplica sin pérdida; prisma migrate status al día.
-- ◻️ **B. Etapa 1 · Esqueleto de la API y acceso** (Opus), espera a A. Archivos: apps/api/src/app.ts, acceso/ (Clerk y llaves), permisos.ts, errores.ts; apps/api/src/rutas/*.ts vacías, ya registradas; packages/contrato/; apps/api/test/ con la base proges_test; /openapi.json y /docs; espacio.json y script raíz verificar. Verificación: npm run verificar; curl /v1/salud; pruebas: sin sesión 401, cliente A no lee a B, llave no escribe.
+- ◻️ **B. Etapa 1 · Esqueleto de la API y acceso** (Opus), espera a A. Archivos: apps/api/src/app.ts, acceso/ (Clerk y llaves), permisos.ts, errores.ts; apps/api/src/rutas/*.ts vacías, ya registradas; packages/contrato/; apps/api/test/ con la base proges_test; /openapi.json y /docs; apps/api/railway.json (build, arranque y migraciones antes de publicar); espacio.json y script raíz verificar. Verificación: npm run verificar; curl /v1/salud; pruebas: sin sesión 401, cliente A no lee a B, llave no escribe.
 - ◻️ **C. Etapa 1 · API de propiedades y ficha clínica** (Sonnet), espera a B. Archivos: apps/api/src/rutas/propiedades.ts; apps/api/src/dominio/ficha/ (historial, reparaciones, alertas y vencimientos); packages/contrato/src/propiedades.ts; apps/api/test/propiedades.test.ts. Verificación: npm run verificar -w apps/api.
 - ◻️ **D. Etapa 1 · API de servicios, tareas, bitácora y pedidos** (Sonnet), espera a B. Archivos: apps/api/src/rutas/{servicios,tareas,notas,pedidos,inicio}.ts; apps/api/src/dominio/trabajo/; apps/api/src/integraciones/drive.ts; packages/contrato/src/trabajo.ts; apps/api/test/trabajo.test.ts. Verificación: npm run verificar -w apps/api.
 - ◻️ **E. Etapa 1 · API de la obra** (Sonnet), espera a B. Archivos: apps/api/src/rutas/{obra,maestros}.ts; apps/api/src/dominio/obra/; apps/api/src/integraciones/odoo.ts; packages/contrato/src/obra.ts; apps/api/test/obra.test.ts (ex probar-obra.ts). Verificación: npm run verificar -w apps/api.
@@ -190,8 +220,8 @@ Tandas: 1) A · 2) B · 3) C D E F G H · 4) I · 5) J K L M N O P · 6) Q R S. 
 - **R1** (3×2) Rehacer todo el frente y mover el back es mucho trabajo y se alarga. Tres etapas; cada una deja el repo funcionando y en un commit. Nada se publica hasta el final.
 - **R2** (2×3, toca datos, plata) Al trasladar una regla, un dueño termina viendo un costo o una nota interna. Las pruebas de hoy pasan a ser pruebas de la API antes de borrar legado/, y cada pieza agrega las suyas como cliente y como llave.
 - **R3** (2×2, toca producción) La web no logra entrar a la API, o al publicar falta una variable. La pieza B prueba la sesión de punta a punta en local. Publicar es una lista paso a paso en PENDIENTES.md, contigo.
-- **R4** (2×1, toca producción) Las pantallas se sienten lentas por el viaje extra web → API → base. API y web en la misma región que Neon, y una llamada por pantalla con los resúmenes.
-- **R5** (2×2, toca producción) Fotos del celular de más de 4,5 MB chocan con el límite de Vercel. Se achican en el teléfono antes de subir; los PDF suben directo a Blob.
+- **R4** (2×1, toca producción) Las pantallas se sienten lentas por el viaje extra web → API → base. La API en Railway en la misma región que Neon, y una llamada por pantalla con los resúmenes.
+- **R5** (2×2, toca producción, datos) Railway tiene un solo ambiente: una vista previa de la web podría escribir en la API de producción. Las vistas previas de Vercel no reciben la dirección de la API de producción; se prueba en local con los dos servicios (espacio.json). Un segundo ambiente en Railway sería otra decisión.
 - **R6** (1×3, toca datos, producción) La migración nueva falla o borra algo en producción. Todos los datos son ficticios. Si falla, el build se detiene y queda la versión anterior (ADR 0009).
 - **R7** (1×3, toca datos, producción) Al mover prisma/ se pierde el historial de migraciones. La carpeta se mueve intacta con git mv; prisma migrate status lo comprueba en proges_dev.
 - **R8** (3×1) Las cifras de Nexxos no se anotan y el reporte queda a medias. El reporte funciona con visitas, ofertas y precio aunque falten las cifras.
@@ -199,12 +229,12 @@ Tandas: 1) A · 2) B · 3) C D E F G H · 4) I · 5) J K L M N O P · 6) Q R S. 
 - **R10** (2×1) Next 16 trae cambios y un agente escribe código de una versión vieja. Cada encargo exige leer la guía de node_modules/next/dist/docs; el build lo detecta.
 
 ## 10. Documentos accesorios y qué queda fuera
-- **ADR 0016:** Monorepo y API propia: d1 a d4, el contrato, las llaves y el /v1. Nuevo.
+- **ADR 0016:** Monorepo y API propia: d1 a d4 (Hono en Railway), el contrato, las llaves y el /v1. Reemplaza el ADR 0009 en dónde corren las migraciones. Nuevo.
 - **ADR 0017:** El frente nuevo: tres miradas, ficha clínica, «esperando a…», corretaje y ofertas, dos tipos de dueño. Dice qué partes de los ADR 0010, 0011 y 0013 quedan reemplazadas. Nuevo.
 - **docs/api.md:** Cómo se pide una llave y cómo se consulta, con ejemplos. Nuevo.
 - **AGENTS.md:** La estructura del monorepo, los comandos y «Antes de decir listo».
 - **espacio.json:** Dos servicios (web y api) con sus puertos, y las rutas nuevas.
-- **PENDIENTES.md:** Los pasos de la v4 se reemplazan por los de publicar la v7: dos proyectos en Vercel, variables, dominio de la API, cargar las propiedades reales, crear la llave de NPL.
+- **PENDIENTES.md:** Los pasos de la v4 se reemplazan por los de publicar la v7: la web en Vercel (raíz apps/web) y la API en Railway, variables, dominio de la API, cargar las propiedades reales, crear la llave de NPL.
 - **~/Code/CLAUDE.md:** La fila de portal-proges en la tabla: monorepo con web y API (repo code-raiz, commit aparte).
 - **TAREA.md:** El plano de esta tarea. Se borra en el último commit.
 
