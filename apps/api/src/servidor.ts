@@ -15,7 +15,6 @@ const { crearApp } = await import("./app");
 const { verificadorDeClerk } = await import("./acceso/clerk");
 const odoo = await import("./integraciones/odoo");
 const drive = await import("./integraciones/drive");
-const { pdfSinConectar } = await import("./integraciones/pdf");
 
 const secretoClerk = process.env.CLERK_SECRET_KEY;
 if (!secretoClerk) {
@@ -26,7 +25,6 @@ const app = crearApp({
   verificarSesion: verificadorDeClerk(secretoClerk),
   odoo,
   drive,
-  pdf: pdfSinConectar,
 });
 
 const puerto = Number(process.env.PORT ?? 3001);

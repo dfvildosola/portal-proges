@@ -76,11 +76,6 @@ export type MaestrosRespuesta = z.infer<typeof MaestrosRespuesta>;
 export const MaestroNuevo = z
   .object({
     odooPartnerId: z.number().int().positive("Elige un proveedor de la lista."),
-    buscado: z
-      .string()
-      .trim()
-      .min(2, "Falta el nombre con que se buscó al proveedor.")
-      .meta({ description: "El texto con que se lo encontró en Odoo: la API lo vuelve a buscar y toma el nombre de Odoo, no del navegador." }),
     especialidad: textoCorto(80, "La especialidad es muy larga.").optional(),
     telefono: textoCorto(40, "El teléfono es muy largo.").optional(),
   })
@@ -193,7 +188,7 @@ export type ObraDueno = z.infer<typeof ObraDueno>;
 const MaestroResumen = z.object({ id: Id, nombre: z.string() }).meta({ id: "ObraMaestroResumen" });
 
 const FotoDePartida = z
-  .object({ driveFileId: z.string(), nombre: z.string() })
+  .object({ id: Id.meta({ description: "El id de la foto: con él se pide la imagen a GET /v1/fotos/{id}." }), driveFileId: z.string(), nombre: z.string() })
   .meta({ id: "ObraFoto", description: "Una foto de la recepción, guardada en el Drive de la propiedad." });
 
 const PartidaEquipo = z

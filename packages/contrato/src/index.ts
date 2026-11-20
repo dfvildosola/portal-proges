@@ -4,6 +4,7 @@
 // esquemas para validar. Cada área vive en su archivo; este solo los junta.
 export * from "./comun";
 export * from "./acceso";
+export * from "./equipo";
 export * from "./propiedades";
 export * from "./trabajo";
 export * from "./obra";

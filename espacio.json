@@ -1,16 +1,20 @@
 {
   "repos": ["."],
-  "clonar": ["node_modules", "apps/api/node_modules", "packages/db/src/generated/prisma"],
-  "copiar": [".env", "apps/api/.env.test"],
+  "clonar": ["node_modules", "apps/api/node_modules", "apps/web/node_modules", "packages/db/src/generated/prisma"],
+  "copiar": [".env", "apps/api/.env.test", "apps/web/.env.local"],
   "bases": {
     "dev": { "original": "proges_dev", "copiar": true }
   },
   "variables": {
     ".env": {
       "DATABASE_URL": "postgresql://diegofigueroa@localhost:5432/{base.dev}?schema=public"
+    },
+    "apps/web/.env.local": {
+      "API_URL": "http://localhost:{puerto.api}"
     }
   },
   "servicios": {
+    "web": { "puerto": 0, "carpeta": "apps/web", "comando": "npx next dev -p {puerto}" },
     "api": { "puerto": 1, "carpeta": "apps/api", "comando": "PORT={puerto} npm run dev" }
   },
   "verificar": {

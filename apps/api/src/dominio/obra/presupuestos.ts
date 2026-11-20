@@ -10,7 +10,8 @@ import type * as contrato from "@proges/contrato";
 import type { Quien } from "../../acceso/quien";
 import { ErrorApi } from "../../errores";
 import type { Drive } from "../../integraciones/tipos";
-import { espacioParaEscribirEn, exigirJefatura } from "../../permisos";
+import { guardarPdf, leerPdf } from "../comun/pdf-drive";
+import { espacioParaEscribirEn, exigirEquipo, exigirJefatura, legible } from "../../permisos";
 import { MAX_BYTES_ARCHIVO, archivosDe, esPdf, nombreSeguro, textoONull } from "./formulario";
 import { exigirAbierto, servicioParaEscribir } from "./permisos-obra";
 
@@ -22,20 +23,7 @@ async function subirPdf(drive: Drive, archivo: File, property: { driveCarpetaId:
   }
   const datos = Buffer.from(await archivo.arrayBuffer());
   if (!esPdf(datos)) throw new ErrorApi(400, "El archivo no es un PDF.", { pdf: "El archivo no es un PDF." });
-  if (!property.driveCarpetaId) {
-    throw new ErrorApi(409, "Esta propiedad no tiene carpeta de Drive: enlázala antes de subir el PDF.");
-  }
-  try {
-    const { driveFileId } = await drive.subirArchivo({
-      property,
-      nombre: `Presupuesto ${nombreSeguro(nombreMaestro) || "maestro"}.pdf`,
-      mime: "application/pdf",
-      datos,
-    });
-    return driveFileId;
-  } catch (e) {
-    throw new ErrorApi(502, `No se pudo subir el PDF a Drive: ${e instanceof Error ? e.message : "error desconocido"}.`);
-  }
+  return guardarPdf(drive, property, `Presupuesto ${nombreSeguro(nombreMaestro) || "maestro"}.pdf`, datos);
 }
 
 export async function cargarPresupuesto(
@@ -145,4 +133,20 @@ export async function rechazarPresupuesto(quien: Quien, id: string, motivo: stri
   });
   if (cambio.count === 0) throw new ErrorApi(409, "Ese presupuesto ya fue resuelto.");
   return { id: p.id, estado: "RECHAZADO" };
+}
+
+// El PDF que mandó el maestro, para que el equipo lo abra. Trae el costo del maestro, así que es
+// solo del equipo: un dueño o una llave reciben 403 antes de buscar nada, y el archivo nunca
+// tiene un enlace público.
+export async function pdfDePresupuesto(quien: Quien, drive: Drive, id: string) {
+  exigirEquipo(quien);
+  const p = await legible(
+    quien,
+    await db.presupuestoMaestro.findUnique({
+      where: { id },
+      select: { organizationId: true, pdfDriveFileId: true, maestro: { select: { nombre: true } } },
+    }),
+  );
+  if (!p.pdfDriveFileId) throw new ErrorApi(404, "Este presupuesto no tiene PDF.");
+  return leerPdf(drive, p.pdfDriveFileId, `Presupuesto ${nombreSeguro(p.maestro.nombre) || "maestro"}`);
 }

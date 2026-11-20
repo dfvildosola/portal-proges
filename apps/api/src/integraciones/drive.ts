@@ -72,6 +72,17 @@ async function tokenDeAcceso(): Promise<string> {
   return token.valor;
 }
 
+// Un error de Drive que guarda el número con que respondió (404, 403…), para que quien llama
+// pueda distinguir «no tiene acceso» de «Drive se cayó».
+class ErrorDrive extends Error {
+  constructor(
+    mensaje: string,
+    readonly estado: number,
+  ) {
+    super(mensaje);
+  }
+}
+
 // Una llamada a Drive con el token puesto. Si Drive responde con error, dice cuál y qué hacer.
 async function drive(url: string, init: RequestInit = {}): Promise<Response> {
   const res = await fetch(url, {
@@ -80,14 +91,18 @@ async function drive(url: string, init: RequestInit = {}): Promise<Response> {
   });
   if (res.ok) return res;
   if (res.status === 404) {
-    throw new Error(
+    throw new ErrorDrive(
       "Drive no encuentra el archivo o la carpeta: puede que la cuenta de servicio no tenga acceso. Comparte la carpeta de la propiedad con su correo.",
+      404,
     );
   }
   if (res.status === 403) {
-    throw new Error("Drive negó el permiso a la cuenta de servicio: debe ser editora de la carpeta de la propiedad.");
+    throw new ErrorDrive(
+      "Drive negó el permiso a la cuenta de servicio: debe ser editora de la carpeta de la propiedad.",
+      403,
+    );
   }
-  throw new Error(`Drive respondió ${res.status}.`);
+  throw new ErrorDrive(`Drive respondió ${res.status}.`, res.status);
 }
 
 // ----------------------------------------------------------------------------
@@ -108,6 +123,34 @@ export function idDeCarpeta(textoOUrl: string): string | null {
   if (enRuta) return enRuta[1];
   const enParametro = t.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
   return enParametro ? enParametro[1] : null;
+}
+
+// Revisa que la cuenta de servicio pueda usar esa carpeta antes de enlazarla a una propiedad:
+// que exista, que sea una carpeta y que pueda agregarle archivos. Devuelve `{ ok: false, motivo }`
+// con una frase lista para mostrar cuando la persona tiene que arreglar algo en Drive (compartir
+// la carpeta con la cuenta de servicio); un fallo de Drive o de la llave se deja caer como error.
+export async function comprobarCarpeta(driveCarpetaId: string): Promise<{ ok: true } | { ok: false; motivo: string }> {
+  if (!ID_DRIVE.test(driveCarpetaId)) {
+    return { ok: false, motivo: "Eso no parece una carpeta de Drive: pega el enlace de la carpeta o su id." };
+  }
+  const correo = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? "la cuenta de servicio de Google";
+  try {
+    const ficha = (await (
+      await drive(`${API}/files/${driveCarpetaId}?fields=mimeType,capabilities(canAddChildren)&supportsAllDrives=true`)
+    ).json()) as { mimeType: string; capabilities?: { canAddChildren?: boolean } };
+    if (ficha.mimeType !== CARPETA_MIME) {
+      return { ok: false, motivo: "Ese enlace es de un archivo, no de una carpeta: pega el enlace de la carpeta de la propiedad." };
+    }
+    if (ficha.capabilities?.canAddChildren === false) {
+      return { ok: false, motivo: `La cuenta de servicio (${correo}) solo puede ver esa carpeta: compártela con ella como editora.` };
+    }
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof ErrorDrive && (e.estado === 404 || e.estado === 403)) {
+      return { ok: false, motivo: `No puedo abrir esa carpeta: compártela con el correo de la cuenta de servicio (${correo}) como editora.` };
+    }
+    throw e;
+  }
 }
 
 // La subcarpeta «Portal» ya conocida de cada carpeta de propiedad, para no preguntarle a Drive
@@ -192,6 +235,23 @@ export async function leerArchivo(driveFileId: string): Promise<{ datos: Buffer;
   ).json()) as { name: string; mimeType: string };
   const contenido = await drive(`${API}/files/${driveFileId}?alt=media&supportsAllDrives=true`);
   return { datos: Buffer.from(await contenido.arrayBuffer()), mime: ficha.mimeType, nombre: ficha.name };
+}
+
+// Manda un archivo a la papelera de Drive (no lo borra para siempre: se puede recuperar desde
+// allá). Se usa al borrar un documento de la propiedad.
+export async function borrarArchivo(driveFileId: string): Promise<void> {
+  if (!ID_DRIVE.test(driveFileId)) throw new Error("El id del archivo de Drive no es válido.");
+  await drive(`${API}/files/${driveFileId}?supportsAllDrives=true&fields=id`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ trashed: true }),
+  });
+}
+
+// ¿Esto parece el id de un archivo de Drive? Los documentos que venían del sistema anterior
+// guardaban otra cosa (la dirección de un almacén), y no se pueden pedir a Drive.
+export function esIdDeArchivo(texto: string): boolean {
+  return ID_DRIVE.test(texto);
 }
 
 // La miniatura que Drive genera de una foto o un PDF, o null si todavía no la tiene. Sirve para

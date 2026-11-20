@@ -11,6 +11,7 @@ const centavos = (n: number) => Math.round(n * 100) / 100;
 export type ObraParaResultados = {
   servicioId: string;
   clienteId: string;
+  clienteNombre: string;
   propiedad: string;
   estado: "ABIERTO" | "TERMINADO";
   presupuestos: PresupuestoCuenta[];
@@ -22,6 +23,7 @@ export type ObraParaResultados = {
 export type ResultadoDeObra = {
   servicioId: string;
   clienteId: string;
+  clienteNombre: string;
   propiedad: string;
   estado: "ABIERTO" | "TERMINADO";
   costoAprobado: number; // aprobado + adicionales
@@ -44,6 +46,7 @@ export function resultadoDeObra(o: ObraParaResultados): ResultadoDeObra {
   return {
     servicioId: o.servicioId,
     clienteId: o.clienteId,
+    clienteNombre: o.clienteNombre,
     propiedad: o.propiedad,
     estado: o.estado,
     costoAprobado: costo.planificado,

@@ -27,8 +27,10 @@ import {
   PropiedadesPagina,
 } from "@proges/contrato";
 import { nuevoRouter } from "../entorno";
+import type { Drive } from "../integraciones/tipos";
 import { ErrorApi } from "../errores";
-import { esDueno, espacioParaCrear, espacioParaEscribirEn, espaciosQueLee, exigirEscritura, legible } from "../permisos";
+import { esDueno, espacioParaCrear, espacioParaEscribirEn, espaciosQueLee, exigirEquipo, exigirEscritura, legible } from "../permisos";
+import { idDeCarpeta } from "../integraciones/drive";
 import { hoyChile } from "../util/fechas";
 import { camposDeLaEntrada, problemaDeMonto, validarPropiedad } from "../dominio/ficha/entrada";
 import { fichaResumen, historialDe, listarPropiedades, reparacionesDe } from "../dominio/ficha/lectura";
@@ -51,6 +53,26 @@ async function propiedadEscribible(quien: Parameters<typeof legible>[0], id: str
   const propiedad = await db.property.findUnique({ where: { id } });
   await espacioParaEscribirEn(quien, propiedad?.organizationId);
   return propiedad!;
+}
+
+// Lo que la persona pegó (el enlace de la carpeta o su id) como id de carpeta, revisado contra
+// Drive. Solo el equipo la enlaza: un cliente no decide dónde viven los archivos de Proges.
+async function carpetaEnlazable(quien: Parameters<typeof legible>[0], drive: Drive, pegado: string): Promise<string> {
+  exigirEquipo(quien);
+  const id = idDeCarpeta(pegado);
+  if (!id) {
+    const mensaje = "Eso no parece una carpeta de Drive: pega el enlace de la carpeta o su id.";
+    throw new ErrorApi(400, mensaje, { driveCarpetaId: mensaje });
+  }
+  let revision: Awaited<ReturnType<Drive["comprobarCarpeta"]>>;
+  try {
+    revision = await drive.comprobarCarpeta(id);
+  } catch (e) {
+    console.error("[api] No se pudo revisar la carpeta de Drive", e);
+    throw new ErrorApi(502, `No se pudo revisar la carpeta en Drive: ${e instanceof Error ? e.message : "error desconocido"}`);
+  }
+  if (!revision.ok) throw new ErrorApi(400, revision.motivo, { driveCarpetaId: revision.motivo });
+  return id;
 }
 
 // ---------------------------------------------------------------------------
@@ -116,12 +138,12 @@ propiedades.openapi(
     tags: ["Propiedades"],
     summary: "Cambiar los datos de una propiedad",
     description:
-      "Cambia los datos de la ficha: dirección, estado, valor comercial, compra, deuda y demás. Solo se cambia lo que se manda; un bloque de plata (`valorComercial`, `compra`, `deuda`) se manda entero, y mandarlo en `null` lo borra. Queda anotado quién guardó por última vez. Una llave de la API no puede.",
+      "Cambia los datos de la ficha: dirección, estado, valor comercial, compra, deuda y demás. Solo se cambia lo que se manda; un bloque de plata (`valorComercial`, `compra`, `deuda`) se manda entero, y mandarlo en `null` lo borra. Queda anotado quién guardó por última vez. Con `driveCarpetaId` (solo el equipo) se enlaza la carpeta de Drive de la propiedad: se manda el enlace o el id, y la API comprueba que la cuenta de servicio de Proges la puede abrir; si no, responde 400 diciendo que hay que compartirla con su correo. Una llave de la API no puede.",
     request: {
       params: ParamId,
       body: { content: { "application/json": { schema: PropiedadCambios } }, required: true },
     },
-    responses: { 200: json(PropiedadDatos, "La propiedad con sus datos nuevos."), ...errores(400, 401, 403, 404) },
+    responses: { 200: json(PropiedadDatos, "La propiedad con sus datos nuevos."), ...errores(400, 401, 403, 404, 502) },
   }),
   async (c) => {
     const quien = c.get("quien");
@@ -130,9 +152,16 @@ propiedades.openapi(
     const cambios = c.req.valid("json");
     const propiedad = await propiedadEscribible(quien, id);
     validarPropiedad(cambios, hoyChile());
+    // La carpeta de Drive se enlaza solo si es del equipo y la cuenta de servicio la puede abrir.
+    const driveCarpetaId =
+      cambios.driveCarpetaId === undefined ? undefined : await carpetaEnlazable(quien, c.get("dep").drive, cambios.driveCarpetaId);
     const actualizada = await db.property.update({
       where: { id: propiedad.id },
-      data: { ...camposDeLaEntrada(cambios), modificadoPorId: persona.usuario.id },
+      data: {
+        ...camposDeLaEntrada(cambios),
+        ...(driveCarpetaId === undefined ? {} : { driveCarpetaId }),
+        modificadoPorId: persona.usuario.id,
+      },
     });
     return c.json(datosDePropiedad(actualizada), 200);
   },

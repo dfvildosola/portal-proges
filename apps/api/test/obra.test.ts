@@ -272,6 +272,7 @@ before(async () => {
         return ordenActual;
       },
       buscarProveedores: async (texto) => (PROVEEDOR.nombre.toLowerCase().includes(texto.toLowerCase().split(" ")[0]) ? [PROVEEDOR] : []),
+      leerProveedor: async (id) => (id === ID_PROVEEDOR ? PROVEEDOR : null),
       facturasDeProveedor: async (id) => (id === ID_PROVEEDOR ? [FACTURA_ODOO] : []),
       leerFacturas: async (ids) => (ids.includes(ID_FACTURA) ? [FACTURA_ODOO] : []),
     },
@@ -333,12 +334,11 @@ const formulario = (campos: Record<string, string | File | (string | File)[]>) =
 
 describe("maestros", () => {
   test("agregar un maestro: solo el equipo; copia el nombre de Odoo y no se repite", async () => {
-    const mal = await e.pedir("equipo", "POST", "/v1/maestros", { odooPartnerId: ID_PROVEEDOR, buscado: "no-existe" });
+    const mal = await e.pedir("equipo", "POST", "/v1/maestros", { odooPartnerId: ID_PROVEEDOR + 1 });
     assert.equal(mal.estado, 400);
 
     const ok = await e.pedir("equipo", "POST", "/v1/maestros", {
       odooPartnerId: ID_PROVEEDOR,
-      buscado: "Maestro Secreto",
       especialidad: "Gasfitería",
     });
     assert.equal(ok.estado, 201, JSON.stringify(ok.cuerpo));
@@ -347,7 +347,7 @@ describe("maestros", () => {
     assert.equal(ok.cuerpo.especialidad, "Gasfitería");
     maestroId = ok.cuerpo.id;
 
-    const repetido = await e.pedir("equipo", "POST", "/v1/maestros", { odooPartnerId: ID_PROVEEDOR, buscado: "Maestro Secreto" });
+    const repetido = await e.pedir("equipo", "POST", "/v1/maestros", { odooPartnerId: ID_PROVEEDOR });
     assert.equal(repetido.estado, 409);
   });
 
@@ -372,7 +372,7 @@ describe("maestros", () => {
     for (const quien of ["clienteA", "llaveA"] as const) {
       assert.equal((await e.pedir(quien, "GET", "/v1/maestros")).estado, 403, quien);
       assert.equal((await e.pedir(quien, "GET", "/v1/maestros/odoo?q=Maestro")).estado, 403, quien);
-      assert.equal((await e.pedir(quien, "POST", "/v1/maestros", { odooPartnerId: 1, buscado: "ab" })).estado, 403, quien);
+      assert.equal((await e.pedir(quien, "POST", "/v1/maestros", { odooPartnerId: 1 })).estado, 403, quien);
       assert.equal((await e.pedir(quien, "PATCH", `/v1/maestros/${maestroId}`, { activo: false })).estado, 403, quien);
       assert.equal((await e.pedir(quien, "GET", `/v1/maestros/${maestroId}/facturas-odoo`)).estado, 403, quien);
     }
@@ -587,6 +587,11 @@ describe("la obra de punta a punta", () => {
     assert.equal(tarea.responsableId, e.ids.equipo);
     assert.match(tarea.que, /^Corregir: Pintura de muros: OBS-SECRETA/);
     assert.equal(await db.foto.count({ where: { partidaId: idsDePartidas[102] } }), 2);
+    // El equipo recibe el id de cada foto, para pedirla a GET /v1/fotos/{id}.
+    const vistaEquipo = await e.pedir("equipo", "GET", `/v1/servicios/${servicioId}/obra`);
+    const fotosDeLaPartida = vistaEquipo.cuerpo.partidas.find((p: { id: string }) => p.id === idsDePartidas[102]).fotos;
+    const idsEnBase = (await db.foto.findMany({ where: { partidaId: idsDePartidas[102] }, select: { id: true } })).map((f) => f.id).sort();
+    assert.deepEqual(fotosDeLaPartida.map((f: { id: string }) => f.id).sort(), idsEnBase);
 
     // Observarla otra vez no duplica la tarea.
     const otra = await e.pedir("equipo", "POST", ruta, formulario({ resultado: "OBSERVADA", observacion: "Sigue mal" }));

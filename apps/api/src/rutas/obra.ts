@@ -42,7 +42,7 @@ import { aFechaCivil } from "../dominio/obra/formulario";
 import { actualizarOrden, revisarOEnlazarOrden } from "../dominio/obra/orden-enlace";
 import { avanceDeRecinto, cambiarPartida } from "../dominio/obra/partidas";
 import { exigirAbierto, servicioParaEscribir } from "../dominio/obra/permisos-obra";
-import { aprobarPresupuesto, cargarPresupuesto, rechazarPresupuesto } from "../dominio/obra/presupuestos";
+import { aprobarPresupuesto, cargarPresupuesto, pdfDePresupuesto, rechazarPresupuesto } from "../dominio/obra/presupuestos";
 import { obraParaDueno, obraParaEquipo } from "../dominio/obra/recorte";
 import { recibirPartida } from "../dominio/obra/recepcion";
 import { ErrorApi } from "../errores";
@@ -210,6 +210,26 @@ obra.openapi(
   async (c) => {
     const { id } = c.req.valid("param");
     return c.json(await cargarPresupuesto(c.get("quien"), c.get("dep").drive, id, c.req.valid("form")), 201);
+  },
+);
+
+obra.openapi(
+  createRoute({
+    method: "get",
+    path: "/presupuestos/{id}/archivo",
+    tags: ["Obra"],
+    summary: "El PDF de un presupuesto",
+    description:
+      "Entrega el PDF que mandó el maestro, desde el Drive de la propiedad. Solo para el equipo (trae el costo del maestro): un dueño o una llave reciben 403. Un presupuesto cargado sin PDF responde 404. El archivo nunca tiene un enlace público.",
+    request: { params: z.object({ id: Id.meta({ description: "El id del presupuesto." }) }) },
+    responses: {
+      200: { content: { "application/pdf": { schema: z.string().meta({ format: "binary" }) } }, description: "El PDF." },
+      ...errores(401, 403, 404, 502),
+    },
+  }),
+  async (c) => {
+    const { cuerpo, cabeceras } = await pdfDePresupuesto(c.get("quien"), c.get("dep").drive, c.req.valid("param").id);
+    return c.body(cuerpo, 200, cabeceras) as never;
   },
 );
 

@@ -17,7 +17,7 @@ import { db, ORG_PROGES, type Usuario } from "@proges/db";
 import { crearApp, type App } from "../src/app";
 import { generarLlave } from "../src/acceso/llaves";
 import type { VerificarSesion } from "../src/entorno";
-import type { Drive, GuardadoPdf, Odoo } from "../src/integraciones/tipos";
+import type { Drive, Odoo } from "../src/integraciones/tipos";
 
 // Un seguro: si DATABASE_URL no apunta a una base «…_test», ninguna prueba crea ni borra nada.
 // Así un error de configuración nunca toca proges_dev.
@@ -49,18 +49,19 @@ export const verificarSesionDePrueba: VerificarSesion = async (token) => {
 // Sistemas de afuera de mentira
 // ---------------------------------------------------------------------------
 
-// Por defecto, Odoo, Drive y el guardado de PDF fallan con un mensaje claro si una ruta los usa.
+// Por defecto, Odoo y Drive (fotos y PDF) fallan con un mensaje claro si una ruta los usa.
 // Una prueba que los necesita pasa su versión falsa: crearEscenario({ odoo: { leerOrden: async () => … } }).
 function noDisponible(nombre: string): never {
   throw new Error(`${nombre} no está disponible en las pruebas: pásale una versión falsa a crearEscenario().`);
 }
 
-export type Falsos = { odoo?: Partial<Odoo>; drive?: Partial<Drive>; pdf?: Partial<GuardadoPdf> };
+export type Falsos = { odoo?: Partial<Odoo>; drive?: Partial<Drive> };
 
 function dependenciasDePrueba(falsos: Falsos) {
   const odoo: Odoo = {
     leerOrden: async () => noDisponible("odoo.leerOrden"),
     buscarProveedores: async () => noDisponible("odoo.buscarProveedores"),
+    leerProveedor: async () => noDisponible("odoo.leerProveedor"),
     facturasDeProveedor: async () => noDisponible("odoo.facturasDeProveedor"),
     leerFacturas: async () => noDisponible("odoo.leerFacturas"),
     ...falsos.odoo,
@@ -69,15 +70,11 @@ function dependenciasDePrueba(falsos: Falsos) {
     subirArchivo: async () => noDisponible("drive.subirArchivo"),
     leerArchivo: async () => noDisponible("drive.leerArchivo"),
     miniatura: async () => noDisponible("drive.miniatura"),
+    borrarArchivo: async () => noDisponible("drive.borrarArchivo"),
+    comprobarCarpeta: async () => noDisponible("drive.comprobarCarpeta"),
     ...falsos.drive,
   };
-  const pdf: GuardadoPdf = {
-    guardar: async () => noDisponible("pdf.guardar"),
-    leer: async () => noDisponible("pdf.leer"),
-    borrar: async () => noDisponible("pdf.borrar"),
-    ...falsos.pdf,
-  };
-  return { verificarSesion: verificarSesionDePrueba, odoo, drive, pdf };
+  return { verificarSesion: verificarSesionDePrueba, odoo, drive };
 }
 
 // ---------------------------------------------------------------------------

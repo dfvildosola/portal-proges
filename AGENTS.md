@@ -8,7 +8,6 @@ Desde la v7 (ADR 0016) esto es un monorepo con workspaces de npm:
 | `apps/web` | La web (Next.js 16). Le pide todo a la API desde el servidor. Corre en Vercel | `apps/web/LEEME.md` |
 | `packages/db` | La base: esquema de Prisma por temas, migraciones, cliente y scripts de carga | — |
 | `packages/contrato` | Lo que la API recibe y entrega (zod). Lo usan la API, la web y `/docs` | — |
-| `legado/` | El portal viejo. Se borra al terminar la etapa 2. No se copia nada de sus pantallas | — |
 
 La maqueta aprobada del portal es `docs/maqueta-v7.html`. Las decisiones están en `docs/decisiones/`, y las de la v7 son la 0016 (monorepo y API propia) y la 0017 (qué ve y hace cada uno).
 

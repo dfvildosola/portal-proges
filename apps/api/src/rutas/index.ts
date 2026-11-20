@@ -8,6 +8,7 @@
 import { nuevoRouter } from "../entorno";
 import { salud } from "./salud";
 import { yo } from "./yo";
+import { equipo } from "./equipo";
 import { propiedades } from "./propiedades";
 import { documentos } from "./documentos";
 import { vencimientos } from "./vencimientos";
@@ -31,6 +32,7 @@ export const rutasV1 = nuevoRouter();
 for (const router of [
   salud,
   yo,
+  equipo,
   propiedades, // pieza C
   documentos, // pieza C
   vencimientos, // pieza C

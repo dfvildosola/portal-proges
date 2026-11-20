@@ -9,18 +9,8 @@ import type * as odoo from "./odoo";
 import type * as drive from "./drive";
 
 // Odoo, solo lectura (ver la promesa al comienzo de odoo.ts).
-export type Odoo = Pick<typeof odoo, "leerOrden" | "buscarProveedores" | "facturasDeProveedor" | "leerFacturas">;
+export type Odoo = Pick<typeof odoo, "leerOrden" | "buscarProveedores" | "leerProveedor" | "facturasDeProveedor" | "leerFacturas">;
 
-// Las fotos en el Drive de cada propiedad. `idDeCarpeta` no va aquí: no habla con Drive, es una
-// función pura que se importa directo.
-export type Drive = Pick<typeof drive, "subirArchivo" | "leerArchivo" | "miniatura">;
-
-// Donde se guardan los PDF de los documentos de una propiedad. La API los recibe, los guarda y
-// los entrega revisando el permiso: nunca con un enlace público.
-export interface GuardadoPdf {
-  // Guarda el archivo en `ruta` (por ejemplo «<cliente>/propiedades/<id>/<uuid>.pdf») y devuelve la
-  // clave con que se lo vuelve a pedir: es lo que se anota en Document.blobKey.
-  guardar(archivo: { ruta: string; mime: string; datos: Uint8Array }): Promise<{ clave: string }>;
-  leer(clave: string): Promise<{ datos: Uint8Array; mime: string }>;
-  borrar(clave: string): Promise<void>;
-}
+// Los archivos (fotos y PDF) en el Drive de cada propiedad. `idDeCarpeta` y `esIdDeArchivo` no van
+// aquí: no hablan con Drive, son funciones puras que se importan directo.
+export type Drive = Pick<typeof drive, "subirArchivo" | "leerArchivo" | "miniatura" | "borrarArchivo" | "comprobarCarpeta">;

@@ -223,6 +223,7 @@ export const ResultadosObra = z
   .object({
     servicioId: Id,
     clienteId: Id,
+    clienteNombre: z.string().meta({ description: "El nombre del cliente dueño de la obra." }),
     propiedad: z.string().meta({ description: "La dirección de la propiedad." }),
     estado: z.enum(["ABIERTO", "TERMINADO"]),
     costoAprobado: Monto.meta({ description: "Lo aprobado a los maestros (presupuesto original más adicionales)." }),

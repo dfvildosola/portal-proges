@@ -113,11 +113,19 @@ resultados.openapi(
         : [],
     );
 
+    // El nombre del cliente de cada obra (la obra solo guarda el id).
+    const clientesDeObras = await db.organizacion.findMany({
+      where: { id: { in: [...new Set(obrasDb.map((o) => o.organizationId))] } },
+      select: { id: true, nombre: true },
+    });
+    const nombresDeClientes = new Map(clientesDeObras.map((o) => [o.id, o.nombre]));
+
     const obrasEntrada: ObraParaResultados[] = obrasDb
       .filter((o) => estaEnElRango(diaChile(o.abiertoEl), new Date(0), hasta) && (!o.cerradoEl || diaChile(o.cerradoEl).getTime() >= desde.getTime()))
       .map((o) => ({
         servicioId: o.id,
         clienteId: o.organizationId,
+        clienteNombre: nombresDeClientes.get(o.organizationId) ?? "",
         propiedad: o.property.direccion,
         estado: o.estado === "TERMINADO" ? "TERMINADO" : "ABIERTO",
         presupuestos: o.presupuestos.map(
@@ -167,6 +175,7 @@ resultados.openapi(
         obras: obras.map((o) => ({
           servicioId: o.servicioId,
           clienteId: o.clienteId,
+          clienteNombre: o.clienteNombre,
           propiedad: o.propiedad,
           estado: o.estado,
           costoAprobado: aMonto(o.costoAprobado, "CLP"),

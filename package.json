@@ -2,7 +2,7 @@
   "name": "proges",
   "version": "0.1.0",
   "private": true,
-  "description": "Proges: monorepo con la API (apps/api), la base (packages/db), el contrato (packages/contrato) y, más adelante, la web.",
+  "description": "Proges: monorepo con la API (apps/api), la web (apps/web), la base (packages/db) y el contrato (packages/contrato).",
   "engines": {
     "node": "24.x"
   },
@@ -15,7 +15,8 @@
     "lint": "npm run lint --workspaces --if-present",
     "prueba": "npm run prueba --workspaces --if-present",
     "largo": "node scripts/chequear-largo.mjs",
-    "verificar": "npm run tipos && npm run lint && npm run prueba && npm run largo"
+    "construir": "npm run build -w @proges/web",
+    "verificar": "npm run tipos && npm run lint && npm run prueba && npm run construir && npm run largo"
   },
   "devDependencies": {
     "eslint": "^9.39.4",

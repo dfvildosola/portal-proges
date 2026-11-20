@@ -245,6 +245,23 @@ export type ProveedorOdoo = {
 // «Diseño» → «Diseno»: Odoo a veces guarda los nombres sin tilde y a veces con.
 const sinTildes = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "");
 
+const CAMPOS_PROVEEDOR = ["name", "vat", "phone", "email"];
+
+// Una ficha de res.partner de Odoo, como la usa el portal; cuenta sus facturas de proveedor.
+async function aProveedor(s: Fila): Promise<ProveedorOdoo> {
+  return {
+    id: Number(s.id),
+    nombre: String(s.name),
+    rut: texto(s.vat),
+    telefono: texto(s.phone),
+    correo: texto(s.email),
+    facturas: await contar("account.move", [
+      ["move_type", "=", "in_invoice"],
+      ["commercial_partner_id", "=", Number(s.id)],
+    ]),
+  };
+}
+
 // Busca proveedores por nombre. Cada palabra tiene que aparecer (en cualquier orden, con o sin
 // tilde): «diseño espacios» encuentra «SOCIEDAD DISENO Y ESPACIOS LIMITADA». Muestra primero a
 // los que tienen más facturas de proveedor.
@@ -259,24 +276,20 @@ export async function buscarProveedores(textoBuscado: string): Promise<Proveedor
     else dominio.push("|", ["name", "ilike", p], ["name", "ilike", alternativa]);
   }
 
-  const socios = await buscar("res.partner", dominio, ["name", "vat", "phone", "email"], {
+  const socios = await buscar("res.partner", dominio, CAMPOS_PROVEEDOR, {
     limit: 15,
     order: "name asc",
   });
-  const proveedores = await Promise.all(
-    socios.map(async (s) => ({
-      id: Number(s.id),
-      nombre: String(s.name),
-      rut: texto(s.vat),
-      telefono: texto(s.phone),
-      correo: texto(s.email),
-      facturas: await contar("account.move", [
-        ["move_type", "=", "in_invoice"],
-        ["commercial_partner_id", "=", Number(s.id)],
-      ]),
-    })),
-  );
+  const proveedores = await Promise.all(socios.map(aProveedor));
   return proveedores.sort((a, b) => b.facturas - a.facturas);
+}
+
+// Un proveedor por su id de Odoo, o null si no existe (o es un contacto suelto de una empresa).
+// Es la forma de confirmar que el id que mandó la web es de verdad un proveedor, sin buscarlo por
+// nombre.
+export async function leerProveedor(id: number): Promise<ProveedorOdoo | null> {
+  const socios = await buscar("res.partner", [["id", "=", id], ["parent_id", "=", false]], CAMPOS_PROVEEDOR, { limit: 1 });
+  return socios.length > 0 ? aProveedor(socios[0]) : null;
 }
 
 export type EstadoFactura = "borrador" | "publicada" | "anulada";

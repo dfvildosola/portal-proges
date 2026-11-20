@@ -277,6 +277,7 @@ describe("resultados: las cuentas, con un caso armado a mano", () => {
   test("obras: aprobado contra facturado y margen", () => {
     const base = {
       clienteId: "c",
+      clienteNombre: "Cliente C",
       propiedad: "Agustinas 715",
       estado: "TERMINADO" as const,
       presupuestos: [

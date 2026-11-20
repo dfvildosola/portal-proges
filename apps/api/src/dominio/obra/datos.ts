@@ -79,7 +79,7 @@ export async function cargarDatosDeObra(
         quitadaEnOdoo: true,
         maestro: { select: { id: true, nombre: true } },
         recibidaPor: { select: { nombre: true } },
-        fotos: { orderBy: { createdAt: "asc" }, select: { driveFileId: true, nombre: true } },
+        fotos: { orderBy: { createdAt: "asc" }, select: { id: true, driveFileId: true, nombre: true } },
       },
     }),
     opciones.paraDueno ? Promise.resolve([]) : db.presupuestoMaestro.findMany({

@@ -24,7 +24,6 @@ import { nuevoRouter } from "../entorno";
 import { desdeAfuera } from "../dominio/obra/permisos-obra";
 import { facturasOdooDeMaestro } from "../dominio/obra/facturas";
 import { textoONull } from "../dominio/obra/formulario";
-import type { ProveedorOdoo } from "../integraciones/odoo";
 import { exigirEquipo, exigirEscritura } from "../permisos";
 import { errores, json } from "./ayuda";
 
@@ -86,17 +85,6 @@ maestros.openapi(
   },
 );
 
-// Confirma contra Odoo que ese proveedor existe y devuelve sus datos: no se le cree a la web el
-// nombre que manda. (Odoo se consulta por nombre porque todavía no hay «leer un proveedor por su id».)
-async function proveedorDeOdoo(
-  buscar: (texto: string) => Promise<ProveedorOdoo[]>,
-  odooPartnerId: number,
-  textoParaBuscar: string,
-): Promise<ProveedorOdoo | null> {
-  const encontrados = await desdeAfuera("Odoo", () => buscar(textoParaBuscar));
-  return encontrados.find((p) => p.id === odooPartnerId) ?? null;
-}
-
 maestros.openapi(
   createRoute({
     method: "post",
@@ -104,7 +92,7 @@ maestros.openapi(
     tags: ["Maestros"],
     summary: "Agregar un maestro",
     description:
-      "Agrega un proveedor de Odoo como maestro. La API vuelve a buscarlo en Odoo con el texto `buscado` y copia el nombre de ahí. Si ya está agregado, responde 409.",
+      "Agrega un proveedor de Odoo como maestro. La API lo vuelve a leer en Odoo por su `odooPartnerId` y copia el nombre de ahí (no el que mande el navegador). Si ya está agregado, responde 409.",
     request: { body: { content: { "application/json": { schema: MaestroNuevo } }, required: true } },
     responses: { 201: json(Maestro, "El maestro agregado."), ...errores(400, 401, 403, 409, 502) },
   }),
@@ -117,7 +105,7 @@ maestros.openapi(
     const repetido = await db.maestro.findUnique({ where: { odooPartnerId: pedido.odooPartnerId }, select: { nombre: true } });
     if (repetido) throw new ErrorApi(409, `${repetido.nombre} ya está agregado como maestro.`);
 
-    const proveedor = await proveedorDeOdoo(c.get("dep").odoo.buscarProveedores, pedido.odooPartnerId, pedido.buscado);
+    const proveedor = await desdeAfuera("Odoo", () => c.get("dep").odoo.leerProveedor(pedido.odooPartnerId));
     if (!proveedor) throw new ErrorApi(400, "No encontré ese proveedor en Odoo. Búscalo de nuevo.", { odooPartnerId: "No está en Odoo." });
 
     const creado = await db.maestro.create({
@@ -161,16 +149,8 @@ maestros.openapi(
 
     let nombre: string | undefined;
     if (cambio.refrescarNombreDeOdoo) {
-      // Se busca por las primeras palabras del nombre que ya tenemos: primero con dos (más
-      // preciso) y, si no aparece, con la primera sola. Si lo renombraron por completo, no lo
-      // encuentra y lo dice.
-      const palabras = maestro.nombre.split(/\s+/).filter((p) => p.length >= 2);
-      let proveedor: ProveedorOdoo | null = null;
-      for (const cuantas of [2, 1]) {
-        proveedor = await proveedorDeOdoo(c.get("dep").odoo.buscarProveedores, maestro.odooPartnerId, palabras.slice(0, cuantas).join(" "));
-        if (proveedor) break;
-      }
-      if (!proveedor) throw new ErrorApi(404, "No lo encontré en Odoo con ese nombre: puede que lo hayan cambiado del todo.");
+      const proveedor = await desdeAfuera("Odoo", () => c.get("dep").odoo.leerProveedor(maestro.odooPartnerId));
+      if (!proveedor) throw new ErrorApi(404, "No lo encontré en Odoo: puede que lo hayan borrado o fusionado con otro.");
       nombre = proveedor.nombre;
     }
 

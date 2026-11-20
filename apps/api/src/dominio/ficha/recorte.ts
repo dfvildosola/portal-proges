@@ -62,6 +62,8 @@ export function datosDePropiedad(p: Property): PropiedadDatos {
         }
       : null,
     exentaContribuciones: p.exentaContribuciones,
+    // Solo si hay carpeta, nunca su id: el dueño y las llaves no necesitan saber dónde está en Drive.
+    tieneCarpetaDrive: p.driveCarpetaId !== null,
     creadaEl: aFechaHoraISO(p.createdAt),
     actualizadaEl: aFechaHoraISO(p.updatedAt),
   };

@@ -119,6 +119,9 @@ export const PropiedadDatos = z
     compra: PropiedadCompra.nullable(),
     deuda: PropiedadDeuda.nullable(),
     exentaContribuciones: z.boolean().meta({ description: "Si no paga cuotas de contribuciones." }),
+    tieneCarpetaDrive: z.boolean().meta({
+      description: "Si la propiedad ya tiene enlazada su carpeta de Drive. Sin ella no se pueden subir PDF ni fotos.",
+    }),
     creadaEl: FechaHoraISO,
     actualizadaEl: FechaHoraISO,
   })
@@ -154,10 +157,23 @@ export const PropiedadNueva = PropiedadCampos.extend({
 }).meta({ id: "PropiedadNueva", description: "Datos para crear una propiedad." });
 export type PropiedadNueva = z.infer<typeof PropiedadNueva>;
 
-export const PropiedadCambios = PropiedadCampos.partial().meta({
-  id: "PropiedadCambios",
-  description: "Los datos de la ficha que cambian. Lo que no se manda queda como estaba.",
-});
+export const PropiedadCambios = PropiedadCampos.partial()
+  .extend({
+    driveCarpetaId: z
+      .string()
+      .trim()
+      .min(1, "Pega el enlace de la carpeta de Drive o su id.")
+      .optional()
+      .meta({
+        description:
+          "La carpeta de Drive de la propiedad: el enlace completo o solo el id. Solo la puede cambiar el equipo, y la cuenta de servicio de Proges tiene que poder abrirla.",
+        example: "https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUv",
+      }),
+  })
+  .meta({
+    id: "PropiedadCambios",
+    description: "Los datos de la ficha que cambian. Lo que no se manda queda como estaba.",
+  });
 export type PropiedadCambios = z.infer<typeof PropiedadCambios>;
 
 // ---------------------------------------------------------------------------

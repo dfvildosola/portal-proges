@@ -1,13 +1,12 @@
 // Rutas de documentos, dueños y grupos económicos (pieza C).
 //
 // Documentos: la lista agrupada de una propiedad con su estado, subir un PDF, borrarlo y pedir el
-// archivo. El PDF se guarda con dep.pdf (integraciones/blob.ts) y NUNCA se entrega con un enlace
-// público: GET /v1/documentos/{id}/archivo primero revisa quién pregunta y después lo busca.
+// archivo. El PDF va a la subcarpeta «Portal» del Drive de la propiedad (dominio/comun/pdf-drive.ts)
+// y NUNCA se entrega con un enlace público: GET /v1/documentos/{id}/archivo primero revisa quién pregunta y después lo busca.
 //
 // Dueños: las personas y sociedades dueñas de las propiedades (Owner), sus grupos económicos
 // (Grupo: la familia que controla varias entidades) y la copropiedad de cada propiedad con su %
 // (PropertyOwner).
-import { randomUUID } from "node:crypto";
 import { createRoute, z } from "@hono/zod-openapi";
 import { db } from "@proges/db";
 import {
@@ -28,8 +27,11 @@ import {
 import { nuevoRouter } from "../entorno";
 import { ErrorApi } from "../errores";
 import { esDueno, espacioParaCrear, espacioParaEscribirEn, espaciosQueLee, exigirEscritura, legible } from "../permisos";
+import { esIdDeArchivo } from "../integraciones/drive";
 import { hoyChile } from "../util/fechas";
 import { fechaCivil } from "../dominio/ficha/entrada";
+import { borrarPdf, exigirCarpetaDeDrive, guardarPdf, leerPdf } from "../dominio/comun/pdf-drive";
+import { esPdf } from "../dominio/obra/formulario";
 import { agruparDocumentos } from "../dominio/ficha/documentos";
 import { PAPEL_CATEGORIA } from "../dominio/ficha/papeles";
 import { documentoDe, duenoDe, propiedadDuenoDe } from "../dominio/ficha/recorte";
@@ -93,9 +95,9 @@ documentos.openapi(
     tags: ["Documentos"],
     summary: "Subir un documento",
     description:
-      "Sube un PDF (hasta 25 MB) como formulario con archivo (`multipart/form-data`). Hay que decir qué `papel` es: con un papel de la lista, el cajón sale solo; con «OTRO» el documento queda sin papel y hay que mandar `tipo`. La fecha de emisión no puede ser futura. Queda anotado quién lo subió. Una llave de la API no puede.",
+      "Sube un PDF (hasta 25 MB) a la subcarpeta «Portal» del Drive de la propiedad, como formulario con archivo (`multipart/form-data`). Hay que decir qué `papel` es: con un papel de la lista, el cajón sale solo; con «OTRO» el documento queda sin papel y hay que mandar `tipo`. La fecha de emisión no puede ser futura. Queda anotado quién lo subió. Si la propiedad no tiene carpeta de Drive enlazada, responde 409. Una llave de la API no puede.",
     request: { params: ParamId, body: { content: { "multipart/form-data": { schema: DocumentoSubida } }, required: true } },
-    responses: { 201: json(DocumentoFicha, "El documento guardado."), ...errores(400, 401, 403, 404, 503) },
+    responses: { 201: json(DocumentoFicha, "El documento guardado."), ...errores(400, 401, 403, 404, 409, 502) },
   }),
   async (c) => {
     const quien = c.get("quien");
@@ -104,12 +106,15 @@ documentos.openapi(
     const form = c.req.valid("form");
     const propiedad = await db.property.findUnique({ where: { id } });
     const organizationId = await espacioParaEscribirEn(quien, propiedad?.organizationId);
+    exigirCarpetaDeDrive(propiedad!);
 
     const archivo = form.file;
     const campos: Record<string, string> = {};
+    // Los bytes se leen una sola vez (tope 25 MB): sirven para comprobar que de verdad es un PDF y para subirlo.
+    const datos = archivo.size > 0 && archivo.size <= MAX_BYTES ? new Uint8Array(await archivo.arrayBuffer()) : new Uint8Array();
     if (archivo.size === 0) campos.file = "El archivo está vacío.";
     else if (archivo.size > MAX_BYTES) campos.file = "El archivo pasa de 25 MB.";
-    else if (archivo.type !== "application/pdf") campos.file = "Sube un PDF.";
+    else if (archivo.type !== "application/pdf" || !esPdf(datos)) campos.file = "Sube un PDF.";
     if (form.papel === "OTRO" && !form.tipo) campos.tipo = "Elige en qué cajón se archiva.";
     if (form.fechaEmision && fechaCivil(form.fechaEmision) > hoyChile()) campos.fechaEmision = "No puede ser una fecha futura.";
     if (Object.keys(campos).length > 0) throw new ErrorApi(400, "Revisa los datos enviados.", campos);
@@ -118,13 +123,8 @@ documentos.openapi(
     const tipo = papel ? PAPEL_CATEGORIA[papel] : form.tipo!;
     const nombre = form.nombre?.trim() || archivo.name;
 
-    const { pdf } = c.get("dep");
-    const datos = new Uint8Array(await archivo.arrayBuffer());
-    const { clave } = await pdf.guardar({
-      ruta: `proges/${organizationId}/propiedades/${id}/${randomUUID()}.pdf`,
-      mime: "application/pdf",
-      datos,
-    });
+    const { drive } = c.get("dep");
+    const driveFileId = await guardarPdf(drive, propiedad!, nombre, datos);
     try {
       const creado = await db.document.create({
         data: {
@@ -133,7 +133,8 @@ documentos.openapi(
           tipo,
           papel,
           nombre,
-          blobKey: clave,
+          // La columna se llama blobKey desde antes de Drive: hoy guarda el id del archivo en Drive.
+          blobKey: driveFileId,
           fechaEmision: form.fechaEmision ? fechaCivil(form.fechaEmision) : null,
           fechaVencimiento: form.fechaVencimiento ? fechaCivil(form.fechaVencimiento) : null,
           subidoPorId: persona.usuario.id,
@@ -142,10 +143,8 @@ documentos.openapi(
       });
       return c.json(documentoDe(creado, false), 201);
     } catch (error) {
-      // El archivo ya está guardado pero la base no lo anotó: se saca para no dejar uno huérfano.
-      await pdf.borrar(clave).catch((e: unknown) => {
-        console.error("subida de documento: no se pudo sacar el archivo huérfano", { clave }, e);
-      });
+      // El archivo ya está en Drive pero la base no lo anotó: se manda a la papelera para no dejar uno huérfano.
+      await borrarPdf(drive, driveFileId, { motivo: "subida de documento sin fila en la base" });
       throw error;
     }
   },
@@ -158,26 +157,22 @@ documentos.openapi(
     tags: ["Documentos"],
     summary: "El archivo de un documento",
     description:
-      "Entrega el PDF del documento. La API primero revisa que puedas ver la propiedad (de otro cliente responde 404) y después lo busca: el archivo nunca tiene un enlace público.",
+      "Entrega el PDF del documento desde el Drive de la propiedad. La API primero revisa que puedas ver la propiedad (de otro cliente responde 404) y después lo busca: el archivo nunca tiene un enlace público. Un documento que viene del sistema anterior y aún no está en Drive responde 404.",
     request: { params: ParamId },
     responses: {
       200: { content: { "application/pdf": { schema: z.string().meta({ format: "binary" }) } }, description: "El PDF." },
-      ...errores(401, 404, 503),
+      ...errores(401, 404, 502),
     },
   }),
   async (c) => {
     const quien = c.get("quien");
     const documento = await legible(quien, await db.document.findUnique({ where: { id: c.req.valid("param").id } }));
-    const { datos, mime } = await c.get("dep").pdf.leer(documento.blobKey);
-    const nombreSeguro = encodeURIComponent(documento.nombre.replace(/\.pdf$/i, "") + ".pdf");
-    // Se copia a un ArrayBuffer propio: así el cuerpo es un tipo que Response siempre acepta.
-    const cuerpo = new Uint8Array(datos).buffer as ArrayBuffer;
-    return c.body(cuerpo, 200, {
-      "Content-Type": mime,
-      "Content-Disposition": `inline; filename*=UTF-8''${nombreSeguro}`,
-      // Es un documento privado: que ningún intermediario lo guarde.
-      "Cache-Control": "private, no-store",
-    }) as never;
+    // Un documento de antes de Drive guarda otra cosa en blobKey: no hay nada que pedirle a Drive.
+    if (!esIdDeArchivo(documento.blobKey)) {
+      throw new ErrorApi(404, "Este documento viene del sistema anterior y todavía no está en el Drive de la propiedad.");
+    }
+    const { cuerpo, cabeceras } = await leerPdf(c.get("dep").drive, documento.blobKey, documento.nombre);
+    return c.body(cuerpo, 200, cabeceras) as never;
   },
 );
 
@@ -187,7 +182,7 @@ documentos.openapi(
     path: "/documentos/{id}",
     tags: ["Documentos"],
     summary: "Borrar un documento",
-    description: "Borra el documento y su archivo. Una llave de la API no puede.",
+    description: "Borra el documento y manda su archivo a la papelera de Drive. Una llave de la API no puede.",
     request: { params: ParamId },
     responses: { 204: sinContenido, ...errores(401, 403, 404) },
   }),
@@ -197,14 +192,11 @@ documentos.openapi(
     const documento = await db.document.findUnique({ where: { id: c.req.valid("param").id } });
     await espacioParaEscribirEn(quien, documento?.organizationId);
     await db.document.delete({ where: { id: documento!.id } });
-    // Si el almacén falla, la fila ya salió de la lista; el archivo que queda se anota en el
-    // registro del servidor con su dirección para poder limpiarlo a mano.
-    await c
-      .get("dep")
-      .pdf.borrar(documento!.blobKey)
-      .catch((e: unknown) => {
-        console.error("borrar documento: no se pudo borrar el archivo del almacén", { documentoId: documento!.id, clave: documento!.blobKey }, e);
-      });
+    // Si Drive falla, la fila ya salió de la lista; el archivo que queda se anota en el registro del
+    // servidor con su id para poder limpiarlo a mano. Los de antes de Drive no tienen archivo allí.
+    if (esIdDeArchivo(documento!.blobKey)) {
+      await borrarPdf(c.get("dep").drive, documento!.blobKey, { documentoId: documento!.id });
+    }
     return c.body(null, 204);
   },
 );

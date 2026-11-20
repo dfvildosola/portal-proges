@@ -171,7 +171,7 @@ export function obraParaEquipo(datos: DatosObra): contrato.ObraEquipo {
       recibidaPor: p.recibidaPor?.nombre ?? null,
       quitadaEnOdoo: p.quitadaEnOdoo,
       maestro: p.maestro,
-      fotos: p.fotos,
+      fotos: p.fotos.map((f) => ({ id: f.id, driveFileId: f.driveFileId, nombre: f.nombre })),
     })),
     presupuestos: datos.presupuestos.map((p) => ({
       id: p.id,

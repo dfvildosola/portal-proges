@@ -2,13 +2,12 @@
 // antes de que lleguen a correr, como un corrector ortográfico para el código. Cada workspace
 // corre `eslint .` en su carpeta y ESLint encuentra este archivo subiendo carpetas.
 //
-// Reglas: las recomendadas de typescript-eslint. legado/ (el portal viejo, solo para consultar)
-// y lo que genera Prisma no se revisan.
+// Reglas: las recomendadas de typescript-eslint. Lo que genera Prisma no se revisa.
 import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
 
 export default defineConfig(
-  globalIgnores(["legado/**", "**/node_modules/**", "**/generated/**", "**/dist/**", "**/.next/**"]),
+  globalIgnores(["**/node_modules/**", "**/generated/**", "**/dist/**", "**/.next/**"]),
   tseslint.configs.recommended,
   {
     rules: {

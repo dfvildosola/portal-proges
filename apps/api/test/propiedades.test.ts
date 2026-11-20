@@ -13,24 +13,27 @@ import { vencimientos } from "../src/rutas/vencimientos";
 import { clavesInternas, crearEscenario, type Escenario } from "./ayuda";
 
 // ---------------------------------------------------------------------------
-// El guardado de PDF de mentira: un mapa en memoria
+// El Drive de mentira: un mapa en memoria con los PDF que se «suben» a la carpeta de la propiedad
 // ---------------------------------------------------------------------------
 
 const guardados = new Map<string, Uint8Array>();
 const borrados: string[] = [];
-const pdfFalso = {
-  guardar: async ({ ruta, datos }: { ruta: string; mime: string; datos: Uint8Array }) => {
-    guardados.set(ruta, datos);
-    return { clave: ruta };
+let subidas = 0;
+const driveFalso = {
+  subirArchivo: async ({ datos }: { datos: Uint8Array }) => {
+    subidas += 1;
+    const driveFileId = `doc_prueba_${process.pid}_${subidas}_abcdef`;
+    guardados.set(driveFileId, datos);
+    return { driveFileId };
   },
-  leer: async (clave: string) => {
-    const datos = guardados.get(clave);
-    if (!datos) throw new Error(`No hay archivo ${clave}`);
-    return { datos, mime: "application/pdf" };
+  leerArchivo: async (driveFileId: string) => {
+    const datos = guardados.get(driveFileId);
+    if (!datos) throw new Error(`No hay archivo ${driveFileId}`);
+    return { datos: Buffer.from(datos), mime: "application/pdf", nombre: "papel.pdf" };
   },
-  borrar: async (clave: string) => {
-    borrados.push(clave);
-    guardados.delete(clave);
+  borrarArchivo: async (driveFileId: string) => {
+    borrados.push(driveFileId);
+    guardados.delete(driveFileId);
   },
 };
 
@@ -57,7 +60,7 @@ let nombreEquipo: string;
 const hoy = hoyChile();
 
 before(async () => {
-  e = await crearEscenario({ pdf: pdfFalso });
+  e = await crearEscenario({ drive: driveFalso });
   sufijo = e.ids.clienteA.replace("prueba_a_", "");
   const equipo = await db.usuario.findUniqueOrThrow({ where: { id: e.ids.equipo } });
   nombreEquipo = equipo.nombre;
@@ -70,6 +73,7 @@ before(async () => {
       comuna: "Ñuñoa",
       region: "RM",
       estado: "ARRENDADA",
+      driveCarpetaId: `carpeta_prueba_${sufijo}_abcdef`,
     },
   });
   propA = a.id;
@@ -542,11 +546,11 @@ describe("documentos", () => {
     assert.equal((await e.pedir("llaveA", "DELETE", `/v1/documentos/${docId}`)).estado, 403);
   });
 
-  test("al borrar se va la fila y el archivo", async () => {
+  test("al borrar se va la fila y el archivo va a la papelera de Drive", async () => {
     const clave = (await db.document.findUniqueOrThrow({ where: { id: docId } })).blobKey;
     assert.equal((await e.pedir("clienteA", "DELETE", `/v1/documentos/${docId}`)).estado, 204);
     assert.equal(await db.document.count({ where: { id: docId } }), 0);
-    assert.ok(borrados.includes(clave));
+    assert.ok(borrados.includes(clave), "el archivo se manda a la papelera de Drive");
     assert.equal((await e.pedir("clienteA", "GET", `/v1/documentos/${docId}/archivo`)).estado, 404);
   });
 });

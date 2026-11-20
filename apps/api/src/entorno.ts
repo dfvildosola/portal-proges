@@ -8,7 +8,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Quien } from "./acceso/quien";
 import { ganchoValidacion } from "./errores";
-import type { Drive, GuardadoPdf, Odoo } from "./integraciones/tipos";
+import type { Drive, Odoo } from "./integraciones/tipos";
 
 // Recibe el token de sesión que mandó la web y responde de quién es, o null si no es válido
 // (vencido, falsificado, de otra aplicación). Un problema del servidor (Clerk no responde) no
@@ -19,7 +19,6 @@ export type Dependencias = {
   verificarSesion: VerificarSesion;
   odoo: Odoo;
   drive: Drive;
-  pdf: GuardadoPdf;
 };
 
 export type Entorno = {

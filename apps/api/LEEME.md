@@ -33,7 +33,7 @@ apps/api/src/
   rutas/            un archivo por área; index.ts los monta en /v1
   rutas/ayuda.ts    json() y errores(): las respuestas de cada ruta para /docs
   dominio/<área>/   las reglas (cálculos, recortes), en funciones puras cuando se puede
-  integraciones/    Odoo (solo lectura), Drive, guardado de PDF; tipos.ts es su forma
+  integraciones/    Odoo (solo lectura) y Drive (fotos y PDF); tipos.ts es su forma
   util/             fechas, formato y al-contrato.ts (Decimal → Monto, fechas → texto)
 apps/api/test/      pruebas (node:test); ayuda.ts arma el escenario
 packages/contrato/  lo que la API recibe y entrega (zod), un archivo por área
@@ -191,14 +191,14 @@ Lo previsto se lanza: `throw new ErrorApi(409, "Esa oferta ya fue respondida.")`
 
 - `crearEscenario()` arma con nombres únicos: equipo, jefatura, admin (de Proges), cliente A (ATENDIDO, con su usuario), cliente B (AUTONOMO, con su usuario) y una llave de A. Devuelve `ids`, `tokens`, `app`, `pedir(quien, método, ruta, cuerpo?)` y `limpiar()`.
 - `quien` en `pedir` es `"equipo" | "jefatura" | "admin" | "clienteA" | "clienteB" | "llaveA" | "anonimo"` o `{ token }`. El cuerpo puede ser un objeto (JSON) o un `FormData` (archivos). Responde `{ estado, cuerpo }`.
-- Odoo, Drive y el guardado de PDF son falsos y fallan si se usan. Para usarlos, pasa tu versión: `crearEscenario({ odoo: { leerOrden: async () => ordenDePrueba } })`.
+- Odoo y Drive (fotos y PDF) son falsos y fallan si se usan. Para usarlos, pasa tu versión: `crearEscenario({ odoo: { leerOrden: async () => ordenDePrueba } })`.
 - `limpiar()` borra todo lo de los clientes A y B (cualquier tabla con `organizationId`) y las personas del escenario. Si tu prueba crea algo en `org_proges` (un maestro, un servicio del catálogo), bórralo tú antes.
 - Seis piezas corren pruebas a la vez sobre la misma base: **nunca** vacíes una tabla entera ni dependas de cuántas filas hay en total; cuenta solo lo de tu escenario.
 - `clavesInternas(cuerpo)` lista las claves que suenan a dato interno (costo, margen, presupuesto, factura); lo que va al dueño tiene que dar `[]`.
 
 ## Sistemas de afuera
 
-Las rutas no importan `integraciones/odoo.ts` ni `drive.ts` directo: los piden al contexto, `c.get("dep").odoo.leerOrden("S00047")`, para que las pruebas pasen versiones falsas. Odoo es **solo lectura**. Guardar y abrir PDF todavía no está conectado (responde 503): ver `integraciones/pdf.ts`.
+Las rutas no importan `integraciones/odoo.ts` ni `drive.ts` directo: los piden al contexto, `c.get("dep").odoo.leerOrden("S00047")`, para que las pruebas pasen versiones falsas. Odoo es **solo lectura**. Los PDF (documentos de la propiedad y presupuestos de maestros) van a la subcarpeta «Portal» del Drive de la propiedad, igual que las fotos, y se entregan siempre desde la API revisando el permiso: lo común está en `dominio/comun/pdf-drive.ts`. Sin carpeta enlazada responde 409.
 
 ## Producción (Railway)
 
