@@ -56,7 +56,13 @@ function motivosDeNuevo(s: ServicioTableroItem): string[] {
 
 function ProximoPaso({ servicio, columna }: { servicio: ServicioTableroItem; columna: ColumnaDelTablero }) {
   if (columna === "nuevo") {
-    return <span className="mt-1 text-xs font-semibold">{motivosDeNuevo(servicio).join(" · ")}</span>;
+    // Uno nuevo también puede estar esperando a alguien: se muestran las dos cosas.
+    return (
+      <>
+        <span className="mt-1 text-xs font-semibold">{motivosDeNuevo(servicio).join(" · ")}</span>
+        {servicio.esperando && <ChipEsperando esperando={servicio.esperando} className="mt-1" />}
+      </>
+    );
   }
   if (columna === "esperando" && servicio.esperando) {
     return <ChipEsperando esperando={servicio.esperando} className="mt-1" />;

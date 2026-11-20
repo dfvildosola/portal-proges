@@ -84,3 +84,14 @@ export function enCurso(g: TableroAgrupado): number {
 export function esperandoMasDeLoNormal(items: readonly ServicioTableroItem[]): ServicioTableroItem[] {
   return items.filter((i) => (i.esperando?.dias ?? 0) > DIAS_TRABADO);
 }
+
+// Todo lo que espera a alguien de afuera, esté en la columna que esté. Un servicio por confirmar o
+// sin responsable va a «Nuevo», pero igual puede llevar días esperando al conservador: si se mirara
+// solo la columna «Esperando», esa espera no saldría en «Trabado» ni en las cifras del Inicio.
+// (Las columnas «Nos toca» y «Por entregar» nunca tienen espera, por definición.) Los que más
+// esperan, primero.
+export function conEspera(g: TableroAgrupado): ServicioTableroItem[] {
+  return [...g.esperando, ...g.nuevo.filter((i) => i.esperando !== null)].sort(
+    (a, b) => (b.esperando?.dias ?? 0) - (a.esperando?.dias ?? 0),
+  );
+}

@@ -10,10 +10,9 @@ import { Tarjeta, TarjetaTitulo } from "@/componentes/ui/tarjeta";
 import { haceCuanto } from "@/lib/formato";
 import { ItemDelInicio } from "./item-con-enlace";
 
-const MAXIMO_VISIBLE = 6;
-
 export function PanelNuevo({ servicios, total }: { servicios: ServicioTableroItem[]; total: number }) {
-  const visibles = servicios.slice(0, MAXIMO_VISIBLE);
+  // La API ya manda solo los que caben (los más antiguos); `total` los cuenta todos.
+  const visibles = servicios;
   return (
     <Tarjeta>
       <TarjetaTitulo>

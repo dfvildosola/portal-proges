@@ -201,10 +201,14 @@ export const PropiedadResumen = z
     tipo: PropiedadTipo,
     estado: PropiedadEstado,
     serviciosEnCurso: z.number().int().meta({ description: "Cuántos servicios abiertos tiene." }),
-    serviciosNuevos: z.number().int().meta({
-      description:
-        "Cuántos de sus servicios abiertos son nuevos (por revisar, por confirmar o sin responsable): la columna «Nuevo» del tablero. Para un dueño, siempre 0.",
-    }),
+    serviciosNuevos: z
+      .number()
+      .int()
+      .optional()
+      .meta({
+        description:
+          "SOLO EQUIPO. Cuántos de sus servicios abiertos son nuevos (por revisar, por confirmar o sin responsable): la columna «Nuevo» del tablero.",
+      }),
     esperandoMasAntiguo: FichaEsperando.extend({ servicioId: Id })
       .nullable()
       .meta({ description: "El «esperando a» que lleva más tiempo entre sus servicios abiertos, o null si no se espera a nadie." }),

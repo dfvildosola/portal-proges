@@ -6,10 +6,11 @@ import type { InicioEquipo } from "@proges/contrato";
 import { aFechaHoraISO, aFechaISO } from "../../util/al-contrato";
 import { equipoActivo, clientesPorId, filasDelTablero, tareasAbiertas } from "./consultas";
 import { seleccionNota } from "./selecciones";
-import { agruparTablero, enCurso, esperandoMasDeLoNormal, type TableroAgrupado } from "./tablero";
+import { agruparTablero, conEspera, enCurso, esperandoMasDeLoNormal, type TableroAgrupado } from "./tablero";
 import { cargaDelEquipo, clasificarPorSemana } from "./tareas";
 
-const MAX_NUEVOS = 50;
+// Los nuevos que muestra el Inicio; el resto se ve en el tablero (la cifra los cuenta todos).
+const MAX_NUEVOS = 6;
 const MAX_TAREAS_ATRASADAS = 30;
 const NOTAS_CON_FOTO = 5;
 
@@ -19,8 +20,8 @@ export function cifrasDelInicio(g: TableroAgrupado, tareasAtrasadas: number): In
   return {
     serviciosEnCurso: enCurso(g),
     nuevosSinRepartir: g.nuevo.length,
-    esperando: g.esperando.length,
-    esperandoMasDe10Dias: esperandoMasDeLoNormal(g.esperando).length,
+    esperando: conEspera(g).length,
+    esperandoMasDe10Dias: esperandoMasDeLoNormal(conEspera(g)).length,
     tareasAtrasadas,
   };
 }
@@ -62,7 +63,7 @@ export async function armarInicio(orgIds: string[], hoy: Date): Promise<InicioEq
     cifras: cifrasDelInicio(grupos, atrasadas.length),
     nuevo: grupos.nuevo.slice(0, MAX_NUEVOS),
     trabado: {
-      esperandoMasDe10Dias: esperandoMasDeLoNormal(grupos.esperando),
+      esperandoMasDe10Dias: esperandoMasDeLoNormal(conEspera(grupos)),
       tareasAtrasadas: atrasadas.slice(0, MAX_TAREAS_ATRASADAS).map((t) => t.contrato),
       presupuestosPorAprobar,
     },

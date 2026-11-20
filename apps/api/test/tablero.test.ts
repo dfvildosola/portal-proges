@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { ServicioTableroItem } from "@proges/contrato";
 import { cifrasDelInicio } from "../src/dominio/trabajo/inicio";
-import { agruparTablero, grupoDelTablero, type FilaDeTablero } from "../src/dominio/trabajo/tablero";
+import { agruparTablero, conEspera, grupoDelTablero, type FilaDeTablero } from "../src/dominio/trabajo/tablero";
 import { proximaTarea } from "../src/dominio/trabajo/tareas";
 
 describe("tablero e inicio", () => {
@@ -89,6 +89,23 @@ describe("tablero e inicio", () => {
     const todosNuevos = agruparTablero(Array.from({ length: 32 }, (_, i) => fila(`n${i}`, { porConfirmar: true, responsable: null })));
     assert.equal(cifrasDelInicio(todosNuevos, 0).nuevosSinRepartir, 32);
     assert.equal(cifrasDelInicio(todosNuevos, 0).serviciosEnCurso, 32);
+  });
+
+  test("inicio: lo que espera a alguien cuenta y sale en «Trabado» aunque siga en Nuevo", () => {
+    // Un servicio por confirmar (o sin responsable) al que ya se le puso «esperando a conservador»
+    // va a la columna Nuevo, pero su espera no se puede perder: la revisión del 2026-11-20 lo pilló.
+    const espera = (dias: number) => ({ a: "CONSERVADOR" as const, detalle: null, desde: "2026-11-01", dias });
+    const g = agruparTablero([
+      fila("confirmado", { esperando: espera(12) }),
+      fila("por-confirmar", { porConfirmar: true, esperando: espera(15) }),
+      fila("sin-dueno", { responsable: null, esperando: espera(20) }),
+      fila("nuevo-sin-espera", { porConfirmar: true }),
+    ]);
+    assert.deepEqual(g.esperando.map((i) => i.id), ["confirmado"]);
+    assert.deepEqual(conEspera(g).map((i) => i.id), ["sin-dueno", "por-confirmar", "confirmado"], "los que más esperan, primero");
+    const c = cifrasDelInicio(g, 0);
+    assert.equal(c.esperando, 3);
+    assert.equal(c.esperandoMasDe10Dias, 3);
   });
 
   test("próxima tarea: la que vence primero, las sin fecha al final, y «atrasada» según hoy", () => {

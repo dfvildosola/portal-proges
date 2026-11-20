@@ -149,11 +149,13 @@ export async function listarPropiedades(
       serviciosEnCurso: abiertos.length,
       // Cuántos están en la columna «Nuevo» del tablero. Es un dato interno del equipo: el dueño no
       // ve los por revisar ni los por confirmar, y quién lleva cada servicio no es asunto suyo.
-      serviciosNuevos: dueno
-        ? 0
-        : abiertos.filter((s) =>
-            esNuevo({ porRevisar: s.porRevisar, porConfirmar: s.porConfirmar, sinResponsable: s.responsableId === null }),
-          ).length,
+      ...(dueno
+        ? {}
+        : {
+            serviciosNuevos: abiertos.filter((s) =>
+              esNuevo({ porRevisar: s.porRevisar, porConfirmar: s.porConfirmar, sinResponsable: s.responsableId === null }),
+            ).length,
+          }),
       esperandoMasAntiguo: esperando
         ? { ...(esperandoDe(esperando, hoy, dueno) as NonNullable<ReturnType<typeof esperandoDe>>), servicioId: esperando.id }
         : null,

@@ -250,7 +250,7 @@ describe("lista de propiedades", () => {
     const r = await e.pedir("clienteA", "GET", "/v1/propiedades");
     const p = r.cuerpo.items.find((x: { id: string }) => x.id === propA);
     assert.equal(p.serviciosEnCurso, 2);
-    assert.equal(p.serviciosNuevos, 0, "quién lleva cada servicio es interno del equipo");
+    assert.equal(p.serviciosNuevos, undefined, "quién lleva cada servicio es interno del equipo");
     assert.ok(!JSON.stringify(r.cuerpo).includes("DETALLE_INTERNO_DE_ESPERA"));
   });
 });

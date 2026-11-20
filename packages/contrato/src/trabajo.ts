@@ -581,7 +581,7 @@ export const InicioEquipo = z
   .object({
     fecha: FechaISO.meta({ description: "El «hoy» en Chile con el que se calculó." }),
     cifras: InicioCifras,
-    nuevo: z.array(ServicioTableroItem).meta({ description: "Los nuevos: por revisar, por confirmar o sin responsable (los más antiguos primero, hasta 50; la cifra `nuevosSinRepartir` los cuenta todos)." }),
+    nuevo: z.array(ServicioTableroItem).meta({ description: "Los nuevos: por revisar, por confirmar o sin responsable (los más antiguos primero, hasta 6; la cifra `nuevosSinRepartir` los cuenta todos y el resto se ve en el tablero)." }),
     trabado: z.object({
       esperandoMasDe10Dias: z.array(ServicioTableroItem).meta({ description: "Los que llevan más días esperando, primero." }),
       tareasAtrasadas: z.array(TareaConServicio).meta({ description: "Las más atrasadas primero (hasta 30)." }),

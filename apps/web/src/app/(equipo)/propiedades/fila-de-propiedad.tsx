@@ -17,11 +17,17 @@ const enlace = (p: PropiedadResumen) => `/propiedades/${encodeURIComponent(p.id)
 
 // En qué está lo que hay en curso: solo tiene sentido si hay algo (si no, «Nos toca» sería un dato
 // falso). Si alguno de sus servicios es nuevo (por confirmar, por revisar o sin responsable), dice
-// «Nuevo», como la columna del tablero; si no, a quién se espera.
+// «Nuevo», como la columna del tablero, y además a quién se espera si algún servicio espera: una
+// obra trabada no se puede esconder detrás de una venta recién llegada.
 function Espera({ p }: { p: PropiedadResumen }) {
   if (p.serviciosEnCurso === 0) return <span className="text-soft">—</span>;
-  if (p.serviciosNuevos > 0) return <Insignia tono="neutro">Nuevo</Insignia>;
-  return <ChipEsperando esperando={esperandoParaChip(p.esperandoMasAntiguo)} />;
+  if ((p.serviciosNuevos ?? 0) === 0) return <ChipEsperando esperando={esperandoParaChip(p.esperandoMasAntiguo)} />;
+  return (
+    <>
+      <Insignia tono="neutro">Nuevo</Insignia>
+      {p.esperandoMasAntiguo && <ChipEsperando esperando={esperandoParaChip(p.esperandoMasAntiguo)} />}
+    </>
+  );
 }
 
 // La columna «En curso» de la tabla: el chip de espera del servicio más antiguo y, si hay más de

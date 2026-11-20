@@ -21,20 +21,22 @@ import { hrefDePestana } from "./pestanas-ficha";
 // una, con el nombre de cada documento (el campo `documento` de la alerta).
 
 const ETIQUETA_GRAVEDAD = { alta: "urgente", media: "pronto", baja: "después" } as const;
-const PESO_GRAVEDAD = { alta: 0, media: 1, baja: 2 } as const;
+type LineaDeAlerta =
+  | { tipo: "sueltas"; alerta: FichaAlerta }
+  | { tipo: "faltan"; nombres: string[]; gravedad: FichaAlerta["gravedad"] };
 
-type LineaDeAlerta = { tipo: "sueltas"; alerta: FichaAlerta } | { tipo: "faltan"; nombres: string[] };
-
-// Las alertas sueltas ya vienen ordenadas de más a menos grave. La línea de documentos que faltan
-// es «pronto»: va después de lo urgente y de lo demás que sea «pronto» (que es más puntual, con su
-// fecha), y antes de lo que puede esperar.
+// La API manda las alertas ordenadas de más a menos grave, y ese orden se respeta: la línea de los
+// documentos que faltan va donde estaba el primero de ellos, con su gravedad (por el orden, es la
+// mayor del grupo). Así la web no lleva una tabla de gravedades propia.
 function lineasDeAlertas(alertas: FichaAlerta[]): LineaDeAlerta[] {
   const faltan = alertas.filter((a) => a.tipo === "DOCUMENTO_FALTA");
-  const lineas: LineaDeAlerta[] = alertas.filter((a) => a.tipo !== "DOCUMENTO_FALTA").map((alerta) => ({ tipo: "sueltas", alerta }));
-  if (faltan.length === 0) return lineas;
-  const grupo: LineaDeAlerta = { tipo: "faltan", nombres: faltan.map((a) => a.documento ?? a.texto) };
-  const lugar = lineas.findIndex((l) => l.tipo === "sueltas" && PESO_GRAVEDAD[l.alerta.gravedad] > PESO_GRAVEDAD.media);
-  lineas.splice(lugar === -1 ? lineas.length : lugar, 0, grupo);
+  const lineas: LineaDeAlerta[] = [];
+  for (const alerta of alertas) {
+    if (alerta.tipo !== "DOCUMENTO_FALTA") lineas.push({ tipo: "sueltas", alerta });
+    else if (alerta === faltan[0]) {
+      lineas.push({ tipo: "faltan", nombres: faltan.map((a) => a.documento ?? a.texto), gravedad: alerta.gravedad });
+    }
+  }
   return lineas;
 }
 
@@ -97,7 +99,7 @@ export function PestanaResumen({ ficha, modo }: { ficha: FichaResumen; modo: Mod
                         <span className="text-sm font-bold">
                           {linea.nombres.length === 1 ? `Falta 1 documento: ${linea.nombres[0]}` : `Faltan ${linea.nombres.length} documentos`}
                         </span>
-                        <Insignia tono={TONO_GRAVEDAD.media}>{ETIQUETA_GRAVEDAD.media}</Insignia>
+                        <Insignia tono={TONO_GRAVEDAD[linea.gravedad]}>{ETIQUETA_GRAVEDAD[linea.gravedad]}</Insignia>
                       </div>
                       {linea.nombres.length > 1 && <span className="text-xs break-words text-soft">{linea.nombres.join(", ")}</span>}
                     </Tarjeta>
