@@ -83,12 +83,9 @@ export default async function Pagina({ params }: { params: Promise<{ id: string 
           esperando={ficha.esperando}
           puedeCambiar={editable}
           porConfirmar={porConfirmar}
+          porRevisar={ficha.porRevisar}
+          sinResponsable={ficha.responsable === null}
         />
-      )}
-      {abierto && ficha.porRevisar && (
-        <p className="rounded-xl bg-warn-soft p-3.5 text-sm font-semibold text-warn">
-          Este servicio viene de un pedido y todavía nadie lo reparte: primero hay que aceptarlo y repartirlo.
-        </p>
       )}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1.25fr_1.1fr] lg:items-start lg:gap-4">

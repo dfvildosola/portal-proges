@@ -12,6 +12,7 @@ type Guardada = { donde: string; servicioId: string; aviso: string | null };
 export function FormularioDeNota(props: {
   opciones: OpcionDeServicio[];
   elegidoAlInicio: string | null;
+  servicioFijo: OpcionDeServicio | null;
   errorDeBusqueda: string | null;
 }) {
   const [ronda, setRonda] = useState(0);

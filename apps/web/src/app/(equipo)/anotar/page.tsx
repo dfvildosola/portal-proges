@@ -23,15 +23,22 @@ export default async function Pagina({ searchParams }: { searchParams: Promise<{
   const deLosDemas = (abiertos.items ?? []).filter((s) => !idsSugeridos.has(s.id)).map((s) => aOpcion(s, false));
   const opciones = [...deSugeridos, ...deLosDemas];
 
-  // Si se llegó desde la ficha de un servicio (/anotar?servicio=ID), ese queda elegido; si no, el
-  // primero que la API propone.
-  const elegidoAlInicio = opciones.find((o) => o.id === servicioPedido)?.id ?? deSugeridos[0]?.id ?? null;
+  // Si se llegó desde la ficha de un servicio (/anotar?servicio=ID), la nota va ahí y no se vuelve
+  // a preguntar dónde: queda en un solo paso. Si no, se elige en el paso 2, con el primero que la
+  // API propone ya marcado.
+  const servicioFijo = opciones.find((o) => o.id === servicioPedido) ?? null;
+  const elegidoAlInicio = servicioFijo?.id ?? deSugeridos[0]?.id ?? null;
 
   // Anotar se piensa para el celular y una mano: en computador va en una columna angosta, no a lo ancho.
   return (
     <div className="flex max-w-xl flex-col gap-5">
       <EncabezadoDePagina titulo="Anotar" subtitulo="Una nota con fotos, para que quede en la bitácora del servicio." />
-      <FormularioDeNota opciones={opciones} elegidoAlInicio={elegidoAlInicio} errorDeBusqueda={abiertos.error} />
+      <FormularioDeNota
+        opciones={opciones}
+        elegidoAlInicio={elegidoAlInicio}
+        servicioFijo={servicioFijo}
+        errorDeBusqueda={abiertos.error}
+      />
     </div>
   );
 }
